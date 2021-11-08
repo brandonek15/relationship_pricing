@@ -1,0 +1,126 @@
+from settings import DEALSCAN_MERGE_FILE,INTERMEDIATE_DATA_PATH,START_DATE, \
+    END_DATE,SQLITE_FILE,COMP_MERGE_FILE
+import os
+import ibis
+
+def merge_data():
+    '''This program will create the query using IBIS, execute the query, and save the file
+    for later use'''
+    client = create_client()
+
+    #Get the dealscan only data
+    #Creates the query
+    merge = merge_dealscan(client)
+
+    # Execute executes the query
+    print("Beginning to execute Dealscan query")
+    merge_df = merge.execute()
+
+    #Save file
+    merge_df.to_pickle(DEALSCAN_MERGE_FILE)
+    #output to CSV
+    path = os.path.join(INTERMEDIATE_DATA_PATH,'dealscan_merge.csv')
+    merge_df.to_csv(path,index=False)
+
+    #Also get the compustat file (to play with in another project potentially)
+    #Creates the query
+    merge = merge_compustat(client)
+
+    # Execute executes the query
+    print("Beginning to execute Compustat query")
+    merge_df = merge.execute()
+
+    #Save file
+    merge_df.to_pickle(COMP_MERGE_FILE)
+    #output to CSV
+    path = os.path.join(INTERMEDIATE_DATA_PATH,'compustat_merge.csv')
+    merge_df.to_csv(path,index=False)
+
+
+def merge_dealscan(client):
+    #This program only pulls dealscan and saves only the dealscan file
+    #This will give us a facility file
+    # Load in tables "facility", "marketsegment", "company"
+    facility= client.table('facility')
+    marketsegment = client.table('marketsegment')
+    company = client.table('company')
+    bb = client.table('borrowerbase')
+    fin_cov = client.table('financialcovenant')
+    worth_cov = client.table('networthcovenant')
+
+    # Keep only observations from the facility file that are starting in date range
+    facility = facility[facility['facilitystartdate'].between(START_DATE, END_DATE)]
+
+    #Merge on company data by mering on Company ID
+    joined = facility.inner_join(company, [
+        facility['borrowercompanyid'] == company['companyid']
+    ])
+
+    # Add marketsegment data by merging on facilityID
+    joined = joined.left_join(marketsegment, [
+        facility['facilityid'] == marketsegment['facilityid']
+    ])
+
+    #Add borrowing base, financial cov, net worth cov
+    joined = joined.left_join(bb, [
+        facility['facilityid'] == bb['facilityid']
+    ])
+    joined = joined.left_join(fin_cov, [
+        facility['packageid'] == fin_cov['packageid']
+    ])
+    joined = joined.left_join(worth_cov, [
+        facility['packageid'] == worth_cov['packageid']
+    ])
+    #Because there are two variables called covenanttype, I need to rename one of them
+    covenanttype_nw = (worth_cov.covenanttype).name('covenanttype_nw')
+
+    final_merge = joined[facility,
+                         company['company'], company['ultimateparentid'],
+                         company['ticker'],company['publicprivate'],
+                         company['country'], company['institutiontype'],
+                         company['primarysiccode'],
+                         marketsegment['marketsegment'],
+                         bb['borrowerbasetype'],bb['borrowerbasepercentage'],
+                         fin_cov['covenanttype'],fin_cov['initialratio'],
+                         worth_cov['baseamt'],
+                         worth_cov['percentofnetincome'],covenanttype_nw
+    ]
+
+    return final_merge
+
+def merge_compustat(client):
+    '''This file merges only compustat tables and saves them to csv (for playing
+    in another project. This provides a firm x quarter file'''
+
+    # Load in compustat tables
+    comp_quarter = client.table('comp_quarter')
+    comp_identity = client.table('comp_identity')
+    #Load in crosswalk
+    crosswalk = client.table('dealscan_compustat_crosswalk')
+
+    # Keep only observations within the start and end dage
+    comp_quarter = comp_quarter[comp_quarter['rdq'].between(START_DATE, END_DATE)]
+    # Get company information
+    joined = comp_quarter.inner_join(comp_identity, [
+        comp_quarter['gvkey'] == comp_identity['gvkey']
+    ])
+    #Merge on crosswalk
+    joined = joined.left_join(crosswalk, [
+        comp_quarter['gvkey'] == crosswalk['gvkey']
+        ])
+
+    final_merge = joined[comp_quarter,
+                         comp_identity['conm'], comp_identity['cusip'],
+                         comp_identity['cik'], comp_identity['sic'],
+                         comp_identity['naics'],crosswalk['bcoid']
+    ]
+
+    return final_merge
+
+def create_client():
+    """Create and configure a database client"""
+    ibis.options.interactive = True
+    ibis.options.sql.default_limit = None
+    # For testing, set to 10000
+    # ibis.options.sql.default_limit = 10000
+    return ibis.sqlite.connect(SQLITE_FILE)
