@@ -47,6 +47,7 @@ def merge_dealscan(client):
     bb = client.table('borrowerbase')
     fin_cov = client.table('financialcovenant')
     worth_cov = client.table('networthcovenant')
+    lender_shares = client.table('lendershares')
 
     # Keep only observations from the facility file that are starting in date range
     facility = facility[facility['facilitystartdate'].between(START_DATE, END_DATE)]
@@ -61,9 +62,12 @@ def merge_dealscan(client):
         facility['facilityid'] == marketsegment['facilityid']
     ])
 
-    #Add borrowing base, financial cov, net worth cov
+    #Add borrowing base, lender shares, financial cov, net worth cov
     joined = joined.left_join(bb, [
         facility['facilityid'] == bb['facilityid']
+    ])
+    joined = joined.left_join(lender_shares, [
+        facility['facilityid'] == lender_shares['facilityid']
     ])
     joined = joined.left_join(fin_cov, [
         facility['packageid'] == fin_cov['packageid']
@@ -83,7 +87,10 @@ def merge_dealscan(client):
                          bb['borrowerbasetype'],bb['borrowerbasepercentage'],
                          fin_cov['covenanttype'],fin_cov['initialratio'],
                          worth_cov['baseamt'],
-                         worth_cov['percentofnetincome'],covenanttype_nw
+                         worth_cov['percentofnetincome'],covenanttype_nw,
+                         lender_shares['lender'],lender_shares['lenderrole'],
+                         lender_shares['bankallocation'],lender_shares['agentcredit'],
+                         lender_shares['leadarrangercredit']
     ]
 
     return final_merge

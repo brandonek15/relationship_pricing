@@ -42,6 +42,11 @@ def pull_raw(wrds_conn,conn):
     retrieve_table(wrds=wrds_conn, connection=conn, library='dealscan',table = 'borrowerbase' \
                    , heading='borrowerbase',columns_to_pull=cols,dtypes_for_upload=dtypes)
 
+    dtypes = {'facilityid': int}
+    cols =['FacilityID','Lender','LenderRole','BankAllocation','AgentCredit','LeadArrangerCredit']
+    retrieve_table(wrds=wrds_conn, connection=conn, library='dealscan',table = 'lendershares' \
+                   , heading='lendershares',columns_to_pull=cols,dtypes_for_upload=dtypes)
+
     dtypes = {'packageid': int}
     cols =['PackageID','CovenantType','InitialRatio']
     retrieve_table(wrds=wrds_conn, connection=conn, library='dealscan',table = 'financialcovenant' \

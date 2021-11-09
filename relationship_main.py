@@ -1,7 +1,7 @@
 '''
-#this will import the CRSP computstat related data straight from the WRDS server
+#this will import the Dealscan computstat related data straight from the WRDS server
 , do basic cleaning, and put it into the sqlite database.
-#At the end I will have a dataset with CRSP/Compustat merged
+#At the end I will have a dataset with Dealscan Compustat
 '''
 
 import os

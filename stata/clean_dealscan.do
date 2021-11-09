@@ -1,0 +1,114 @@
+*Import the merged data
+import delimited using "$data_path/dealscan_merge.csv", clear
+
+duplicates drop
+
+*Since we need lender identities, we will drop those observations without them - small number
+drop if mi(lender)
+
+*Format dates
+foreach var in facilitystartdate facilityenddate {
+	gen temp = date(`var',"YMD")
+	format temp %td
+	drop `var' 
+	rename temp `var'
+}
+sort borrowercompanyid facilityid packageid loantype facilitystartdate
+
+*Renamecovenant variables
+rename covenanttype cov_type_fin
+rename initialratio init_ratio_fin
+rename baseamt base_amt_nw
+rename percentofnetincome perc_ni_nw
+rename covenanttype_nw cov_type_nw
+
+*Generate covenant existence variables
+gen fin_cov = (!mi(init_ratio_fin) | !mi(cov_type_fin))
+gen nw_cov = (!mi(base_amt_nw) | !mi(cov_type_nw) | !mi(perc_ni_nw))
+gen borrower_base = (!mi(borrowerbasetype) | !mi(borrowerbasepercentage))
+label var fin_cov "Financial Cov"
+label var nw_cov "Net Worth Cov"
+label var borrower_base "Borrowing Base"
+
+replace marketsegment = "N/A" if mi(marketsegment)
+replace cov_type_fin = "None" if mi(cov_type_fin)
+replace cov_type_nw = "None" if mi(cov_type_nw)
+replace borrowerbasetype = "N/A" if mi(borrowerbasetype)
+
+*Create variables based off of marketsegment
+gen leveraged = (marketsegment == "Leveraged" | marketsegment == "Highly Leveraged")
+gen cov_lite = (marketsegment == "Covenant Lite")
+replace borrower_base = 1 if (marketsegment == "Borrowing Base")
+gen asset_based = (marketsegment == "Asset Based")
+gen institutional = (marketsegment == "Institutional")
+
+*Starting with this type of a dataset
+isid borrowercompanyid facilityid marketsegment cov_type_fin cov_type_nw borrowerbasetype lender
+*Want to get down to a facility x lender dataset
+
+save "$data_path/stata_temp/dealscan_pre_collapse", replace
+
+*Create indiciators for financial covenants, net worth covenants, and borrower base
+*Note that this dataset would still be valid if I didn't collapse by lender, but want to do a 1:1 merge later
+use "$data_path/stata_temp/dealscan_pre_collapse", clear
+collapse (max) fin_cov nw_cov borrower_base leveraged cov_lite asset_based institutional, by(facilityid lender)
+isid facilityid lender
+save "$data_path/stata_temp/dealscan_indicators", replace
+
+use "$data_path/stata_temp/dealscan_pre_collapse", clear
+*Get it into a facilityid lender dataset to merge on indicators
+drop marketsegment borrowerbasetype borrowerbasepercentage cov_type_fin ///
+ init_ratio_fin base_amt_nw perc_ni_nw cov_type_nw ///
+ fin_cov nw_cov borrower_base ///
+ leveraged cov_lite asset_based institutional
+
+duplicates drop
+isid facilityid lender
+merge 1:1 facilityid lender using  "$data_path/stata_temp/dealscan_indicators", assert(3) nogen
+
+*Now we need to use loan types 
+*Create indicators for the different types of loans
+gen revolving_credit = ///
+ (loantype == "364-Day Facility" | loantype  == "Revolver/Line < 1 Yr." | ///
+ loantype  == "Revolver/Line >= 1 Yr." | loantype  == "Revolver/Term Loan")
+gen institutional_term_loan = 0
+foreach type in B C D E F G H I J K {
+	replace institutional_term_loan = 1 if loantype == "Term Loan `type'"
+}
+gen amortizing_term_loan = (loantype == "Term Loan" | loantype == "Term Loan A")
+*Create a generic term loan indicator
+gen term_loan = institutional_term_loan + amortizing_term_loan
+
+*Create quarter date variable.
+gen date_quarterly = qofd(facilitystartdate)
+format date_quarterly %tq
+label var date_quarterly "Quarterly Start Date"
+gen end_date_quarterly = qofd(facilityenddate)
+format end_date_quarterly %tq
+label var end_date_quarterly "Quarterly End Date"
+
+/*
+*Todo
+*Do other data cleaning? Maybe only keep certain observations - make sure currencies match up?
+*Keep only US,USD loans
+*May want to change later
+keep if country == "USA"
+keep if currency == "United States Dollars"
+*/
+
+isid facilityid lender
+save "$data_path/dealscan_facility_lender_level", replace
+
+*Create datasets with only lender variables that can be merged on later - These are only for
+*Measuring who gets the relationship benefits
+use "$data_path/dealscan_facility_lender_level", clear
+keep facilityid lender lenderrole bankallocation agentcredit leadarrangercredit
+isid facilityid lender
+save "$data_path/dealscan_lender_level", replace
+
+*Create a datset with only facility variables that can used in analyses
+use "$data_path/dealscan_facility_lender_level", clear
+drop lender lenderrole bankallocation agentcredit leadarrangercredit
+duplicates drop
+isid facilityid
+save "$data_path/dealscan_facility_level", replace
