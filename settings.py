@@ -33,6 +33,6 @@ START_DATE = pd.to_datetime('2003-01-01')
 END_DATE = pd.to_datetime('2020-12-31')
 
 # Set to 1 if you want all of the raw data to be pulled
-PULL_RAW = 0
+PULL_RAW = 1
 GET_WRDS_DEALSCAN_LINK = 0
-MERGE_DEALSCAN_COMPUSTAT = 0
+MERGE_DEALSCAN_COMPUSTAT = 1

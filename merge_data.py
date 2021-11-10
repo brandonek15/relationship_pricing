@@ -42,12 +42,13 @@ def merge_dealscan(client):
     #This will give us a facility file
     # Load in tables "facility", "marketsegment", "company"
     facility= client.table('facility')
+    package = client.table('package')
     marketsegment = client.table('marketsegment')
     company = client.table('company')
     bb = client.table('borrowerbase')
+    lender_shares = client.table('lendershares')
     fin_cov = client.table('financialcovenant')
     worth_cov = client.table('networthcovenant')
-    lender_shares = client.table('lendershares')
 
     # Keep only observations from the facility file that are starting in date range
     facility = facility[facility['facilitystartdate'].between(START_DATE, END_DATE)]
@@ -55,6 +56,11 @@ def merge_dealscan(client):
     #Merge on company data by mering on Company ID
     joined = facility.inner_join(company, [
         facility['borrowercompanyid'] == company['companyid']
+    ])
+
+    # Add package data by merging on packageID
+    joined = joined.left_join(package, [
+        facility['packageid'] == marketsegment['packageid']
     ])
 
     # Add marketsegment data by merging on facilityID
@@ -83,6 +89,8 @@ def merge_dealscan(client):
                          company['ticker'],company['publicprivate'],
                          company['country'], company['institutiontype'],
                          company['primarysiccode'],
+                         package['SalesAtClose'],package['DealAmount'],
+                         package['RefinancingIndicator'],
                          marketsegment['marketsegment'],
                          bb['borrowerbasetype'],bb['borrowerbasepercentage'],
                          fin_cov['covenanttype'],fin_cov['initialratio'],

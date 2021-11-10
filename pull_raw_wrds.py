@@ -1,7 +1,6 @@
 from settings import COMPUSTAT_DEALSCAN_LINK
 import pandas as pd
 import numpy as np
-from sqlalchemy.types import Integer, Text
 
 COMP_VARS = ['datadate', 'fyearq', 'fqtr', 'rdq', 'atq',
              'ceqq','chq','cheq','cshoq,''ltq',
@@ -25,6 +24,11 @@ def pull_raw(wrds_conn,conn):
           'Currency','ExchangeRate','Maturity','Secured','DistributionMethod','Seniority']
     retrieve_table(wrds=wrds_conn, connection=conn, library='dealscan',table = 'facility' \
                    , heading='facility',columns_to_pull=cols,dtypes_for_upload=dtypes)
+
+    dtypes = {'packageid': int}
+    cols =['PackageID','SalesAtClose','DealAmount','RefinancingIndicator']
+    retrieve_table(wrds=wrds_conn, connection=conn, library='dealscan',table = 'package' \
+                   , heading='package',columns_to_pull=cols,dtypes_for_upload=dtypes)
 
     dtypes = {'companyid': int}
     cols =['CompanyID','Company','UltimateParentID','Ticker','PublicPrivate','Country',\
