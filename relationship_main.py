@@ -10,10 +10,11 @@ import sqlite3
 import pandas as pd
 
 from settings import DIRECTORY_LIST,PULL_RAW,MERGE_DEALSCAN_COMPUSTAT,GET_WRDS_DEALSCAN_LINK, \
-    SQLITE_FILE
+    SQLITE_FILE,READ_IN_SDC
 
 import pull_raw_wrds
 import merge_data
+import read_in_sdc
 
 # Configurations for WRDS
 DB = wrds.Connection(wrds_username='zborowsk')
@@ -58,6 +59,10 @@ def main():
     #Merge the files into one from the local database
     if MERGE_DEALSCAN_COMPUSTAT == 1:
         merge_data.merge_data()
+
+    #Import SDC platinum files
+    if READ_IN_SDC ==1:
+        read_in_sdc.read_in_sdc()
 
     # Commit and close the connection
     conn.commit()

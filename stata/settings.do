@@ -3,6 +3,7 @@ clear all
 capture restore
 set more off
 set type double
+set maxvar 32000
 
 cap log close _all
 

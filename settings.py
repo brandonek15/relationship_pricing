@@ -13,6 +13,7 @@ elif platform.system() == 'Linux':
 #Import the merge_data function from previous hw
 DATA_PATH = os.path.join(ROOT,'data')
 RAW_DATA_PATH = os.path.join(DATA_PATH,'raw')
+RAW_DATA_SDC_PATH = os.path.join(RAW_DATA_PATH,'sdc')
 INPUTS_DATA_PATH = os.path.join(DATA_PATH,'inputs')
 
 CODE_PATH = os.path.join(ROOT, 'code')
@@ -27,12 +28,13 @@ COMP_MERGE_FILE = os.path.join(INTERMEDIATE_DATA_PATH,'compustat_merge.pkl')
 COMPUSTAT_DEALSCAN_LINK = os.path.join(RAW_DATA_PATH,'ds_cs_link_April_2018_post.xlsx')
 
 DIRECTORY_LIST = [FINAL_OUTPUT_PATH, CODE_PATH,DATA_PATH,INTERMEDIATE_DATA_PATH,\
-                  SQL_LITE_PATH,RAW_DATA_PATH,INPUTS_DATA_PATH]
+                  SQL_LITE_PATH,RAW_DATA_PATH,INPUTS_DATA_PATH,RAW_DATA_SDC_PATH]
 
 START_DATE = pd.to_datetime('2003-01-01')
 END_DATE = pd.to_datetime('2020-12-31')
 
 # Set to 1 if you want all of the raw data to be pulled
-PULL_RAW = 1
+PULL_RAW = 0
 GET_WRDS_DEALSCAN_LINK = 0
-MERGE_DEALSCAN_COMPUSTAT = 1
+MERGE_DEALSCAN_COMPUSTAT = 0
+READ_IN_SDC = 1
