@@ -1,7 +1,8 @@
 from settings import DEALSCAN_MERGE_FILE,INTERMEDIATE_DATA_PATH,START_DATE, \
-    END_DATE,SQLITE_FILE,COMP_MERGE_FILE
+    END_DATE,SQLITE_FILE,COMP_MERGE_FILE,EQUITY_ISSUANCE_TABLE,DEBT_ISSUANCE_TABLE
 import os
 import ibis
+import pandas as pd
 
 def merge_data():
     '''This program will create the query using IBIS, execute the query, and save the file
@@ -154,3 +155,20 @@ def create_client():
     # For testing, set to 10000
     # ibis.options.sql.default_limit = 10000
     return ibis.sqlite.connect(SQLITE_FILE)
+
+def export_sdc(conn):
+    '''This file will read in the SDC tables using SQL and export them as csv's for Stata'''
+    for type in ['equity','debt']:
+        if type == 'equity':
+            table_name = EQUITY_ISSUANCE_TABLE
+            file_name = 'sdc_equity_issuance_all.csv'
+        elif type == 'debt':
+            table_name = DEBT_ISSUANCE_TABLE
+            file_name = 'sdc_debt_issuance_all.csv'
+
+        query = "SELECT * FROM " + table_name
+        df = pd.read_sql_query(query, conn)
+        # save the file to csv
+        file_loc = os.path.join(INTERMEDIATE_DATA_PATH,file_name)
+        df.to_csv(file_loc, index=False, mode='w')
+        print('Finished saving file: ' + file_loc)

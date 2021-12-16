@@ -7,10 +7,10 @@
 import os
 import wrds
 import sqlite3
-import pandas as pd
 
 from settings import DIRECTORY_LIST,PULL_RAW,MERGE_DEALSCAN_COMPUSTAT,GET_WRDS_DEALSCAN_LINK, \
-    SQLITE_FILE,READ_IN_SDC,EQUITY_ISSUANCE_TABLE,DEBT_ISSUANCE_TABLE,MA_ISSUANCE_TABLE,DELETE_SDC
+    SQLITE_FILE,READ_IN_SDC,EQUITY_ISSUANCE_TABLE,DEBT_ISSUANCE_TABLE,MA_ISSUANCE_TABLE,DELETE_SDC, \
+    EXPORT_SDC
 
 import pull_raw_wrds
 import merge_data
@@ -81,6 +81,10 @@ def main():
     #Import SDC platinum files
     if READ_IN_SDC ==1:
         read_in_sdc.read_in_sdc(conn)
+
+    #Export SDC files to csv for STATA
+    if EXPORT_SDC ==1:
+        merge_data.export_sdc(conn)
 
     # Commit and close the connection
     conn.commit()
