@@ -168,6 +168,8 @@ bys gvkey date_quarterly (fdate): keep if _n == 1
 rename bcoid borrowercompanyid
 label var borrowercompanyid "Dealscan Borrower Company ID"
 label var gvkey "Compustat Company ID"
+*Get 6 digit cusip for mering
+gen cusip_6 = substr(cusip,1,6)
 
 xtset gvkey date_quarterly
 *Now I have a proper panel

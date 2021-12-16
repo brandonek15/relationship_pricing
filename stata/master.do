@@ -17,4 +17,6 @@ do "$code_path/settings.do"
 do "$code_path/clean_compustat.do"
 do "$code_path/clean_fred.do"
 do "$code_path/clean_dealscan.do"
-do "$code_path/clean_sdc_equity.do"
+do "$code_path/clean_sdc.do"
+
+*Merge data together

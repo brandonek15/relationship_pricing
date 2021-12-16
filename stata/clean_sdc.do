@@ -35,8 +35,28 @@ foreach num_var in `numeric_vars' shares_desc {
 	destring `num_var', replace force
 }
 
+*Need to be able to merge on the CUSIPs - will be merging based off of the ultimate parent
+gen cusip_6 = parent_ultimate_cusip_6 
+
+*Create a date to merge on with
+gen month = substr(issue_date,1,2)
+gen date = substr(issue_date,4,2)
+gen year = "20" + substr(issue_date,7,2)
+destring month date year, replace
+gen date_daily = mdy(month,date,year)
+format date_daily %td
+gen date_quarterly = qofd(date_daily)
+format date_quarterly %tq
+label var date_quarterly "Quarterly Date"
+drop month date year issue_date
+
+
+*Todo am I going to be merging on quarterly data?
+*First need to collapse it to the issue_date? Basically need to collapse it down to quarterly data and then
+*We will merge it on.
+
 *Todo clean the names of the issuers and bookrunners
 save "$data_path/sdc_equity_clean", replace
 
 *Import SDC debt data
-import delimited using "$data_path/sdc_debt_issuance_all.csv", varnames(1) clear
+*import delimited using "$data_path/sdc_debt_issuance_all.csv", varnames(1) clear

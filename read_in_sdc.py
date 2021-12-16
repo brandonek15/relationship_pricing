@@ -21,7 +21,8 @@ COLSPECS_EQUITY = [(1, 9), (10, 40), (41, 161), (162, 171), (172, 202), \
             (625, 641), (642, 658), (659, 675), (676, 689), (690, 703), \
             (704, 716), (717, 729), (730, 737), (738, 758), \
             (759, 777), (778, 797), (798, 815), \
-            (816, 827), (828, 840), (838, 868), (869, 876), (877, 884)]
+            (816, 827), (828, 840), (838, 868), (869, 876), (877, 884), \
+            (885,894),(895,904),(905,914),(915,924),(925,931)]
 NAMES_EQUITY = ['issue_date', 'issuer', 'business_desc', 'sic', 'high_tech_ind', \
          'state', 'nation', 'ticker','ticker_exch', \
          'ind', 'bookrunners', 'all_managers', 'gross_spread_per_unit', 'management_fee_dol','underwriting_fee_dol', \
@@ -32,7 +33,8 @@ NAMES_EQUITY = ['issue_date', 'issuer', 'business_desc', 'sic', 'high_tech_ind',
          'orig_price_high', 'orig_price_low', 'orig_price_mid', 'shares_filed_local', 'shares_filed_global', \
          'amt_filed_local', 'amt_filed_global', 'ipo_ind', 'shares_offered_local', \
          'prim_shares_offered_local', 'sec_shares_offered_local', 'shares_offered_global', \
-         'yest_stock_price', 'stock_price_close_offer', 'spinoff_parent', 'perc_owned_before_spinoff','perc_owned_after_spinoff']
+         'yest_stock_price', 'stock_price_close_offer', 'spinoff_parent', 'perc_owned_before_spinoff','perc_owned_after_spinoff', \
+         'exch_listed','issuer_cusip_6','issuer_cusip_9','parent_immediated_cusip_6','parent_ultimate_cusip_6']
 
 COLSPECS_DEBT = [(1, 9), (10, 18), (19, 27), (28, 36), (37, 67), (68, 188), \
             (189, 198), (199, 229),(230, 244),(245, 259), (260, 266),(267, 282), \
@@ -42,7 +44,8 @@ COLSPECS_DEBT = [(1, 9), (10, 18), (19, 27), (28, 36), (37, 67), (68, 188), \
             (468, 479),(480, 494), (495, 507), (508, 516), (517, 530),  \
             (531, 543),(544, 559), (560, 605), (606, 615), (616, 633), (634, 642), \
             (643, 659), (660, 676), (677, 693), (694, 707), \
-            (708, 721), (722, 734), (735, 747), (748, 758), (759, 774)]
+            (708, 721), (722, 734), (735, 747), (748, 758), (759, 774), \
+                 (775,784),(785,794),(795,804),(805,811)]
 NAMES_DEBT = ['maturity_final','maturity','filing_date','issue_date', 'issuer', 'business_desc', \
               'sic', 'high_tech_ind', 'state', 'nation', 'ticker','ticker_exch', \
          'ind', 'bookrunners', 'all_managers', 'gross_spread_per_unit', 'management_fee_dol', \
@@ -51,47 +54,55 @@ NAMES_DEBT = ['maturity_final','maturity','filing_date','issue_date', 'issuer', 
         'gross_spread_dol', 'principal_local', 'principal_global',  'proceeds_local', 'proceeds_global', \
         'offer_price', 'sec_type', 'desc', 'currency', 'marketplace', 'prim_exch', \
         'orig_price_high', 'orig_price_low', 'orig_price_mid', 'shares_filed_local', \
-        'shares_filed_global', 'amt_filed_local', 'amt_filed_global', 'coupon', 'offer_ytm']
+        'shares_filed_global', 'amt_filed_local', 'amt_filed_global', 'coupon', 'offer_ytm', \
+        'issuer_cusip_6','issuer_cusip_9','parent_immediated_cusip_6','parent_ultimate_cusip_6']
 
 def read_in_sdc(conn):
     '''This function will loop over all of the equity, debt, files and then upload them
     to a database'''
 
-    year = 2020
-    year = 2020
     #Have data through 2020 so need to make the range go through 2021
-    for year in range(2000,2021,1):
+    for year in range(2020,2021,1):
         #Loop over debt and equity
-        #for type in ['equity','debt']:
-        for type in ['equity']:
+        for type in ['equity','debt']:
+        #for type in ['debt']:
             if type == 'equity':
                 table_name = EQUITY_ISSUANCE_TABLE
                 colspecs = COLSPECS_EQUITY
                 names = NAMES_EQUITY
+                loop_list = ['single']
             elif type == 'debt':
                 table_name = DEBT_ISSUANCE_TABLE
                 colspecs = COLSPECS_DEBT
                 names = NAMES_DEBT
+                loop_list = ['1','2']
+            for loop_iter in loop_list:
+                if loop_iter == 'single':
+                    suffix = ''
+                elif loop_iter == '1':
+                    suffix = '_1'
+                elif loop_iter == '2':
+                    suffix = '_2'
 
-            file_name = type + '_issuance_' + str(year) + '.txt'
-            file_location = os.path.join(RAW_DATA_SDC_PATH,file_name)
-            #Read in text file
-            # Load in the equity issuance file
-            #This file will import the txt file, create and create the appropriate column headers for stata.
-            df = pd.read_fwf(file_location,colspecs = colspecs,names=names,index_col=False)
-            #Weird problem with reading in the spinoff parent in that sometimes the column is shifted too far right
-            if type == 'equity':
-                #Remove string characters from stock_price_close_offer
-                df['stock_price_close_offer'] = df['stock_price_close_offer'].str.replace('[a-zA-Z]+','')
-                #If it ends with a decimal place, remove it
-                df['stock_price_close_offer'] = df['stock_price_close_offer'].str.replace('\.$', '')
-                #remove numeric characters from string parent name
-                df['spinoff_parent']= df['spinoff_parent'].str.replace('\d+','')
-            #Get the aggregated dataframe based off of the one we read in
-            df = aggregate_df(df)
-            #Save it
-            df.to_sql(name=table_name, con=conn, if_exists="append", index=False)
-            print('added file' + file_location + ' to database')
+                file_name = type + '_issuance_' + str(year) + suffix + '.txt'
+                file_location = os.path.join(RAW_DATA_SDC_PATH,file_name)
+                #Read in text file
+                # Load in the equity issuance file
+                #This file will import the txt file, create and create the appropriate column headers for stata.
+                df = pd.read_fwf(file_location,colspecs = colspecs,names=names,index_col=False)
+                #Weird problem with reading in the spinoff parent in that sometimes the column is shifted too far right
+                if type == 'equity':
+                    #Remove string characters from stock_price_close_offer
+                    df['stock_price_close_offer'] = df['stock_price_close_offer'].str.replace('[a-zA-Z]+','')
+                    #If it ends with a decimal place, remove it
+                    df['stock_price_close_offer'] = df['stock_price_close_offer'].str.replace('\.$', '')
+                    #remove numeric characters from string parent name
+                    df['spinoff_parent']= df['spinoff_parent'].str.replace('\d+','')
+                #Get the aggregated dataframe based off of the one we read in
+                df = aggregate_df(df)
+                #Save it
+                df.to_sql(name=table_name, con=conn, if_exists="append", index=False)
+                print('added file' + file_location + ' to database')
 
 def get_list_of_indices(date_array):
     '''This function returns the list of indices to create a dataframe'''
