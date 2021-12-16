@@ -47,6 +47,11 @@ def pull_raw(wrds_conn,conn):
                    , heading='borrowerbase',columns_to_pull=cols,dtypes_for_upload=dtypes)
 
     dtypes = {'facilityid': int}
+    cols =['FacilityID','BaseRate','Fee','MinBps','MaxBps','AllInDrawn','AllInUndrawn']
+    retrieve_table(wrds=wrds_conn, connection=conn, library='dealscan',table = 'currfacpricing' \
+                   , heading='currfacpricing',columns_to_pull=cols,dtypes_for_upload=dtypes)
+
+    dtypes = {'facilityid': int}
     cols =['FacilityID','Lender','LenderRole','BankAllocation','AgentCredit','LeadArrangerCredit']
     retrieve_table(wrds=wrds_conn, connection=conn, library='dealscan',table = 'lendershares' \
                    , heading='lendershares',columns_to_pull=cols,dtypes_for_upload=dtypes)
@@ -70,6 +75,7 @@ def pull_raw(wrds_conn,conn):
     cols = ['gvkey','conm','cusip','cik','sic','naics']
     retrieve_table(wrds_conn, conn, 'comp', 'names', 'comp_identity', \
                    columns_to_pull=cols,dtypes_for_upload=dtypes)
+
 
 def retrieve_table(wrds, connection, library, table, heading, columns_to_pull='all', \
                    dtypes_for_upload = None):

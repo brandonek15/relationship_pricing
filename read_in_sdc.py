@@ -8,6 +8,7 @@ import numpy as np
 #todo It is possible that the column lengths would change when I download different years.
 #If this occurs, need to figure out a more automated way. Even worse, the order of the columns
 #See if I can standardize them in SDC
+#todo need to download all years
 
 COLSPECS_EQUITY = [(1, 9), (10, 40), (41, 161), (162, 171), (172, 202), \
             (203, 217), (218, 232), (233, 239), (240, 255), \

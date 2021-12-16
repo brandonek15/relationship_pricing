@@ -37,9 +37,9 @@ DIRECTORY_LIST = [FINAL_OUTPUT_PATH, CODE_PATH,DATA_PATH,INTERMEDIATE_DATA_PATH,
 START_DATE = pd.to_datetime('2003-01-01')
 END_DATE = pd.to_datetime('2020-12-31')
 #Delete SDC Tables Only set to 1 if you are sure you want to delete
-DELETE_SDC =1
+DELETE_SDC =0
 # Set to 1 if you want all of the raw data to be pulled
 PULL_RAW = 0
 GET_WRDS_DEALSCAN_LINK = 0
-MERGE_DEALSCAN_COMPUSTAT = 0
-READ_IN_SDC = 1
+MERGE_DEALSCAN_COMPUSTAT = 1
+READ_IN_SDC = 0

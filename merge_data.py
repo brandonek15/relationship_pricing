@@ -46,9 +46,19 @@ def merge_dealscan(client):
     marketsegment = client.table('marketsegment')
     company = client.table('company')
     bb = client.table('borrowerbase')
+    pricing = client.table('currfacpricing')
     lender_shares = client.table('lendershares')
     fin_cov = client.table('financialcovenant')
     worth_cov = client.table('networthcovenant')
+
+    #Aggregate pricing to make it only observation per facilityid
+    pricing = pricing.group_by('facilityid').aggregate([
+        pricing['baserate'].max().name('baserate'),
+        pricing['minbps'].max().name('minbps'),
+        pricing['maxbps'].max().name('maxbps'),
+        pricing['allindrawn'].max().name('allindrawn'),
+        pricing['allinundrawn'].max().name('allinundrawn')
+        ])
 
     # Keep only observations from the facility file that are starting in date range
     facility = facility[facility['facilitystartdate'].between(START_DATE, END_DATE)]
@@ -56,11 +66,6 @@ def merge_dealscan(client):
     #Merge on company data by mering on Company ID
     joined = facility.inner_join(company, [
         facility['borrowercompanyid'] == company['companyid']
-    ])
-
-    # Add package data by merging on packageID
-    joined = joined.left_join(package, [
-        facility['packageid'] == marketsegment['packageid']
     ])
 
     # Add marketsegment data by merging on facilityID
@@ -72,8 +77,14 @@ def merge_dealscan(client):
     joined = joined.left_join(bb, [
         facility['facilityid'] == bb['facilityid']
     ])
+    joined = joined.left_join(pricing, [
+        facility['facilityid'] == pricing['facilityid']
+    ])
     joined = joined.left_join(lender_shares, [
         facility['facilityid'] == lender_shares['facilityid']
+    ])
+    joined = joined.left_join(package, [
+        facility['packageid'] == package['packageid']
     ])
     joined = joined.left_join(fin_cov, [
         facility['packageid'] == fin_cov['packageid']
@@ -81,6 +92,7 @@ def merge_dealscan(client):
     joined = joined.left_join(worth_cov, [
         facility['packageid'] == worth_cov['packageid']
     ])
+
     #Because there are two variables called covenanttype, I need to rename one of them
     covenanttype_nw = (worth_cov.covenanttype).name('covenanttype_nw')
 
@@ -89,10 +101,13 @@ def merge_dealscan(client):
                          company['ticker'],company['publicprivate'],
                          company['country'], company['institutiontype'],
                          company['primarysiccode'],
-                         package['SalesAtClose'],package['DealAmount'],
-                         package['RefinancingIndicator'],
+                         package['salesatclose'],package['dealamount'],
+                         package['refinancingindicator'],
                          marketsegment['marketsegment'],
                          bb['borrowerbasetype'],bb['borrowerbasepercentage'],
+                         pricing['baserate'],
+                         pricing['minbps'], pricing['maxbps'],
+                         pricing['allindrawn'], pricing['allinundrawn'],
                          fin_cov['covenanttype'],fin_cov['initialratio'],
                          worth_cov['baseamt'],
                          worth_cov['percentofnetincome'],covenanttype_nw,

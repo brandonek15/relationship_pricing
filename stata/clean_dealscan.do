@@ -87,6 +87,15 @@ gen end_date_quarterly = qofd(facilityenddate)
 format end_date_quarterly %tq
 label var end_date_quarterly "Quarterly End Date"
 
+*Merge on FRED rate data to make a comparable spread variable
+merge m:1 date_quarterly using "$data_path/fred_rates", nogen keep(1 3)
+*We will make all spreads relative to libor - so need to make adjustments for all other ones.
+*todo think about if this is the right measure of rate?
+gen spread = allindrawn 
+replace spread = allindrawn + dprime - lior3m if baserate == "Prime"
+replace spread = allindrawn if baserate == "Fixed Rate"
+*Will assume all other rates are spreads over libor (they are very small, collectively like 100 obs)
+
 /*
 *Todo
 *Do other data cleaning? Maybe only keep certain observations - make sure currencies match up?
