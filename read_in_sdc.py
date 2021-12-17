@@ -62,10 +62,9 @@ def read_in_sdc(conn):
     to a database'''
 
     #Have data through 2020 so need to make the range go through 2021
-    for year in range(2020,2021,1):
+    for year in range(2000,2021,1):
         #Loop over debt and equity
         for type in ['equity','debt']:
-        #for type in ['debt']:
             if type == 'equity':
                 table_name = EQUITY_ISSUANCE_TABLE
                 colspecs = COLSPECS_EQUITY

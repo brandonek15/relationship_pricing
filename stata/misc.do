@@ -29,4 +29,5 @@ isid cusip_6 date_quarterly
 *Todo, figure out how to deal with bookrunners? some sort of egen to combine information? Need to standardize names
 
 
-
+use "$data_path/compustat_clean", clear
+bys cusip_6 date_quarterly: gen N = _N

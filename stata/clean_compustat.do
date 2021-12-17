@@ -178,5 +178,23 @@ bys cusip_6 date_quarterly (atq): keep if _n ==_N
 
 *And also need to be able to merge on dealscan data that won't have a unique borrowercompanyid
 
+*Sometimes two compustat firms have the same borrowercompanyid
+*When this happens, keep the one with the higher assets and if they are still tied, the one with the larger cik
+*What I will do is save two datasets and then append back together. 1st is those with borrowercompanyid and then those without
+preserve
+drop if mi(borrowercompanyid)
+bys borrowercompanyid date_quarterly (atq cik): keep if _n == _N
+isid borrowercompanyid date_quarterly
+save "$data_path/stata_temp/compustat_with_bcid", replace
+restore
+
+preserve 
+keep if mi(borrowercompanyid)
+save "$data_path/stata_temp/compustat_without_bcid", replace
+restore
+use "$data_path/stata_temp/compustat_without_bcid", clear
+append using "$data_path/stata_temp/compustat_with_bcid"
+*Now if I have a borrowercompanyid, then it is unique by quarter
+
 *Now I have a proper panel
 save "$data_path/compustat_clean", replace

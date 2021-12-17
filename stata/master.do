@@ -20,3 +20,4 @@ do "$code_path/clean_dealscan.do"
 do "$code_path/clean_sdc.do"
 
 *Merge data together
+do "$code_path/merge_data.do"

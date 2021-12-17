@@ -121,3 +121,8 @@ drop lender lenderrole bankallocation agentcredit leadarrangercredit
 duplicates drop
 isid facilityid
 save "$data_path/dealscan_facility_level", replace
+
+*Todo - think of a way to collapse this down to the quarterly level. Ideally want 
+*An indicator for whether a loan occured in that quarter (easy)
+*The identies of revolving lenders, identities of term lenders, a way to merge back shares?
+*A discount for observations where it can be estimated
