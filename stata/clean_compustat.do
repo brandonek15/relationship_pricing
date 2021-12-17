@@ -171,6 +171,12 @@ label var gvkey "Compustat Company ID"
 *Get 6 digit cusip for mering
 gen cusip_6 = substr(cusip,1,6)
 
-xtset gvkey date_quarterly
+*Need to have multiple unique identifiers: gvkey date_quarterly, cusip_6 date_quarterly
+isid gvkey date_quarterly
+*Could look at each case individually and choose, but instead I will just keep the biggest one
+bys cusip_6 date_quarterly (atq): keep if _n ==_N
+
+*And also need to be able to merge on dealscan data that won't have a unique borrowercompanyid
+
 *Now I have a proper panel
 save "$data_path/compustat_clean", replace

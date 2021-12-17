@@ -2,16 +2,23 @@
 *And make a dataset set up for doing summary stats at origination
 *And for the regression analysis.
 use "$data_path/compustat_clean", clear
-isid gvkey date_quarterly
-*Only keep observations that can match to dealscan and springing cov
-drop if mi(borrowercompanyid)
-drop if mi(cik)
+
+*Todo look into why I am not merging more of these?
+merge 1:1 cusip_6 date_quarterly using "$data_path/sdc_equity_clean_quarterly"
+rename _merge merge_equity
+
+merge 1:1 cusip_6 date_quarterly using "$data_path/sdc_conv_clean_quarterly"
+rename _merge merge_conv
+
+*Merge on SDC data
+
 *Sometimes two compustat firms have the same borrowercompanyid
 *When this happens, keep the one with the higher assets and if they are still tied, the one with the larger cik
 bys borrowercompanyid date_quarterly (atq cik): keep if _n == _N
+isid borrowercompanyid date_quarterly
+
 
 *Now we add dealscan data to the panel
-isid borrowercompanyid date_quarterly
 merge 1:m borrowercompanyid date_quarterly using ///
  "$data_path/dealscan_facility_level", keep(1 3)
 gen matched_dealscan = (_merge ==3)

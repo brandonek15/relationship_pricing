@@ -50,13 +50,67 @@ format date_quarterly %tq
 label var date_quarterly "Quarterly Date"
 drop month date year issue_date
 
+*create an IPO indicator
+gen ipo = (ipo_ind == "Yes")
+drop ipo_ind
 
-*Todo am I going to be merging on quarterly data?
-*First need to collapse it to the issue_date? Basically need to collapse it down to quarterly data and then
-*We will merge it on.
+*Want to create a variable for number of units (usually shares)
+*First rely on shares from the desc, then fill it in sequentialy if missing
+gen num_units = shares_desc 
+replace num_units = shares_offered_local if missing(num_units)
+
+*Want to seperate convertable bonds to another dataset and then merge it on later?
+gen equity = 1
+replace equity = 0 if regex(sec_type,"Cvt")
+replace equity = 0 if regex(sec_type,"Conv")
+replace equity = 0 if regex(sec_type,"Debt Sec")
+gen debt =  (regex(sec_type,"Debt Sec"))
+gen conv = (equity ==0 & debt ==0)
 
 *Todo clean the names of the issuers and bookrunners
+
+preserve
+keep if equity ==1
 save "$data_path/sdc_equity_clean", replace
+restore
+
+preserve
+keep if conv ==1
+save "$data_path/sdc_conv_clean", replace
+restore
+
+foreach type in "equity" "conv" {
+	use "$data_path/sdc_`type'_clean", clear
+
+	local collapse_vars sec_type
+	local max_vars ipo equity debt conv
+	local last_vars issuer business_desc currency bookrunners all_managers
+	local sum_vars management_fee_dol underwriting_fee_dol selling_conc_dol ///
+		reallowance_dol gross_spread_dol proceeds_local num_units
+	local mean_vars gross_spread_per_unit gross_spread_perc management_fee_perc underwriting_fee_perc ///
+		selling_conc_perc reallowance_perc 
+	local weight_var proceeds_local
+
+	collapse (rawsum) `sum_vars' (max) `max_vars' (last) `last_vars' ///
+		(mean) `mean_vars' [aweight=`weight_var'], by(cusip_6 date_quarterly)
+
+	foreach var in `sum_vars' `mean_vars' {
+		replace `var' = . if `var' ==0
+	}
+
+	rename proceeds_local proceeds
+	*Rename these so we can have different sets of these variables
+	foreach var of varlist management_fee_dol-reallowance_perc {
+		rename `var' `var'_`type'
+	}
+	*Most important variables: The gross spread_percent, gross_spread_dollar, the proceeds, the cusip_6 and the date_quarterly
+	*From here I have whether there is a deal (make an indicator for whether it gets merged on?
+	*And then I also have data on the "price" and the size
+	save  "$data_path/sdc_`type'_clean_quarterly", replace
+	isid cusip_6 date_quarterly
+
+}
+
 
 *Import SDC debt data
-*import delimited using "$data_path/sdc_debt_issuance_all.csv", varnames(1) clear
+import delimited using "$data_path/sdc_debt_issuance_all.csv", varnames(1) clear
