@@ -170,6 +170,8 @@ label var borrowercompanyid "Dealscan Borrower Company ID"
 label var gvkey "Compustat Company ID"
 *Get 6 digit cusip for mering
 gen cusip_6 = substr(cusip,1,6)
+*Drop obs without cusip_6
+drop if mi(cusip_6)
 
 *Need to have multiple unique identifiers: gvkey date_quarterly, cusip_6 date_quarterly
 isid gvkey date_quarterly

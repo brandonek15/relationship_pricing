@@ -31,3 +31,10 @@ isid cusip_6 date_quarterly
 
 use "$data_path/compustat_clean", clear
 bys cusip_6 date_quarterly: gen N = _N
+
+/* If I want to merge a different way
+joinby borrowercompanyid date_quarterly using "$data_path/dealscan_facility_level", ///
+unmatched(master) _merge(dealscan_merge_cat)
+*Now I have a dataset that may have multiple observations for the same cusip_6 date_quarterly if there are multiple
+*Facilities. It is a company x quarter x facility dataset
+save "$data_path/merged_data_comp_quart_fac", replace

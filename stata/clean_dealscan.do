@@ -135,30 +135,26 @@ save "$data_path/dealscan_facility_level", replace
 *Now we will get the discounts by packageid
 do "$code_path/prep_discount_regression_data.do"
 
-*Collapsing to the package level. Want
+*Collapsing to the quarterly level. Want
 *An indicator for whether a loan occured in that package
 *The facilityid of the revolving, term, and other loans (the largest ones)
 *A discount for observations where it can be estimated
 use "$data_path/dealscan_facility_level", clear
-sort packageid facilityid
-br packageid facilityid loantype facilityamt
-bys packageid (facilityid): gen N = _N
 
 foreach type in term rev other {
-	egen `type'_max = max(facilityamt) if `type'_loan ==1, by(packageid date_quarterly)
+	egen `type'_max = max(facilityamt) if `type'_loan ==1, by(borrowercompanyid date_quarterly)
 	gen facilityid_`type'_max = facilityid if (facilityamt==`type'_max & `type'_loan ==1)
 	*This will be the facilityid of the the biggest type of loan in the package (to merge on later)
-	egen facilityid_`type' = max(facilityid_`type'_max), by(packageid date_quarterly)
+	egen facilityid_`type' = max(facilityid_`type'_max), by(borrowercompanyid date_quarterly)
 	*Want an indicator for whether the package has this type of loan in it
-	egen `type'_loan_max = max(`type'_loan), by(packageid date_quarterly)	
+	egen `type'_loan_max = max(`type'_loan), by(borrowercompanyid date_quarterly)	
 	drop `type'_max facilityid_`type'_max
 }
-*br packageid loantype facilityamt facilityid facilityid_*
+*br borrowercompanyid loantype facilityamt facilityid facilityid_*
 
-keep packageid *_max facilityid_* date_quarterly borrowercompanyid
+keep borrowercompanyid *_max facilityid_* date_quarterly borrowercompanyid
 rename *_max *
 duplicates drop
-merge 1:1 packageid date_quarterly using "$data_path/stata_temp/dealscan_discounts", assert (1 3) nogen
-save "$data_path/dealscan_package_level", replace
-*Now to collapse this down to the quarterly level.
-use "$data_path/dealscan_package_level", clear
+merge 1:1 borrowercompanyid date_quarterly using "$data_path/stata_temp/dealscan_discounts", assert (1 3) nogen
+isid borrowercompanyid date_quarterly
+save "$data_path/dealscan_quarterly", replace
