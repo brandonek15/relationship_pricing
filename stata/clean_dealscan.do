@@ -68,7 +68,7 @@ merge 1:1 facilityid lender using  "$data_path/stata_temp/dealscan_indicators", 
 
 *Now we need to use loan types 
 *Create indicators for the different types of loans
-gen revolving_credit = ///
+gen rev_loan = ///
  (loantype == "364-Day Facility" | loantype  == "Revolver/Line < 1 Yr." | ///
  loantype  == "Revolver/Line >= 1 Yr." | loantype  == "Revolver/Term Loan")
 gen institutional_term_loan = 0
@@ -78,7 +78,8 @@ foreach type in B C D E F G H I J K {
 gen amortizing_term_loan = (loantype == "Term Loan" | loantype == "Term Loan A")
 *Create a generic term loan indicator
 gen term_loan = institutional_term_loan + amortizing_term_loan
-
+*Create indicitator for other loan that isn't term or revolving credit
+gen other_loan = rev_loan ==0 & term_loan ==0
 *Create quarter date variable.
 gen date_quarterly = qofd(facilitystartdate)
 format date_quarterly %tq
@@ -89,21 +90,30 @@ label var end_date_quarterly "Quarterly End Date"
 
 *Merge on FRED rate data to make a comparable spread variable
 merge m:1 date_quarterly using "$data_path/fred_rates", nogen keep(1 3)
-*We will make all spreads relative to libor - so need to make adjustments for all other ones.
-*todo think about if this is the right measure of rate?
+*Make some fair adjustments to rates- don't want to throw it out of the sample
+replace minbps = allindrawn if minbps>=10000 //100% interest is not realistic
+
 gen spread = allindrawn 
-replace spread = allindrawn + dprime - lior3m if baserate == "Prime"
-replace spread = allindrawn if baserate == "Fixed Rate"
+*allindrawn is the amount the borrower pays in bps over LIBOR for each dollar drawn, including spread and annual/facility fee
+*Will make another measure of spread with minbps (note that maxbps and minbps are almost always the same)
+gen spread_2 = minbps
+replace spread_2 = allindrawn + dprime - lior3m if baserate == "Prime"
+replace spread_2 = allindrawn if baserate == "Fixed Rate"
 *Will assume all other rates are spreads over libor (they are very small, collectively like 100 obs)
 
 /*
 *Todo
-*Do other data cleaning? Maybe only keep certain observations - make sure currencies match up?
-*Keep only US,USD loans
+*Do other data cleaning? Maybe only keep certain observations ?
+*Keep only US,USD loans?
 *May want to change later
 keep if country == "USA"
 keep if currency == "United States Dollars"
 */
+
+*Make variables for discount regression
+*First make sure the currencies match up
+replace facilityamt = facilityamt*exchangerate
+gen log_facilityamt = log(facilityamt)
 
 isid facilityid lender
 save "$data_path/dealscan_facility_lender_level", replace
@@ -122,7 +132,33 @@ duplicates drop
 isid facilityid
 save "$data_path/dealscan_facility_level", replace
 
-*Todo - think of a way to collapse this down to the quarterly level. Ideally want 
-*An indicator for whether a loan occured in that quarter (easy)
-*The identies of revolving lenders, identities of term lenders, a way to merge back shares?
+*Now we will get the discounts by packageid
+do "$code_path/prep_discount_regression_data.do"
+
+*Collapsing to the package level. Want
+*An indicator for whether a loan occured in that package
+*The facilityid of the revolving, term, and other loans (the largest ones)
 *A discount for observations where it can be estimated
+use "$data_path/dealscan_facility_level", clear
+sort packageid facilityid
+br packageid facilityid loantype facilityamt
+bys packageid (facilityid): gen N = _N
+
+foreach type in term rev other {
+	egen `type'_max = max(facilityamt) if `type'_loan ==1, by(packageid date_quarterly)
+	gen facilityid_`type'_max = facilityid if (facilityamt==`type'_max & `type'_loan ==1)
+	*This will be the facilityid of the the biggest type of loan in the package (to merge on later)
+	egen facilityid_`type' = max(facilityid_`type'_max), by(packageid date_quarterly)
+	*Want an indicator for whether the package has this type of loan in it
+	egen `type'_loan_max = max(`type'_loan), by(packageid date_quarterly)	
+	drop `type'_max facilityid_`type'_max
+}
+*br packageid loantype facilityamt facilityid facilityid_*
+
+keep packageid *_max facilityid_* date_quarterly borrowercompanyid
+rename *_max *
+duplicates drop
+merge 1:1 packageid date_quarterly using "$data_path/stata_temp/dealscan_discounts", assert (1 3) nogen
+save "$data_path/dealscan_package_level", replace
+*Now to collapse this down to the quarterly level.
+use "$data_path/dealscan_package_level", clear

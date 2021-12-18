@@ -1,22 +1,47 @@
 *Get the facility level data
 use "$data_path/dealscan_facility_level", clear
-*Keep only observations with both a term loan and a revolving loan
-egen max_revolving_credit = max(revolving_credit), by(packageid)
-egen max_term_loan = max(term_loan), by(packageid)
-keep if max_revolving_credit == 1 & max_term_loan ==1
-drop max_revolving_credit max_term_loan
+*Keep only observations that are a term loan and revolving line of credit
+keep if term_loan ==1 | rev_loan ==1
 
-*egen groupby?
+*I will use facilityid x revolving fixed effects.
+*This gives me an coefficient for for facility id x  revolving and facilityid x term (through the FE). 
+*The difference between the two will give me the "discount"
+egen packageid_rev_loan_quarter = group(packageid rev_loan date_quarterly)
+*Loop over different measures of the discount
+foreach spread_type in standard alternate {
+	if "`spread_type'" == "standard" {
+		local spread_var spread
+		local spread_suffix 1
+	}
+	if "`spread_type'" == "alternate" {
+		local spread_var spread_2
+		local spread_suffix 2
+	}
+	
+	foreach discount_type in simple controls {
+	
+		if "`discount_type'" == "simple" {
+			local controls 
+		}
+		if "`discount_type'" == "controls" {
+			local controls log_facilityamt maturity
+		}
 
-*This is too slow, think of another way
-*Now need to create an indicator for every faciliy id * the indicator for revolving credit
-levelsof facilityid, local(facilityids)
-foreach facid of local facilityids {
-	gen fac_rev_`facid' = (facilityid==`facid' & revolving_credit ==1)
+		reghdfe `spread_var' `controls', absorb(packageid_rev_loan, savefe) keepsingletons
+		rename __hdfe1__ fe_coeff
+		*Need to spread the fe_coeff by
+		gen fe_coeff_term = fe_coeff if rev_loan==0
+		gen fe_coeff_rev = fe_coeff if rev_loan ==1
+		egen fe_coeff_term_sp = max(fe_coeff_term), by(packageid)
+		egen fe_coeff_rev_sp = max(fe_coeff_rev), by(packageid)
+		gen rev_discount_`spread_suffix'_`discount_type' = fe_coeff_term_sp - fe_coeff_rev_sp
+		drop fe_coeff*
+	}
 }
-
-*What if I instead use facilityid x revolving fixed effects.
-*This gives me an indicator for facility id x  revolving and facilityid x term. The difference
-*Between the two will give me the "discount"
-
-*What I want is deal fixed effects and dealFE * revolving indicators
+sort packageid rev_loan facilityid
+br packageid facilityid rev_loan rev_discount*
+*Now I only want to keep the packageid and rev_discounts
+keep packageid rev_discount* date_quarterly
+duplicates drop
+isid packageid date_quarterly
+save "$data_path/stata_temp/dealscan_discounts", replace
