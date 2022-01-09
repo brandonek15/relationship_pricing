@@ -15,14 +15,15 @@ append using "$data_path/stata_temp/compustat_without_bcid"
 isid cusip_6 date_quarterly
 
 *Merge on SDC data
-*Todo look into why I am not merging more of these? Cusip6 seems not to be working super well
-merge 1:1 cusip_6 date_quarterly using "$data_path/sdc_equity_clean_quarterly"
+*Merge doesn't get everything but that is okay. Sometimes it is private, so won't be in compustat. Othertiems
+*The company is not around anymore, othertimes it isn't merged bc the IPO would occur before there is compustat data.
+merge 1:1 cusip_6 date_quarterly using "$data_path/sdc_equity_clean_quarterly", update
 rename _merge merge_equity
 
-merge 1:1 cusip_6 date_quarterly using "$data_path/sdc_conv_clean_quarterly"
+merge 1:1 cusip_6 date_quarterly using "$data_path/sdc_conv_clean_quarterly", update
 rename _merge merge_conv
 
-merge 1:1 cusip_6 date_quarterly using "$data_path/sdc_debt_clean_quarterly"
+merge 1:1 cusip_6 date_quarterly using "$data_path/sdc_debt_clean_quarterly", update
 rename _merge merge_debt
 isid cusip_6 date_quarterly
 
@@ -34,8 +35,3 @@ rev_discount_1_controls rev_discount_2_simple rev_discount_2_controls merge_equi
 gross_spread_dol_equity gross_spread_perc_equity proceeds_equity merge_conv ///
 gross_spread_dol_conv gross_spread_perc_conv proceeds_conv merge_debt ///
 gross_spread_dol_debt gross_spread_perc_debt proceeds_debt
-
-*Todo - find out a good way to link identities of lenders/ boorunners/managers
-*Todo - put identifies of lenders/shares into dealscan quarterly (using facilityid)
-*Need to think of a good way to look over time. We have our firm identifier (cusip_6) and all the info we would need
-*

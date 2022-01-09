@@ -53,6 +53,14 @@ program define clean_sdc
 	label var date_quarterly "Quarterly Date"
 	drop month date year issue_date
 
+	*Keep only deals done in dollars (can adjust this later)
+	keep if currency == "US" | mi(currency)
+	*Create categories of deal
+	gen public = (regex(marketplace,"Public") | regex(marketplace,"Shelf") ///
+	 | regex(marketplace,"Registration") | regex(marketplace,"Universal"))
+	gen private = (regex(marketplace,"Private"))
+	gen withdrawn = (marketplace == "Withdrawn")
+	
 	*Todo clean the names of the issuers and bookrunners
 
 end
@@ -116,11 +124,15 @@ replace num_units = shares_filed_local if mi(num_units)
 gen ipo = 0
 save "$data_path/sdc_debt_clean", replace
 
+/*
+use "$data_path/sdc_equity_clean", clear
+*/
+
 foreach type in "equity" "conv" "debt" {
 
 	use "$data_path/sdc_`type'_clean", clear
 
-	local max_vars ipo equity debt conv
+	local max_vars ipo equity debt conv public private withdrawn
 	local last_vars issuer business_desc currency bookrunners all_managers
 	local sum_vars management_fee_dol underwriting_fee_dol selling_conc_dol ///
 		reallowance_dol gross_spread_dol proceeds_local num_units
@@ -138,12 +150,15 @@ foreach type in "equity" "conv" "debt" {
 	rename proceeds_local proceeds
 	*Rename these so we can have different sets of these variables
 	rename * *_`type'
-	rename cusip_6_`type' cusip_6
-	rename date_quarterly_`type' date_quarterly
+	*For these variables, they are common accross the datasets
+	foreach remove_type_var in cusip_6 date_quarterly equity conv debt {
+		rename `remove_type_var'_`type' `remove_type_var'
+	}
+	
 	*Most important variables: The gross spread_percent, gross_spread_dollar, the proceeds, the cusip_6 and the date_quarterly
 	*From here I have whether there is a deal (make an indicator for whether it gets merged on?
 	*And then I also have data on the "price" and the size
-	save  "$data_path/sdc_`type'_clean_quarterly", replace
 	isid cusip_6 date_quarterly
+	save  "$data_path/sdc_`type'_clean_quarterly", replace
 
 }

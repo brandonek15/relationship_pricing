@@ -38,3 +38,12 @@ unmatched(master) _merge(dealscan_merge_cat)
 *Now I have a dataset that may have multiple observations for the same cusip_6 date_quarterly if there are multiple
 *Facilities. It is a company x quarter x facility dataset
 save "$data_path/merged_data_comp_quart_fac", replace
+
+
+/*
+use "$data_path/merged_data_comp_quart", clear
+sort cusip_6 date_quarterly
+br merge_equity conm issuer_equity date_quarterly cusip_6 cusip cik public_equity private_equity withdrawn_equity
+br conm issuer_equity cik date_quarterly merge_equity  cusip_6 borrowercompanyid  merge_dealscan
+br merge_equity conm issuer_equity date_quarterly cusip_6 cusip cik public private withdrawn if merge_equity == 2
+*/

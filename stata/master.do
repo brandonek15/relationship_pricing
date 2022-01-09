@@ -21,3 +21,4 @@ do "$code_path/clean_sdc.do"
 
 *Merge data together
 do "$code_path/merge_data.do"
+do "$code_path/prep_merged_data.do"
