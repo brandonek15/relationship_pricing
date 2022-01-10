@@ -20,3 +20,4 @@ order cusip_6 date_quarterly equity debt conv loan
 *based off of whether past business is from same lender/bookrunner
 *E.g. 1 if equity issuance this quarter with loan from same institution as bookrunner
 *     0 if eqauity issuance this quarter with loan from diffirent institution as bookrunner
+save "$data_path/merged_data_comp_quart_clean", replace

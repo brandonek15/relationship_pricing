@@ -32,6 +32,8 @@ isid cusip_6 date_quarterly
 use "$data_path/compustat_clean", clear
 bys cusip_6 date_quarterly: gen N = _N
 
+use "$data_path/dealscan_quarterly", clear
+
 /* If I want to merge a different way
 joinby borrowercompanyid date_quarterly using "$data_path/dealscan_facility_level", ///
 unmatched(master) _merge(dealscan_merge_cat)

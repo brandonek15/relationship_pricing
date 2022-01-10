@@ -118,13 +118,6 @@ gen log_facilityamt = log(facilityamt)
 isid facilityid lender
 save "$data_path/dealscan_facility_lender_level", replace
 
-*Create datasets with only lender variables that can be merged on later - These are only for
-*Measuring who gets the relationship benefits
-use "$data_path/dealscan_facility_lender_level", clear
-keep facilityid lender lenderrole bankallocation agentcredit leadarrangercredit
-isid facilityid lender
-save "$data_path/dealscan_lender_level", replace
-
 *Create a datset with only facility variables that can used in analyses
 use "$data_path/dealscan_facility_lender_level", clear
 drop lender lenderrole bankallocation agentcredit leadarrangercredit
@@ -134,6 +127,8 @@ save "$data_path/dealscan_facility_level", replace
 
 *Now we will get the discounts by packageid
 do "$code_path/prep_discount_regression_data.do"
+*Create datasets with only lender variables that can be merged on later
+do "$code_path/prep_dealscan_lender_data.do"
 
 *Collapsing to the quarterly level. Want
 *An indicator for whether a loan occured in that package
@@ -157,4 +152,18 @@ rename *_max *
 duplicates drop
 merge 1:1 borrowercompanyid date_quarterly using "$data_path/stata_temp/dealscan_discounts", assert (1 3) nogen
 isid borrowercompanyid date_quarterly
+save "$data_path/stata_temp/dealscan_quarterly_no_lender", replace
+
+*Merge on lender (need to loop over the two  types of loans and create temporary datasets where I rename
+*all variables with suffix of type and then merge the lender data on. Will have 25 x 2 x 3 do I need to keep all
+foreach type in term rev {
+	use "$data_path/stata_temp/lenders_facilityid_level", clear
+	rename * *_`type'
+	tempfile lender_temp_`type'
+	save `lender_temp_`type''
+}
+use "$data_path/stata_temp/dealscan_quarterly_no_lender", clear
+foreach type in term rev {
+	merge m:1 facilityid_`type' using `lender_temp_`type'', keep(1 3) nogen 
+}
 save "$data_path/dealscan_quarterly", replace
