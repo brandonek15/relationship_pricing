@@ -16,8 +16,9 @@ foreach event_var in equity debt conv loan {
 	replace `event_var' = 0 if mi(`event_var')
 }
 order cusip_6 date_quarterly equity debt conv loan
-*From here we need identities of lenders/bookrunners and can make indicators 
+*From herece we clean  we need identities of lenders/bookrunners, we can make indicators 
 *based off of whether past business is from same lender/bookrunner
 *E.g. 1 if equity issuance this quarter with loan from same institution as bookrunner
 *     0 if eqauity issuance this quarter with loan from diffirent institution as bookrunner
+*E.g. 1 if bookrunner_j_equiity(T) == lender_i_rev(T-t) for any i,j, t<12)
 save "$data_path/merged_data_comp_quart_clean", replace

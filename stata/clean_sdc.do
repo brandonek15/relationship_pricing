@@ -62,6 +62,10 @@ program define clean_sdc
 	gen withdrawn = (marketplace == "Withdrawn")
 	
 	*Todo clean the names of the issuers and bookrunners
+	*Create a variable for each manager
+	di "about to split"
+	split bookrunners, gen(bookrunner_) parse("/")
+	di "finished splitting"
 
 end
 
@@ -107,6 +111,8 @@ restore
 
 preserve
 keep if conv ==1
+*There are no convertable obs for these vars
+drop bookrunner_13-bookrunner_19
 save "$data_path/sdc_conv_clean", replace
 restore
 
@@ -133,7 +139,7 @@ foreach type in "equity" "conv" "debt" {
 	use "$data_path/sdc_`type'_clean", clear
 
 	local max_vars ipo equity debt conv public private withdrawn
-	local last_vars issuer business_desc currency bookrunners all_managers
+	local last_vars issuer business_desc currency bookrunner* all_managers
 	local sum_vars management_fee_dol underwriting_fee_dol selling_conc_dol ///
 		reallowance_dol gross_spread_dol proceeds_local num_units
 	local mean_vars gross_spread_per_unit gross_spread_perc management_fee_perc underwriting_fee_perc ///
