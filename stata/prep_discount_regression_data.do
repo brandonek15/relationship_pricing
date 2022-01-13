@@ -32,14 +32,15 @@ foreach spread_type in standard alternate {
 		*Need to spread the fe_coeff by
 		gen fe_coeff_term = fe_coeff if rev_loan==0
 		gen fe_coeff_rev = fe_coeff if rev_loan ==1
-		egen fe_coeff_term_sp = max(fe_coeff_term), by(borrowercompanyid)
-		egen fe_coeff_rev_sp = max(fe_coeff_rev), by(borrowercompanyid)
+		egen fe_coeff_term_sp = max(fe_coeff_term), by(borrowercompanyid date_quarterly)
+		egen fe_coeff_rev_sp = max(fe_coeff_rev), by(borrowercompanyid date_quarterly)
 		gen rev_discount_`spread_suffix'_`discount_type' = fe_coeff_term_sp - fe_coeff_rev_sp
 		drop fe_coeff*
 	}
 }
-sort borrowercompanyid rev_loan facilityid
-br borrowercompanyid facilityid rev_loan rev_discount*
+sort borrowercompanyid date_quarterly rev_loan facilityid
+br borrowercompanyid date_quarterly packageid facilityid rev_loan rev_discount* ///
+ allindrawn spread spread_2
 *Now I only want to keep the borrowercompanyid and rev_discounts
 keep borrowercompanyid rev_discount* date_quarterly
 duplicates drop
