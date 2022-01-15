@@ -1,4 +1,5 @@
 *Loan Covenant master file
+*Finish Clean SDC later - need to standardize
 
 * set directory
 if "`c(os)'" == "Unix" {

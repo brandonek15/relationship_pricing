@@ -1,7 +1,6 @@
 cap program drop clean_sdc
 program define clean_sdc
 	args type
-	
 	*Todo, make this cleaning a function that takes in a string as an input  
 	local numeric_vars_equity shares_offered_local prim_shares_offered_local ///
 	sec_shares_offered_local shares_offered_global yest_stock_price stock_price_close_offer ///
@@ -62,6 +61,9 @@ program define clean_sdc
 	gen withdrawn = (marketplace == "Withdrawn")
 	
 	*Todo clean the names of the issuers and bookrunners
+	*Standardize SDC
+	do "$code_path/standardize_sdc.do"
+	standardize_bookrunners
 	*Create a variable for each manager
 	di "about to split"
 	split bookrunners, gen(bookrunner_) parse("/")
