@@ -51,6 +51,8 @@ br merge_equity conm issuer_equity date_quarterly cusip_6 cusip cik public priva
 */
 
 *Start standardizing bookrunners
-use "$data_path/sdc_equity_clean", clear
+use "$data_path/sdc_debt_clean", clear
 br issuer date_daily bookrunners all_managers bookrunner_*
-replace bookrunner_1 = subinstr(bookrunner_1,",","",.)
+sort bookrunner_1
+br issuer date_daily bookrunners all_managers bookrunner_* if bookrunner_1 == "Ameritas"
+
