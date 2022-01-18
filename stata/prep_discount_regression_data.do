@@ -1,7 +1,5 @@
 *Get the facility level data
 use "$data_path/dealscan_facility_level", clear
-*Keep only observations that are a term loan and revolving line of credit
-keep if term_loan ==1 | rev_loan ==1
 
 *I will use facilityid x revolving fixed effects.
 *This gives me an coefficient for for facility id x  revolving and facilityid x term (through the FE). 
@@ -26,8 +24,8 @@ foreach spread_type in standard alternate {
 		if "`discount_type'" == "controls" {
 			local controls log_facilityamt maturity
 		}
-
-		reghdfe `spread_var' `controls', absorb(borrowerid_rev_loan_quarter, savefe) keepsingletons
+		*Only want term and rev_loan obs in the regression
+		reghdfe `spread_var' `controls' if term_loan ==1 | rev_loan ==1, absorb(borrowerid_rev_loan_quarter, savefe) keepsingletons
 		rename __hdfe1__ fe_coeff
 		*Need to spread the fe_coeff by
 		gen fe_coeff_term = fe_coeff if rev_loan==0
@@ -41,6 +39,8 @@ foreach spread_type in standard alternate {
 sort borrowercompanyid date_quarterly rev_loan facilityid
 br borrowercompanyid date_quarterly packageid facilityid rev_loan rev_discount* ///
  allindrawn spread spread_2
+isid facilityid
+save "$data_path/stata_temp/dealscan_discounts_facilityid", replace
 *Now I only want to keep the borrowercompanyid and rev_discounts
 keep borrowercompanyid rev_discount* date_quarterly
 duplicates drop

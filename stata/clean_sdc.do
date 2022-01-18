@@ -178,6 +178,7 @@ append using "$data_path/sdc_debt_clean"
 *Need to choose a set of variables that will give me the exact same sort every time so the index is a proper id
 sort cusip_6 date_daily desc sec_type proceeds_local
 gen sdc_deal_id = _n
+rename date_quarterly date_quarterly_sdc
 save "$data_path/sdc_all_clean", replace
 
 *Make a long dataset that is one observation per bookrunner x deal - this will be used for
