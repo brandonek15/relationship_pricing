@@ -184,11 +184,12 @@ save "$data_path/sdc_all_clean", replace
 *a joinby on name of bookrunner (will have minimal information and can merge on sdc_all_clean later)
 use "$data_path/sdc_all_clean", clear
 *Do a simple version first as a test
-keep bookrunner_* sdc_deal_id 
+keep bookrunner_* sdc_deal_id cusip_6
 reshape long bookrunner_, i(sdc_deal_id) j(num)
 *Rename this to the same variable as the dealscan lender variable
 rename bookrunner_ lender
 drop if mi(lender)
 drop num
 replace lender = trim(lender)
+drop if lender == NA | lender== "TBD" | lender == "Unknown"
 save "$data_path/sdc_deal_bookrunner", replace
