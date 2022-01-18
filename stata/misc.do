@@ -56,3 +56,9 @@ br issuer date_daily bookrunners all_managers bookrunner_*
 sort bookrunner_1
 br issuer date_daily bookrunners all_managers bookrunner_* if bookrunner_1 == "Ameritas"
 
+*
+use "$data_path/dealscan_facility_lender_level", clear
+
+
+use "$data_path/dealscan_lender_level", clear
+bys lender: gen N = _N

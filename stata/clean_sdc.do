@@ -170,3 +170,25 @@ foreach type in "equity" "conv" "debt" {
 	save  "$data_path/sdc_`type'_clean_quarterly", replace
 
 }
+
+*Make both an "all sdc clean dataset" where every deal is an observation and has an identifier
+use "$data_path/sdc_equity_clean", clear
+append using "$data_path/sdc_conv_clean"
+append using "$data_path/sdc_debt_clean"
+*Need to choose a set of variables that will give me the exact same sort every time so the index is a proper id
+sort cusip_6 date_daily desc sec_type proceeds_local
+gen sdc_deal_id = _n
+save "$data_path/sdc_all_clean", replace
+
+*Make a long dataset that is one observation per bookrunner x deal - this will be used for
+*a joinby on name of bookrunner (will have minimal information and can merge on sdc_all_clean later)
+use "$data_path/sdc_all_clean", clear
+*Do a simple version first as a test
+keep bookrunner_* sdc_deal_id 
+reshape long bookrunner_, i(sdc_deal_id) j(num)
+*Rename this to the same variable as the dealscan lender variable
+rename bookrunner_ lender
+drop if mi(lender)
+drop num
+replace lender = trim(lender)
+save "$data_path/sdc_deal_bookrunner", replace

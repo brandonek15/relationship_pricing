@@ -438,12 +438,30 @@ program define standardize_bookrunners
 	replace bookrunners = subinstr(bookrunners,"Bank of Americarg","Bank of America",.)		
 	replace bookrunners = subinstr(bookrunners,"JP Morgan La","JP Morgan",.)		
 	replace bookrunners = subinstr(bookrunners,"Wells Fargo ","Wells Fargo",.)		
+	replace bookrunners = subinstr(bookrunners,"Smbc Friend","SMBC",.)		
+	replace bookrunners = subinstr(bookrunners,"Smbc Nikko","SMBC",.)		
+	replace bookrunners = subinstr(bookrunners,"Smbc ","SMBC",.)		
+	replace bookrunners = subinstr(bookrunners,"Smbc","SMBC",.)		
+	replace bookrunners = subinstr(bookrunners,"Scotia ","Scotia",.)		
+	replace bookrunners = subinstr(bookrunners,"JP Morgan La","JP Morgan",.)		
+	replace bookrunners = subinstr(bookrunners,"Hsbc Da","HSBC",.)		
+	replace bookrunners = subinstr(bookrunners,"Hsbc ","HSBC",.)		
+	replace bookrunners = subinstr(bookrunners,"Hong Shangg","HSBC",.)		
+	replace bookrunners = subinstr(bookrunners,"Credit Lyonnaiso","Credit Lyonnais",.)		
+	replace bookrunners = subinstr(bookrunners,"Credit Lyonnaiswert","Credit Lyonnais",.)		
+	replace bookrunners = subinstr(bookrunners,"Credit Suisse Gibraltar","Credit Suisse",.)		
+	replace bookrunners = subinstr(bookrunners,"Credit Suisse Yman","Credit Suisse",.)		
+	replace bookrunners = subinstr(bookrunners,"Credri Suis","Credit Suisse",.)		
+	replace bookrunners = subinstr(bookrunners,"Citi Glo Hldg","Citi",.)		
+	replace bookrunners = subinstr(bookrunners,"Citi ","Citi",.)		
+	replace bookrunners = subinstr(bookrunners,"Breanmur Rret","Brean",.)		
+	replace bookrunners = subinstr(bookrunners,"Bbva","BBVA",.)		
 
 	*Needs to be at the end
 	*These need to be done carefully so they don't change letters unless they are
 	*exactly this at the end of the string
-	local replace_list `" "Deutsche " "Deutsche" "Comm" "Wells" "Multi" "Mit " "Mb" "Hsbc" "Hapo" "Gugg" "Fleet" "Db" "Cs" "Commerz" "Com" "Barclay" "Ak" "Shaw" "Macq" "Raymond" "Raymond " "Macq" "Bnp" "Gs" "Cla" "Cohen" "First Al" "Dominion" "Laz" "Sco" "Soundv" "Td" "Ba" "Barc" "Deutsche" "'
-	local new_list `" "Deutsche Bank" "Deutsche Bank" "Commonwealth Securities" "Wells Fargo" "Multi-Bank Securities" "MUFG" "Multi-Bank Securities" "HSBC" "Hapoalim" "Guggenheim" "Fleet Boston" "Deutsche Bank" "Credit Suisse" "Commerzbank" "Barclays" "AK Capital" "Shaws" "Macquarie" "Raymond James" "Raymond James" "Macquarie" "BNP Paribas" "Goldman Sachs" "Credit Lyonnais" "Cohen and Co." "First Albany" "RBC" "Lazard" "SCO" "Soundview" "TD Securities" "Bank of America" "Barclays" "Deutsche Bank" "'
+	local replace_list `" "Wells" "Hs" "Lloyd" "Deutsche " "Deutsche" "Comm" "Wells" "Multi" "Mit " "Mb" "Hsbc" "Hapo" "Gugg" "Fleet" "Db" "Cs" "Commerz" "Com" "Barclay" "Ak" "Shaw" "Macq" "Raymond" "Raymond " "Macq" "Bnp" "Gs" "Cla" "Cohen" "First Al" "Dominion" "Laz" "Sco" "Soundv" "Td" "Ba" "Barc" "Deutsche" "'
+	local new_list `" "Wells Fargo" "HSBC" "Lloyds" "Deutsche Bank" "Deutsche Bank" "Commonwealth Securities" "Wells Fargo" "Multi-Bank Securities" "MUFG" "Multi-Bank Securities" "HSBC" "Hapoalim" "Guggenheim" "Fleet Boston" "Deutsche Bank" "Credit Suisse" "Commerzbank" "Barclays" "AK Capital" "Shaws" "Macquarie" "Raymond James" "Raymond James" "Macquarie" "BNP Paribas" "Goldman Sachs" "Credit Lyonnais" "Cohen and Co." "First Albany" "RBC" "Lazard" "SCO" "Soundview" "TD Securities" "Bank of America" "Barclays" "Deutsche Bank" "'
 		
 	local n: word count `replace_list'
 	forvalues i = 1/`n' {
@@ -503,7 +521,31 @@ program define standardize_bookrunners
 	replace bookrunners = subinstr(bookrunners,"Us Bancorp","US Bancorp",.)		  	
 	replace bookrunners = subinstr(bookrunners,"Us Bancorp","Mellons",.)		  	
 	replace bookrunners = subinstr(bookrunners,"JP Morgan La","JP Morgan",.)		
-	replace bookrunners = subinstr(bookrunners,"Great Pacificific","Great Pacific",.)		
+	replace bookrunners = subinstr(bookrunners,"US Barclaysncorp","US Bancorp",.)		
+	replace bookrunners = subinstr(bookrunners,"UBSSz","UBS",.)		
+	replace bookrunners = subinstr(bookrunners,"UBSsng","UBS",.)		
+	replace bookrunners = subinstr(bookrunners,"US Bancorporp  Pa","US Bancorp",.)		
+	replace bookrunners = subinstr(bookrunners,"Td Amer","TD Securities",.)		
+	replace bookrunners = subinstr(bookrunners,"Tdbank","TD Securities",.)		
+	replace bookrunners = subinstr(bookrunners,"Stand ","Stand",.)		
+	replace bookrunners = subinstr(bookrunners,"Salomon Smith Barclaysrney","Salomon Smith Barney",.)		
+	replace bookrunners = subinstr(bookrunners,"RBCe","RBC",.)		
+	replace bookrunners = subinstr(bookrunners,"RBSp","RBS",.)		
+	replace bookrunners = subinstr(bookrunners,"PNC ","PNC",.)		
+	replace bookrunners = subinstr(bookrunners,"Morgan Stanley Da","Morgan Stanley",.)		
+	replace bookrunners = subinstr(bookrunners,"Mellonss ","Mellons",.)		
+	replace bookrunners = subinstr(bookrunners,"Macquarieur","Macquarie",.)		
+	replace bookrunners = subinstr(bookrunners,"Macquarie Credit Suisse","Macquarie",.)		
+	replace bookrunners = subinstr(bookrunners,"Macquarie ","Macquarie",.)		
+	replace bookrunners = subinstr(bookrunners,"MUFG Union","MUFG",.)		
+	replace bookrunners = subinstr(bookrunners,"Macquarieur","Macquarie",.)		
+	replace bookrunners = subinstr(bookrunners,"Deutsche Banklays","Deutsche Bank",.)		
+	replace bookrunners = subinstr(bookrunners,"Deutsche N","Deutsche Bank",.)		
+	replace bookrunners = subinstr(bookrunners,"Barclaysrclays","Barclays",.)		
+	replace bookrunners = subinstr(bookrunners,"BONY Ss","BONY Ss",.)		
+	replace bookrunners = subinstr(bookrunners,"Wells FargoMn","Wells Fargo",.)		
+	replace bookrunners = subinstr(bookrunners,"Wells Fargo ","Wells Fargo",.)		
+
 	
 	*Converting acquisitions
 	replace bookrunners = subinstr(bookrunners,"Bank One","JP Morgan",.)
