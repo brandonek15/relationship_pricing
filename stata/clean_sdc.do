@@ -191,5 +191,5 @@ rename bookrunner_ lender
 drop if mi(lender)
 drop num
 replace lender = trim(lender)
-drop if lender == NA | lender== "TBD" | lender == "Unknown"
+drop if lender == "NA" | lender== "TBD" | lender == "Unknown"
 save "$data_path/sdc_deal_bookrunner", replace
