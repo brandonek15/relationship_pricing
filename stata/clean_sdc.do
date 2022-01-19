@@ -195,4 +195,5 @@ drop num
 replace lender = trim(lender)
 drop if lender == "NA" | lender== "TBD" | lender == "Unknown"
 replace lender = upper(lender)
+duplicates drop
 save "$data_path/sdc_deal_bookrunner", replace

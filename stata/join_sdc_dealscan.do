@@ -15,6 +15,7 @@ merge m:1 facilityid using "$data_path/stata_temp/dealscan_discounts_facilityid"
 rename date_quarterly date_quarterly_dealscan
 rename facilitystartdate date_daily_dealscan
 
+duplicates drop
 *Now we have our dataset to do analyses
 save "$data_path/sdc_dealscan_pairwise_combinations", replace
 sort cusip_6 date_daily_sdc date_daily_dealscan
