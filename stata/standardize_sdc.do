@@ -413,7 +413,7 @@ program define standardize_bookrunners
 	replace bookrunners = subinstr(bookrunners,"Suntrust Ami","Suntrust",.)		
 	replace bookrunners = subinstr(bookrunners,"Suntrust Equi","Suntrust",.)		
 	replace bookrunners = subinstr(bookrunners,"Suntrustcm","Suntrust",.)		
-	replace bookrunners = subinstr(bookrunners,"Tda","TD Securities",.)		
+	replace bookrunners = subinstr(bookrunners,"Tda","TD",.)		
 	replace bookrunners = subinstr(bookrunners,"UBS ","UBS",.)		
 	replace bookrunners = subinstr(bookrunners,"UBS Limited","UBS",.)		
 	replace bookrunners = subinstr(bookrunners,"UBSec","UBS",.)		
@@ -461,7 +461,7 @@ program define standardize_bookrunners
 	*These need to be done carefully so they don't change letters unless they are
 	*exactly this at the end of the string
 	local replace_list `" "Wells" "Hs" "Lloyd" "Deutsche " "Deutsche" "Comm" "Wells" "Multi" "Mit " "Mb" "Hsbc" "Hapo" "Gugg" "Fleet" "Db" "Cs" "Commerz" "Com" "Barclay" "Ak" "Shaw" "Macq" "Raymond" "Raymond " "Macq" "Bnp" "Gs" "Cla" "Cohen" "First Al" "Dominion" "Laz" "Sco" "Soundv" "Td" "Ba" "Barc" "Deutsche" "'
-	local new_list `" "Wells Fargo" "HSBC" "Lloyds" "Deutsche Bank" "Deutsche Bank" "Commonwealth Securities" "Wells Fargo" "Multi-Bank Securities" "MUFG" "Multi-Bank Securities" "HSBC" "Hapoalim" "Guggenheim" "Fleet Boston" "Deutsche Bank" "Credit Suisse" "Commerzbank" "Barclays" "AK Capital" "Shaws" "Macquarie" "Raymond James" "Raymond James" "Macquarie" "BNP Paribas" "Goldman Sachs" "Credit Lyonnais" "Cohen and Co." "First Albany" "RBC" "Lazard" "SCO" "Soundview" "TD Securities" "Bank of America" "Barclays" "Deutsche Bank" "'
+	local new_list `" "Wells Fargo" "HSBC" "Lloyds" "Deutsche Bank" "Deutsche Bank" "Commonwealth Securities" "Wells Fargo" "Multi-Bank Securities" "MUFG" "Multi-Bank Securities" "HSBC" "Hapoalim" "Guggenheim" "Fleet Boston" "Deutsche Bank" "Credit Suisse" "Commerzbank" "Barclays" "AK Capital" "Shaws" "Macquarie" "Raymond James" "Raymond James" "Macquarie" "BNP Paribas" "Goldman Sachs" "Credit Lyonnais" "Cohen and Co." "First Albany" "RBC" "Lazard" "SCO" "Soundview" "TD" "Bank of America" "Barclays" "Deutsche Bank" "'
 		
 	local n: word count `replace_list'
 	forvalues i = 1/`n' {
@@ -525,8 +525,8 @@ program define standardize_bookrunners
 	replace bookrunners = subinstr(bookrunners,"UBSSz","UBS",.)		
 	replace bookrunners = subinstr(bookrunners,"UBSsng","UBS",.)		
 	replace bookrunners = subinstr(bookrunners,"US Bancorporp  Pa","US Bancorp",.)		
-	replace bookrunners = subinstr(bookrunners,"Td Amer","TD Securities",.)		
-	replace bookrunners = subinstr(bookrunners,"Tdbank","TD Securities",.)		
+	replace bookrunners = subinstr(bookrunners,"Td Amer","TD",.)		
+	replace bookrunners = subinstr(bookrunners,"Tdbank","TD",.)		
 	replace bookrunners = subinstr(bookrunners,"Stand ","Stand",.)		
 	replace bookrunners = subinstr(bookrunners,"Salomon Smith Barclaysrney","Salomon Smith Barney",.)		
 	replace bookrunners = subinstr(bookrunners,"RBCe","RBC",.)		
@@ -542,7 +542,7 @@ program define standardize_bookrunners
 	replace bookrunners = subinstr(bookrunners,"Deutsche Banklays","Deutsche Bank",.)		
 	replace bookrunners = subinstr(bookrunners,"Deutsche N","Deutsche Bank",.)		
 	replace bookrunners = subinstr(bookrunners,"Barclaysrclays","Barclays",.)		
-	replace bookrunners = subinstr(bookrunners,"BONY Ss","BONY Ss",.)		
+	replace bookrunners = subinstr(bookrunners,"BONY Ss","BONY",.)		
 	replace bookrunners = subinstr(bookrunners,"Wells FargoMn","Wells Fargo",.)		
 	replace bookrunners = subinstr(bookrunners,"Wells Fargo ","Wells Fargo",.)		
 
@@ -552,17 +552,6 @@ program define standardize_bookrunners
 	replace bookrunners = subinstr(bookrunners,"Bear Stearns","JP Morgan",.)
 	replace bookrunners = subinstr(bookrunners,"Merrill Lynch","Bank of America",.)
 	replace bookrunners = subinstr(bookrunners,"Wachovia","Wells Fargo",.)
-	replace bookrunners = subinstr(bookrunners,"Salomon Smith Barney","Morgan Stanley",.)
+	replace bookrunners = subinstr(bookrunners,"Salomon Smith Barney","Citi",.)
 
 end
-/*
-*For now, we will do them live
-use "$data_path/sdc_equity_clean", clear
-br issuer date_daily bookrunners all_managers bookrunner_* if regex(all_managers,"Deutsche Banc Alex Brown")
-
-import delimited using "$data_path/sdc_equity_issuance_all.csv", varnames(1) clear
-standardize_bookrunners
-split bookrunners, gen(bookrunner_) parse("/")
-sort bookrunner_1
-bys bookrunner_1: gen N = _N
-br all_managers bookrunner_1 if N<5

@@ -135,50 +135,51 @@ save "$data_path/sdc_debt_clean", replace
 /*
 use "$data_path/sdc_equity_clean", clear
 */
+foreach date_type in "quarterly" "daily" {
+	foreach type in "equity" "conv" "debt" {
 
-foreach type in "equity" "conv" "debt" {
+		use "$data_path/sdc_`type'_clean", clear
 
-	use "$data_path/sdc_`type'_clean", clear
+		local max_vars ipo equity debt conv public private withdrawn
+		local last_vars issuer business_desc currency bookrunner* all_managers desc
+		local sum_vars management_fee_dol underwriting_fee_dol selling_conc_dol ///
+			reallowance_dol gross_spread_dol proceeds_local num_units
+		local mean_vars gross_spread_per_unit gross_spread_perc management_fee_perc underwriting_fee_perc ///
+			selling_conc_perc reallowance_perc 
+		local weight_var proceeds_local
 
-	local max_vars ipo equity debt conv public private withdrawn
-	local last_vars issuer business_desc currency bookrunner* all_managers
-	local sum_vars management_fee_dol underwriting_fee_dol selling_conc_dol ///
-		reallowance_dol gross_spread_dol proceeds_local num_units
-	local mean_vars gross_spread_per_unit gross_spread_perc management_fee_perc underwriting_fee_perc ///
-		selling_conc_perc reallowance_perc 
-	local weight_var proceeds_local
+		collapse (rawsum) `sum_vars' (max) `max_vars' (last) `last_vars' ///
+			(mean) `mean_vars' [aweight=`weight_var'], by(cusip_6 date_`date_type')
 
-	collapse (rawsum) `sum_vars' (max) `max_vars' (last) `last_vars' ///
-		(mean) `mean_vars' [aweight=`weight_var'], by(cusip_6 date_quarterly)
+		foreach var in `sum_vars' `mean_vars' {
+			replace `var' = . if `var' ==0
+		}
 
-	foreach var in `sum_vars' `mean_vars' {
-		replace `var' = . if `var' ==0
+		rename proceeds_local proceeds
+		*Only do this for quarterly
+		if "`date_type'" == "quarterly" {
+			*Rename these so we can have different sets of these variables
+			rename * *_`type'
+			*For these variables, they are common accross the datasets
+			foreach remove_type_var in cusip_6 date_`date_type' equity conv debt {
+				rename `remove_type_var'_`type' `remove_type_var'
+			}
+		}
+		*Most important variables: The gross spread_percent, gross_spread_dollar, the proceeds, the cusip_6 and the date_quarterly
+		*From here I have whether there is a deal (make an indicator for whether it gets merged on?
+		*And then I also have data on the "price" and the size
+		isid cusip_6 date_`date_type'
+		save  "$data_path/sdc_`type'_clean_`date_type'", replace
+
 	}
-
-	rename proceeds_local proceeds
-	*Rename these so we can have different sets of these variables
-	rename * *_`type'
-	*For these variables, they are common accross the datasets
-	foreach remove_type_var in cusip_6 date_quarterly equity conv debt {
-		rename `remove_type_var'_`type' `remove_type_var'
-	}
-	
-	*Most important variables: The gross spread_percent, gross_spread_dollar, the proceeds, the cusip_6 and the date_quarterly
-	*From here I have whether there is a deal (make an indicator for whether it gets merged on?
-	*And then I also have data on the "price" and the size
-	isid cusip_6 date_quarterly
-	save  "$data_path/sdc_`type'_clean_quarterly", replace
-
 }
-
 *Make both an "all sdc clean dataset" where every deal is an observation and has an identifier
-use "$data_path/sdc_equity_clean", clear
-append using "$data_path/sdc_conv_clean"
-append using "$data_path/sdc_debt_clean"
+use "$data_path/sdc_equity_clean_daily", clear
+append using "$data_path/sdc_conv_clean_daily"
+append using "$data_path/sdc_debt_clean_daily"
 *Need to choose a set of variables that will give me the exact same sort every time so the index is a proper id
-sort cusip_6 date_daily desc sec_type proceeds_local
+sort cusip_6 date_daily desc proceeds
 gen sdc_deal_id = _n
-rename date_quarterly date_quarterly_sdc
 save "$data_path/sdc_all_clean", replace
 
 *Make a long dataset that is one observation per bookrunner x deal - this will be used for
@@ -193,4 +194,5 @@ drop if mi(lender)
 drop num
 replace lender = trim(lender)
 drop if lender == "NA" | lender== "TBD" | lender == "Unknown"
+replace lender = upper(lender)
 save "$data_path/sdc_deal_bookrunner", replace
