@@ -26,6 +26,4 @@ merge m:1 borrowercompanyid date_quarterly using "$data_path/stata_temp/compusta
 rename bankallocation loan_share
 rename lenderrole role
 keep cusip_6 lender facilityid lender loan_share role
-*temp
-replace lender = "Deutsche Bank" if regexm(lender,"Deutsche")
 save "$data_path/lender_facilityid_cusip6", replace
