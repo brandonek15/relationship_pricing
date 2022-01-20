@@ -22,7 +22,7 @@ sort cusip_6 date_daily_sdc date_daily_dealscan
 br issuer lender cusip_6  date_daily_sdc date_daily_dealscan loantype loan_share ///
 	rev_discount_1_simple gross_spread_perc proceeds sdc_deal_id facilityid
 	
-*Repeat the same analysis but get all lenders and bookrunners pairs
+*Repeat the same analysis but get all lender/ cusip and bookrunner/cusip pairs
 use "$data_path/sdc_deal_bookrunner", clear
 rename lender lender_sdc
 joinby cusip_6 using "$data_path/lender_facilityid_cusip6" ,unmatched(none)
@@ -39,6 +39,11 @@ merge m:1 facilityid using "$data_path/stata_temp/dealscan_discounts_facilityid"
 	keepusing(`dealscan_vars') keep(3) nogen
 rename date_quarterly date_quarterly_dealscan
 rename facilitystartdate date_daily_dealscan
+
+*Make an indicator for whether the lender is the same
+gen same_lender = (lender_sdc == lender_dealscan)
+gen days_from_ds_to_sdc = date_daily_sdc - date_daily_dealscan
+gen days_from_sdc_to_ds = date_daily_dealscan - date_daily_sdc
 
 *Now we have our dataset to do analyses
 save "$data_path/sdc_dealscan_pairwise_combinations_matched_unmatched", replace

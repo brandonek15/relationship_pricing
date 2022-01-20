@@ -183,6 +183,8 @@ gen sdc_deal_id = _n
 save "$data_path/sdc_all_clean", replace
 
 *Make a long dataset that is one observation per bookrunner x deal - this will be used for
+*First load program that cleans dealscan to apply the same cleaning here as well
+do "$code_path/standardize_sdc.do"
 *a joinby on name of bookrunner (will have minimal information and can merge on sdc_all_clean later)
 use "$data_path/sdc_all_clean", clear
 *Do a simple version first as a test
@@ -194,6 +196,8 @@ drop if mi(lender)
 drop num
 replace lender = trim(lender)
 drop if lender == "NA" | lender== "TBD" | lender == "Unknown"
+clean_lender_sdc
 replace lender = upper(lender)
 duplicates drop
+*Now also clean using dealscan cleaning code
 save "$data_path/sdc_deal_bookrunner", replace
