@@ -62,3 +62,16 @@ use "$data_path/dealscan_facility_lender_level", clear
 
 use "$data_path/dealscan_lender_level", clear
 bys lender: gen N = _N
+
+/* All the datasets
+use "$data_path/sdc_dealscan_pairwise_combinations", clear
+isid sdc_deal_id facilityid lender cusip_6
+*Other data I may need to merge on
+use "$data_path/sdc_all_clean", clear
+isid sdc_deal_id
+use "$data_path/stata_temp/dealscan_discounts_facilityid", clear
+isid facilityid
+use "$data_path/sdc_deal_bookrunner", clear
+isid sdc_deal_id lender
+use "$data_path/lender_facilityid_cusip6", clear
+isid facilityid lender
