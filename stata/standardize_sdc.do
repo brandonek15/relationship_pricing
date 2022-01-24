@@ -724,7 +724,7 @@ replace lender = "Washington Mutual" if regexm(lender,"Washington Mutual")
 replace lender = "Wells Fargo" if regexm(lender,"Wells Fargo")
 replace lender = "Wells Fargo" if regexm(lender,"Wells") 
 replace lender = "Toronto Dom" if regexm(lender,"TD") 
-replace lender = "Wells Fargo" lender == "Wells Fargo"
+replace lender = "Wells Fargo" if lender == "Wells Fargo"
 
 
 

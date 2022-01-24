@@ -23,6 +23,6 @@ use "$data_path/dealscan_facility_lender_level", clear
 *only keeping observations that I can merge on a cusip_6, which are those that can match to compustat.
 merge m:1 borrowercompanyid date_quarterly using "$data_path/stata_temp/compustat_with_bcid", keep(3) keepusing(cusip_6) nogen
 *Now keep the lender data we care about in the merge
-keep cusip_6 lender facilityid loan_share role
+keep cusip_6 lender facilityid
 *replace lender = upper(lender)
 save "$data_path/lender_facilityid_cusip6", replace
