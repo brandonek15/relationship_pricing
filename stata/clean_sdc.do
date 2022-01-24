@@ -179,6 +179,7 @@ append using "$data_path/sdc_conv_clean_daily"
 append using "$data_path/sdc_debt_clean_daily"
 *Need to choose a set of variables that will give me the exact same sort every time so the index is a proper id
 sort cusip_6 date_daily desc proceeds
+gen log_proceeds = log(proceeds)
 gen sdc_deal_id = _n
 save "$data_path/sdc_all_clean", replace
 

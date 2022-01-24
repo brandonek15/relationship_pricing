@@ -13,7 +13,7 @@ program define merge_info_onto_joined_data
 	drop agentcredit leadarrangercredit
 
 	*Merge variables from SDC
-	local sdc_vars issuer date_daily equity debt conv gross_spread_perc proceeds `sdc_vars_add'
+	local sdc_vars issuer date_daily equity debt conv gross_spread_perc proceeds log_proceeds `sdc_vars_add'
 	merge m:1 sdc_deal_id using "$data_path/sdc_all_clean", keepusing(`sdc_vars') keep(3) nogen
 	rename date_daily date_daily_sdc
 	*Merge dealscan deal data
@@ -41,9 +41,12 @@ merge_info_onto_joined_data unmatched "gross_spread_dol proceeds" "leveraged ass
 save "$data_path/sdc_dealscan_pairwise_5yrs_post_ds", replace
 *This is an analysis code that uses this dataset
 do "$code_path/analysis_sdc_issuance_after_ds.do"
+do "$code_path/analysis_ds_loan_pricing_after_sdc.do"
 
 *All dealscan interactions five years after an SDC observation
 use "$data_path/sdc_dealscan_pairwise_combinations_matched_unmatched", clear
 keep if days_from_ds_to_sdc >= -5*365 & days_from_ds_to_sdc <=0
 merge_info_onto_joined_data unmatched "gross_spread_dol proceeds" "leveraged asset_based"
 save "$data_path/sdc_dealscan_pairwise_5yrs_post_sdc", replace
+do "$code_path/analysis_ds_lending_after_sdc.do"
+do "$code_path/analysis_sdc_fee_pricing_after_ds.do"
