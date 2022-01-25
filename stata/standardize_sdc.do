@@ -724,8 +724,6 @@ replace lender = "Washington Mutual" if regexm(lender,"Washington Mutual")
 replace lender = "Wells Fargo" if regexm(lender,"Wells Fargo")
 replace lender = "Wells Fargo" if regexm(lender,"Wells") 
 replace lender = "Toronto Dom" if regexm(lender,"TD") 
-replace lender = "Wells Fargo" if lender == "Wells Fargo"
-
 
 
 foreach i in "Bank of America" "Charles Schwab" "Royal Bank of Canada" "Royal Bank of Scotland" "SBI" "SMBC" ///
@@ -746,4 +744,28 @@ foreach i in "Bank of America" "Charles Schwab" "Royal Bank of Canada" "Royal Ba
 	
 	}
 	
+replace lender = "JP Morgan" if lender == "Chase"
+replace lender = "Wells Fargo" if lender == "WF"
+	
+	
+end
+
+cap program drop sdc_wide_to_long
+program define sdc_wide_to_long
+
+	keep bookrunner_* sdc_deal_id cusip_6
+	reshape long bookrunner_, i(sdc_deal_id) j(num)
+	*Rename this to the same variable as the dealscan lender variable
+	rename bookrunner_ lender
+	drop if mi(lender)
+	drop num
+	replace lender = trim(lender)
+	drop if lender == "NA" | lender== "TBD" | lender == "Unknown"
+	clean_lender_sdc
+	replace lender = upper(lender)
+	duplicates drop
+
+
+
+
 end

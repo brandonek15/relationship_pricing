@@ -188,17 +188,5 @@ save "$data_path/sdc_all_clean", replace
 do "$code_path/standardize_sdc.do"
 *a joinby on name of bookrunner (will have minimal information and can merge on sdc_all_clean later)
 use "$data_path/sdc_all_clean", clear
-*Do a simple version first as a test
-keep bookrunner_* sdc_deal_id cusip_6
-reshape long bookrunner_, i(sdc_deal_id) j(num)
-*Rename this to the same variable as the dealscan lender variable
-rename bookrunner_ lender
-drop if mi(lender)
-drop num
-replace lender = trim(lender)
-drop if lender == "NA" | lender== "TBD" | lender == "Unknown"
-clean_lender_sdc
-replace lender = upper(lender)
-duplicates drop
-*Now also clean using dealscan cleaning code
+sdc_wide_to_long
 save "$data_path/sdc_deal_bookrunner", replace

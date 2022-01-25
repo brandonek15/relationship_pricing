@@ -28,3 +28,6 @@ do "$code_path/merge_data.do"
 do "$code_path/prep_merged_data.do"
 do "$code_path/join_sdc_dealscan.do"
 do "$code_path/prep_data_for_dynamics.do"
+do "$code_path/join_same_dataset.do"
+do "$code_path/figures_stickiness.do"
+
