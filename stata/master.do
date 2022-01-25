@@ -10,7 +10,10 @@ else if "`c(os)'" == "Windows" {
 *No need for this yet
    global root = ""
 }
-
+else if "`c(os)'" == "MacOSX" {
+   global root = "/Users/Benjamin/Documents/GitHub/relationship_pricing/"
+   global code_path = "$root/stata/"	
+}
 *Load settings
 do "$code_path/settings.do"
 
