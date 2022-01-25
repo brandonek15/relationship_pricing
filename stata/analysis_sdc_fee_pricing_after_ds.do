@@ -35,7 +35,7 @@ foreach type in all equity debt {
 		local cond "if `type'==1" 
 	}
 	if "`type'" == "all" {
-		local cond "" 
+		local cond "if 1 ==1" 
 	}
 	estimates clear
 	local i = 1
