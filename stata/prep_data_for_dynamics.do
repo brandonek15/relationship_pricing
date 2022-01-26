@@ -3,18 +3,15 @@ cap program drop merge_info_onto_joined_data
 program define merge_info_onto_joined_data
 	args matched_dummy sdc_vars_add dealscan_vars_add
 	*Merge dealscan lender variables
-	local dealscan_lender_vars lenderrole bankallocation leadarrangercredit agentcredit
+	local dealscan_lender_vars lenderrole bankallocation lead_arranger_credit agent_credit
 	merge m:1 facilityid lender using "$data_path/dealscan_facility_lender_level", ///
-		keepusing(`dealscan_lender_vars') keep(3) nogen
+		keepusing(`dealscan_lender_vars') keep(3) assert(2 3) nogen
 	rename bankallocation loan_share
 	rename lenderrole role
-	gen agent_credit = (agentcredit == "Yes")
-	gen lead_arranger_credit = (leadarrangercredit == "Yes")
-	drop agentcredit leadarrangercredit
 
 	*Merge variables from SDC
 	local sdc_vars issuer date_daily equity debt conv gross_spread_perc proceeds log_proceeds `sdc_vars_add'
-	merge m:1 sdc_deal_id using "$data_path/sdc_all_clean", keepusing(`sdc_vars') keep(3) nogen
+	merge m:1 sdc_deal_id using "$data_path/sdc_all_clean", keepusing(`sdc_vars') keep(3) assert(2 3) nogen
 	rename date_daily date_daily_sdc
 	*Merge dealscan deal data
 	local dealscan_vars date_quarterly facilitystartdate loantype packageid log_facilityamt maturity rev_discount_* ///

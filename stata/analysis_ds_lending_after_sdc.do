@@ -14,6 +14,8 @@ local last_vars equity debt conv log_proceeds gross_spread_dol gross_spread_perc
 collapse (max) `max_vars' constant (last) `last_vars' ///
 	, by(lender_sdc sdc_deal_id)
 
+replace same_lender = same_lender *100
+
 
 foreach type in all term rev {
 
@@ -63,6 +65,6 @@ foreach type in all term rev {
 	esttab est* using "$regression_output_path/regressions_likelihood_from_sdc_to_ds_`type'.tex", ///
 	replace b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) ///
 	title("Likelihood of receiving a Dealscan Loan after SDC issuance - `type'") scalars("fe Fixed Effects" ) ///
-	 addnotes("Robust SE" "Observation is SDC deal x lender")
+	 addnotes("Robust SE" "Observation is SDC deal x lender" "Same Lender is either 0 or 100 for readability of coeffs")
 
 }

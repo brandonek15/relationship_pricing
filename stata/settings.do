@@ -31,3 +31,5 @@ global comp_outcome_vars cash_assets acq_assets shrhlder_payout_assets ///
 	 
 global lower_cut_wins 2.5
 global upper_cut_wins 97.5
+
+global run_big_data_code 1

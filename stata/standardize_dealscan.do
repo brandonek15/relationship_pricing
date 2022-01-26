@@ -251,6 +251,8 @@ program define standardize_ds
 	replace lender = "Wachovia" if regexm(lender,"Wachovia")
 	replace lender = "Washington Mutual" if regexm(lender,"Washington Mutual")
 	replace lender = "Wells Fargo" if regexm(lender,"Wells Fargo")
+	replace lender = "Monroe Capital" if regexm(lender,"Monroe")
+	replace lender = "Monroe Capital" if regexm(lender,"MC Financing")
 
 
 	foreach i in "Royal Bank of Canada" "Royal Bank of Scotland" "SBI" "SMBC" ///

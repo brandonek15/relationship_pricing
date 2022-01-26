@@ -1,3 +1,4 @@
+
 cap program drop merge_time_between_sdc_sdc
 program define merge_time_between_sdc_sdc
 	*Merge on dates
@@ -81,22 +82,23 @@ save "$data_path/sdc_debt_to_equity_match", replace
 
 restore
 
-*Do debt to debt * Very Slow (15 min on server + merges)
-use "$data_path/sdc_deal_bookrunner_debt", clear
-rename * *_copy
-rename cusip_6_copy cusip_6
+if $run_big_data_code == 1 {
+	*Do debt to debt * Very Slow (15 min on server + merges)
+	use "$data_path/sdc_deal_bookrunner_debt", clear
+	rename * *_copy
+	rename cusip_6_copy cusip_6
 
-joinby cusip_6 using "$data_path/sdc_deal_bookrunner_debt",unmatched(none)
-*Don't want to keep matches that come from the same deal_id
-drop if sdc_deal_id == sdc_deal_id_copy
-*Only want to keep one set of matches (bc there are essentially duplicates)
-keep if sdc_deal_id>sdc_deal_id_copy
+	joinby cusip_6 using "$data_path/sdc_deal_bookrunner_debt",unmatched(none)
+	*Don't want to keep matches that come from the same deal_id
+	drop if sdc_deal_id == sdc_deal_id_copy
+	*Only want to keep one set of matches (bc there are essentially duplicates)
+	keep if sdc_deal_id>sdc_deal_id_copy
 
-merge_time_between_sdc_sdc
-gen same_lender = (lender == lender_copy)
+	merge_time_between_sdc_sdc
+	gen same_lender = (lender == lender_copy)
 
-save "$data_path/sdc_debt_to_debt_match", replace
-
+	save "$data_path/sdc_debt_to_debt_match", replace
+}
 /*
 *Need to still do dealscan to dealscan, which has problems due to size
 use "$data_path/lender_facilityid_cusip6", clear

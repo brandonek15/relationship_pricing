@@ -1,7 +1,14 @@
 *Make figures for stickiness 
 *Specifically meaning the fraction of deal type X to have the same lender in deal type Y, t years ago.
+if $run_big_data_code == 1 {
+	local type_list equity_to_equity equity_to_debt debt_to_equity  debt_to_debt
+}
+else {
+	local type_list equity_to_equity equity_to_debt debt_to_equity 
+}
 
-foreach type in equity_to_equity equity_to_debt debt_to_equity  debt_to_debt  {
+
+foreach type in `type_list'  {
 	if "`type'" == "equity_to_equity" {
 		local data_to_use "$data_path/sdc_`type'_match"
 		local title "Fraction of equity deals with same lender in most recent equity deal"

@@ -115,7 +115,35 @@ keep if currency == "United States Dollars"
 replace facilityamt = facilityamt*exchangerate
 gen log_facilityamt = log(facilityamt)
 
-isid facilityid lender
+*Before running, then this is true
+isid facilityid lender 
+
+*Load in the function for standardization of lenders
+do "$code_path/standardize_dealscan.do"
+*Run standardization function
+standardize_ds
+*After standardizing, this is not an identifer (check out facilityid 446806 for a good example)
+*Need to collapse to facilityid lender
+*The variables that vary are agentcredit leadarrangercredit bankallocation lenderrole
+gen agent_credit = (agentcredit == "Yes")
+gen lead_arranger_credit = (leadarrangercredit == "Yes")
+drop agentcredit leadarrangercredit
+
+*Make a dataset with collapsing only the variables that vary
+preserve
+keep facilityid lender agent_credit lead_arranger_credit bankallocation lenderrole
+gsort facilityid lender -bankallocation -lead_arranger_credit agent_credit
+*Want to keep the role of the observation with the higher allocatoin, but if not allocation, then lead_arranger_credit agent_credit
+collapse (max) agent_credit lead_arranger_credit (sum) bankallocation (first) lenderrole, by(facilityid lender)
+save "$data_path/stata_temp/facilityid_lender_merge_data", replace
+restore
+*
+drop agent_credit lead_arranger_credit bankallocation lenderrole
+duplicates drop
+merge 1:1 facilityid lender using "$data_path/stata_temp/facilityid_lender_merge_data", nogen assert(3)
+
+isid facilityid lender 
+
 save "$data_path/dealscan_facility_lender_level", replace
 
 *Create a datset with only facility variables that can used in analyses

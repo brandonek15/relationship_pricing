@@ -16,6 +16,7 @@ local last_vars spread rev_discount_* loan_share maturity log_facilityamt  ///
 collapse (max) `max_vars' constant (last) `last_vars' ///
 	, by(lender_dealscan facilityid)
 
+replace same_lender = same_lender *100
 
 foreach type in all equity debt {
 
@@ -70,6 +71,6 @@ foreach type in all equity debt {
 	esttab est* using "$regression_output_path/regressions_likelihood_from_ds_to_sdc_`type'.tex", ///
 	replace b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) ///
 	title("Likelihood of future SDC issuance after Dealscan loan -`type'") scalars("fe Fixed Effects" ) ///
-	addnotes("Robust SEs" "Observation is Dealscan facility x lender")
+	addnotes("Robust SEs" "Observation is Dealscan facility x lender" "Same Lender is either 0 or 100 for readability of coeffs")
 
 }
