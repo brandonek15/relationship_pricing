@@ -41,27 +41,27 @@ foreach type in all equity debt {
 	local i = 1
 
 	foreach lhs in gross_spread_perc {
-		reghdfe `lhs' same_lender `cond', a(constant) vce(robust)
+		reg `lhs' same_lender `cond',  vce(robust)
 		estadd local fe = "No"
 		estimates store est`i'
 		local ++i
 		
-		reghdfe `lhs' same_lender_years_out_2 same_lender_years_out_3 same_lender_years_out_4 same_lender_years_out_5 `cond', a(constant) vce(robust)
+		reg `lhs' same_lender_years_out_2 same_lender_years_out_3 same_lender_years_out_4 same_lender_years_out_5 `cond',  vce(robust)
 		estadd local fe = "No"
 		estimates store est`i'
 		local ++i
 
-		reghdfe `lhs' same_lender same_lender_log_facilityamt log_proceeds `cond', a(constant) vce(robust)
+		reg `lhs' same_lender same_lender_log_facilityamt log_proceeds `cond',  vce(robust)
 		estadd local fe = "No"
 		estimates store est`i'
 		local ++i
 
-		reghdfe `lhs' same_lender same_lender_log_facilityamt log_proceeds same_lender_discount `cond', a(constant) vce(robust)
+		reg `lhs' same_lender same_lender_log_facilityamt log_proceeds same_lender_discount `cond',  vce(robust)
 		estadd local fe = "No"
 		estimates store est`i'
 		local ++i
 
-		reghdfe `lhs' same_lender_log_facilityamt log_proceeds same_lender_discount `cond' & same_lender==1, a(constant) vce(robust)
+		reg `lhs' same_lender_log_facilityamt log_proceeds same_lender_discount `cond' & same_lender==1,  vce(robust)
 		estadd local fe = "No"
 		estimates store est`i'
 		local ++i
@@ -69,7 +69,8 @@ foreach type in all equity debt {
 
 	}
 
-	esttab est* using "$regression_output_path/regressions_sdc_fees_after_ds_`type'.tex", replace b(%9.3f) se(%9.3f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+	esttab est* using "$regression_output_path/regressions_sdc_fees_after_ds_`type'.tex", ///
+	replace b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) ///
 	title("Pricing of SDC Fees after Dealscan Loans -`type'") scalars("fe Fixed Effects" ) ///
 	 addnotes("Robust SE" "Observation is SDC deal x lender")
 

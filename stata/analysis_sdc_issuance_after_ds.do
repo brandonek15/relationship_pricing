@@ -31,43 +31,44 @@ foreach type in all equity debt {
 	estimates clear
 	local i = 1
 
-	reghdfe same_lender `cond', a(constant) vce(robust)
+	reg same_lender `cond',  vce(robust)
 	estadd local fe = "No"
 	estimates store est`i'
 	local ++i
 
-	reghdfe same_lender rev_loan term_loan other_loan `cond', a(constant) vce(robust)
+	reg same_lender rev_loan term_loan other_loan `cond',  vce(robust)
 	estadd local fe = "No"
 	estimates store est`i'
 	local ++i
 
-	reghdfe same_lender lead_arranger_credit agent_credit `cond', a(constant) vce(robust)
+	reg same_lender lead_arranger_credit agent_credit `cond',  vce(robust)
 	estadd local fe = "No"
 	estimates store est`i'
 	local ++i
 
-	reghdfe same_lender loan_share `cond', a(constant) vce(robust)
+	reg same_lender loan_share `cond',  vce(robust)
 	estadd local fe = "No"
 	estimates store est`i'
 	local ++i
 
-	reghdfe same_lender spread maturity log_facilityamt `cond', a(constant) vce(robust)
+	reg same_lender spread maturity log_facilityamt `cond',  vce(robust)
 	estadd local fe = "No"
 	estimates store est`i'
 	local ++i
 
-	reghdfe same_lender rev_discount_1_simple `cond', a(constant) vce(robust)
+	reg same_lender rev_discount_1_simple `cond',  vce(robust)
 	estadd local fe = "No"
 	estimates store est`i'
 	local ++i
 
-	reghdfe same_lender rev_loan term_loan other_loan lead_arranger_credit agent_credit ///
-	loan_share spread maturity log_facilityamt  rev_discount_1_simple `cond', a(constant) vce(robust)
+	reg same_lender rev_loan term_loan other_loan lead_arranger_credit agent_credit ///
+	loan_share spread maturity log_facilityamt  rev_discount_1_simple `cond',  vce(robust)
 	estadd local fe = "No"
 	estimates store est`i'
 	local ++i
 
-	esttab est* using "$regression_output_path/regressions_likelihood_from_ds_to_sdc_`type'.tex", replace b(%9.3f) se(%9.3f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+	esttab est* using "$regression_output_path/regressions_likelihood_from_ds_to_sdc_`type'.tex", ///
+	replace b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) ///
 	title("Likelihood of future SDC issuance after Dealscan loan -`type'") scalars("fe Fixed Effects" ) ///
 	addnotes("Robust SEs" "Observation is Dealscan facility x lender")
 

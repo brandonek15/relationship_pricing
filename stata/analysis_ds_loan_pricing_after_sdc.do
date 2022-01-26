@@ -39,29 +39,30 @@ foreach type in all term rev {
 	local i = 1
 
 	foreach lhs in spread rev_discount_1_simple {
-		reghdfe `lhs' same_lender `cond', a(constant) vce(robust)
+		reg `lhs' same_lender `cond',  vce(robust)
 		estadd local fe = "No"
 		estimates store est`i'
 		local ++i
 		
-		reghdfe `lhs' same_lender_equity same_lender_debt same_lender_conv `cond', a(constant) vce(robust)
+		reg `lhs' same_lender_equity same_lender_debt same_lender_conv `cond',  vce(robust)
 		estadd local fe = "No"
 		estimates store est`i'
 		local ++i
 
-		reghdfe `lhs' same_lender_years_out_2 same_lender_years_out_3 same_lender_years_out_4 same_lender_years_out_5 `cond', a(constant) vce(robust)
+		reg `lhs' same_lender_years_out_2 same_lender_years_out_3 same_lender_years_out_4 same_lender_years_out_5 `cond',  vce(robust)
 		estadd local fe = "No"
 		estimates store est`i'
 		local ++i
 
-		reghdfe `lhs' same_lender log_facilityamt maturity `cond', a(constant) vce(robust)
+		reg `lhs' same_lender log_facilityamt maturity `cond',  vce(robust)
 		estadd local fe = "No"
 		estimates store est`i'
 		local ++i
 
 	}
 
-	esttab est* using "$regression_output_path/regressions_ds_pricing_after_sdc_`type'.tex", replace b(%9.3f) se(%9.3f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+	esttab est* using "$regression_output_path/regressions_ds_pricing_after_sdc_`type'.tex", ///
+	 replace b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) ///
 	title("Pricing of Dealscan Loans after SDC issuance -`type'") scalars("fe Fixed Effects" ) ///
 	 addnotes("Robust SE" "Observation is SDC deal x lender")
 

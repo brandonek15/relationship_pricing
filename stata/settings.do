@@ -6,6 +6,7 @@ set type double
 set maxvar 32000
 
 cap log close _all
+cap set scheme david4
 
 global data_path "$root/intermediate_data"
 global regression_output_path "$root/output/tables/regression_tables"
