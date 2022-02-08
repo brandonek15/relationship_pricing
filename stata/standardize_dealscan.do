@@ -308,9 +308,28 @@ program define standardize_ds
 	replace lender = "RBS" if regexm(lender,"Royal Bank of Scotland")
 	replace lender = "Toronto Dom" if regexm(lender,"Toronto") & regexm(lender,"Dominion")
 	replace lender = "Wells Fargo" if lender == "Wachovia"
+	replace lender = "TD" if lender == "Toronto Dom"
+	replace lender = "BMO" if lender == "Bank of Montreal"
+	replace lender = "US Bancorp" if lender == "Us"
+	replace lender = "Bank of New York" if lender == "Bank of New York Mellon"
+	replace lender = "Deutsche Bank" if lender == "Deutsche"
+	replace lender = "SMBC" if lender == "Sumitomo Mitsui"
+	replace lender = "Bank of New York" if lender == "Mellon"
+	replace lender = "BNP Paribas" if lender == "Bank of The West"
+	replace lender = "BBVA" if lender == "Compass"
+	replace lender = "Scotia" if lender == "Bank of Nova Scotia"	
 
 	replace lender = subinstr(lender," Bank","",.) if substr(lender,-5,.) == " Bank"
 
+	replace lender = strtrim(lender)
 	replace lender = upper(lender)
+	
+	*Do changes after they been capitalized
+	replace lender = "US BANK" if lender == "US"	
+	replace lender = "DEUTSCHE BANK" if lender == "DEUTSCHE"	
+	replace lender = "BNP PARIBAS" if lender == "BANK OF THE WEST"	
+	
+
+	
 
 end

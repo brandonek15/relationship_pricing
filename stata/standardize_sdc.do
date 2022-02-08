@@ -743,9 +743,14 @@ foreach i in "Bank of America" "Charles Schwab" "Royal Bank of Canada" "Royal Ba
 		replace lender = "`i'" if regexm(lender,"`i'")
 	
 	}
-	
-replace lender = "JP Morgan" if lender == "Chase"
-replace lender = "Wells Fargo" if lender == "WF"
+
+	replace lender = upper(lender)
+	replace lender = "JP MORGAN" if lender == "CHASE"
+	replace lender = "WELLS FARGO" if lender == "WF"
+	replace lender = "TD" if lender == "TORONTO DOMINION"
+	replace lender = "TD" if lender == "TORONTO DOM"
+	replace lender = "LASALLE" if lender == "LA SALLE"
+
 	
 	
 end
@@ -762,7 +767,6 @@ program define sdc_wide_to_long
 	replace lender = trim(lender)
 	drop if lender == "NA" | lender== "TBD" | lender == "Unknown"
 	clean_lender_sdc
-	replace lender = upper(lender)
 	duplicates drop
 
 

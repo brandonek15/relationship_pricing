@@ -1,4 +1,4 @@
-*Loan Covenant master file
+*Relationship pricing master file
 *Finish Clean SDC later - need to standardize
 
 * set directory

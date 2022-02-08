@@ -33,9 +33,9 @@ end
 
 *E.G. All SDC interactions five years after a dealscan observation
 use "$data_path/sdc_dealscan_pairwise_combinations_matched_unmatched", clear
-keep if days_from_ds_to_sdc <= 5*365 & days_from_ds_to_sdc >=0
+keep if days_from_ds_to_sdc >=0
 merge_info_onto_joined_data unmatched "gross_spread_dol proceeds" "leveraged asset_based"
-save "$data_path/sdc_dealscan_pairwise_5yrs_post_ds", replace
+save "$data_path/sdc_dealscan_pairwise_post_ds", replace
 *This is an analysis code that uses this dataset
 do "$code_path/analysis_sdc_issuance_after_ds.do"
 do "$code_path/analysis_ds_loan_pricing_after_sdc.do"

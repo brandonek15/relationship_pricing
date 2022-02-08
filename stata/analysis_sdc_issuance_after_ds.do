@@ -2,7 +2,18 @@
 *on previous deals in either SDC to Dealscan or Dealscan to SDC
 
 *Use the all possible relationships data
-use "$data_path/sdc_dealscan_pairwise_5yrs_post_ds", clear
+use "$data_path/sdc_dealscan_pairwise_post_ds", clear
+*Don't want to make it run this, but this is the identifier
+*isid facilityid lender_dealscan lender_sdc sdc_deal_id
+
+*We only want to keep the most recent match
+sort facilityid days_from_ds_to_sdc
+egen min_days_from_ds_to_sdc = min(days_from_ds_to_sdc), by(facilityid) 
+br issuer facilityid sdc_deal_id lender_dealscan lender_sdc  same_lender term_loan rev_loan other_loan equity debt conv
+keep if days_from_ds_to_sdc == min_days_from_ds_to_sdc
+
+br facilityid lender_dealscan lender_sdc sdc_deal_id same_lender term_loan rev_loan other_loan equity debt conv
+sort facilityid sdc_deal_id lender_dealscan
 
 *Analyses
 *E.g. regress any future SDC issuance on whether the bookrunner of the issuance
@@ -17,6 +28,16 @@ collapse (max) `max_vars' constant (last) `last_vars' ///
 	, by(lender_dealscan facilityid)
 
 replace same_lender = same_lender *100
+
+br lender_dealscan facilityid same_lender term_loan rev_loan other_loan equity debt conv
+*Simple correlations
+corr same_lender agent_credit
+corr same_lender lead_arranger_credit
+corr same_lender rev_discount_1_simple
+corr same_lender spread
+corr same_lender rev_discount_1_simple if lead_arranger_credit ==1 & rev_loan ==1
+corr same_lender spread if lead_arranger_credit ==1
+
 
 foreach type in all equity debt {
 

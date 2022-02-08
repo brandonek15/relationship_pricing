@@ -87,6 +87,10 @@ label var date_quarterly "Quarterly Start Date"
 gen end_date_quarterly = qofd(facilityenddate)
 format end_date_quarterly %tq
 label var end_date_quarterly "Quarterly End Date"
+*Make a date_daily variable
+get date_daily = facilitystartdate
+label var date_daily "Date Daily of Start Date"
+format date_daily %td
 
 *Merge on FRED rate data to make a comparable spread variable
 merge m:1 date_quarterly using "$data_path/fred_rates", nogen keep(1 3)
@@ -148,7 +152,7 @@ save "$data_path/dealscan_facility_lender_level", replace
 
 *Create a datset with only facility variables that can used in analyses
 use "$data_path/dealscan_facility_lender_level", clear
-drop lender lenderrole bankallocation agentcredit leadarrangercredit
+drop lender lenderrole bankallocation agent_credit lead_arranger_credit
 duplicates drop
 isid facilityid
 save "$data_path/dealscan_facility_level", replace
