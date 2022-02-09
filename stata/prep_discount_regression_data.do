@@ -37,9 +37,13 @@ foreach spread_type in standard alternate {
 	}
 }
 sort borrowercompanyid date_quarterly rev_loan facilityid
+/*
 br borrowercompanyid date_quarterly packageid facilityid rev_loan rev_discount* ///
  allindrawn spread spread_2
+*/
 isid facilityid
+*Merge on cusip_6
+merge m:1 borrowercompanyid date_quarterly using "$data_path/stata_temp/compustat_with_bcid", keep(1 3) keepusing(cusip_6) nogen
 save "$data_path/stata_temp/dealscan_discounts_facilityid", replace
 *Now I only want to keep the borrowercompanyid and rev_discounts
 keep borrowercompanyid rev_discount* date_quarterly

@@ -84,3 +84,9 @@ rename cusip_6_copy cusip_6
 
 joinby cusip_6 using "$data_path/sdc_deal_bookrunner",unmatched(none)
 *Cannot do this, has 222m observations (obviously we have duplicates but this is unreasonable)
+
+*As inputs it will take the following:
+*Number of lenders per deal
+local n_lenders 20
+*Get the skeleton dataset (sdc_deal_id x lender)
+make_skeleton "ds" `n_lenders'

@@ -314,7 +314,6 @@ program define standardize_ds
 	replace lender = "Bank of New York" if lender == "Bank of New York Mellon"
 	replace lender = "Deutsche Bank" if lender == "Deutsche"
 	replace lender = "SMBC" if lender == "Sumitomo Mitsui"
-	replace lender = "Bank of New York" if lender == "Mellon"
 	replace lender = "BNP Paribas" if lender == "Bank of The West"
 	replace lender = "BBVA" if lender == "Compass"
 	replace lender = "Scotia" if lender == "Bank of Nova Scotia"	
@@ -325,9 +324,10 @@ program define standardize_ds
 	replace lender = upper(lender)
 	
 	*Do changes after they been capitalized
-	replace lender = "US BANK" if lender == "US"	
+	replace lender = "US BANCORP" if lender == "US"	
 	replace lender = "DEUTSCHE BANK" if lender == "DEUTSCHE"	
 	replace lender = "BNP PARIBAS" if lender == "BANK OF THE WEST"	
+	replace lender = "BANK OF NEW YORK" if lender == "MELLON"
 	
 
 	

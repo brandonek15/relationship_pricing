@@ -88,7 +88,7 @@ gen end_date_quarterly = qofd(facilityenddate)
 format end_date_quarterly %tq
 label var end_date_quarterly "Quarterly End Date"
 *Make a date_daily variable
-get date_daily = facilitystartdate
+gen date_daily = facilitystartdate
 label var date_daily "Date Daily of Start Date"
 format date_daily %td
 

@@ -23,11 +23,7 @@ do "$code_path/clean_fred.do"
 do "$code_path/clean_dealscan.do"
 do "$code_path/clean_sdc.do"
 
-*Merge data together
-do "$code_path/merge_data.do"
-do "$code_path/prep_merged_data.do"
-do "$code_path/join_sdc_dealscan.do"
-do "$code_path/prep_data_for_dynamics.do"
-do "$code_path/join_same_dataset.do"
-do "$code_path/figures_stickiness.do"
-
+*Make relationship dataset
+do "$code_path/prep_relationship_datasets.do"
+do "$code_path/create_sdc_issuance_relationships.do"
+do "$code_path/create_ds_lending_relationships.do"
