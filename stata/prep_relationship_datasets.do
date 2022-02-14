@@ -1,6 +1,18 @@
 *This program will prepare the necessary datasets needed to merge on later in the do file that makes the final dataset for 
 *understanding past relationships
 
+*INPUT
+*Number of lenders per deal
+local n_lenders 20
+
+
+*Create the skeleton datasets and save them
+foreach base_type in "sdc" "ds" {
+	*Get the skeleton dataset (sdc_deal_id x lender)
+	make_skeleton "`base_type'" `n_lenders'
+	save "$data_path/stata_temp/skeleton_`base_type'_`n_lenders'" , replace
+}
+
 *First need to prepare datasets for joining on cusip_6 lender." Will eventually do joinbys to do the matches.
 *Make SDC ones first. ONly contain the cusip_6 lender and sdc_deal_id
 use "$data_path/sdc_deal_bookrunner", clear
@@ -29,19 +41,19 @@ local burner_days 90 //This says that if I am getting matches from the same sour
 foreach base_type in sdc ds {
 
 	if "`base_type'" == "sdc" {
-		local base_dataset "$data_path/sdc_deal_bookrunner"
+		local base_dataset "$data_path/stata_temp/skeleton_`base_type'_`n_lenders'"
 		local base_dataset_info "$data_path/sdc_all_clean"
 		local id sdc_deal_id
 	}
 	else if "`base_type'" == "ds" {
-		local base_dataset "$data_path/lender_facilityid_cusip6"
+		local base_dataset "$data_path/stata_temp/skeleton_`base_type'_`n_lenders'"
 		local base_dataset_info "$data_path/stata_temp/dealscan_discounts_facilityid"
 		local id facilityid
 	}
 
 	use `base_dataset', clear
 	*Merge on the date of the sdc_deal_id
-	merge m:1 `id' using "`base_dataset_info'", keepusing(date_daily) keep(3) nogen
+	merge m:1 `id' using "`base_dataset_info'", keepusing(date_daily cusip_6) keep(3) nogen
 	rename date_daily date_daily_base
 	rename `id' `id'_base
 	*I am making 6 types of matches,
@@ -81,7 +93,7 @@ foreach base_type in sdc ds {
 			*Save it to be merged on later
 			isid `id' lender
 			keep `id' lender `subset_id'_`subset_type' date_daily_`subset_type' days_after_match_`subset_type'
-			save "$data_path/stata_temp/matches_`base_type'_`subset_type'", replace 
+			save "$data_path/stata_temp/matches_`base_type'_`subset_type'_`n_lenders'", replace 
 		restore
 	}
 

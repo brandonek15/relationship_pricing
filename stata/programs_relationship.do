@@ -52,7 +52,7 @@ end
 *
 cap program drop fill_out_skeleton
 program define fill_out_skeleton
-	args type base_vars sdc_vars ds_vars ds_lender_vars
+	args type base_vars sdc_vars ds_vars ds_lender_vars n_lenders
 
 	if "`type'" == "sdc" {
 		local base_dataset "$data_path/sdc_deal_bookrunner"
@@ -69,7 +69,7 @@ program define fill_out_skeleton
 	*Now merge on who was truly a lender on the deal
 	merge 1:1 `id' lender using "`base_dataset'", keep(1 3)
 	gen hire = (_merge ==3)
-	labe var hire "Hire"
+	label var hire "Hire"
 	drop cusip_6 _merge
 
 	*Get basic deal characteristics I always want
@@ -96,7 +96,7 @@ program define fill_out_skeleton
 			local merge_vars `ds_vars'
 		}
 		*Get the most recent matches
-		merge 1:1 `id' lender using "$data_path/stata_temp/matches_`type'_`subset_type'", keep(1 3) nogen
+		merge 1:1 `id' lender using "$data_path/stata_temp/matches_`type'_`subset_type'_`n_lenders'", keep(1 3) nogen
 		*Now rename the base `id' for mergin reasons
 		rename `id' `id'_base
 		*Now merge on the information from that past relationship (but first need to rename `subset_id'_`subset_type' to `subset_id'

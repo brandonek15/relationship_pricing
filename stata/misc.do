@@ -90,3 +90,34 @@ joinby cusip_6 using "$data_path/sdc_deal_bookrunner",unmatched(none)
 local n_lenders 20
 *Get the skeleton dataset (sdc_deal_id x lender)
 make_skeleton "ds" `n_lenders'
+
+use "$data_path/sdc_deals_with_past_relationships_20", clear
+
+/*
+egen past_relationship = rowmax(rel_equity rel_debt rel_conv rel_rev_loan rel_term_loan rel_other_loan)
+reg hire past_relationship
+*/
+
+gen rev_loan_discount_inter = 0
+replace rev_loan_discount_inter = rev_discount_1_simple_rev_loan*rel_rev_loan if !mi(rev_discount_1_simple_rev_loan)
+*br rev_loan_discount_inter rev_discount_1_simple_rev_loan rel_rev_loan
+
+foreach type in all equity debt {
+
+	if "`type'" == "equity" {
+		local cond "if `type' ==1" 
+	}
+	if "`type'" == "debt" {
+		local cond "if `type'==1" 
+	}
+	if "`type'" == "all" {
+		local cond "if 1 ==1" 
+	}
+	estimates clear
+	local i = 1
+
+	reg hire rel* `cond'
+	
+	reg hire rel* rev_loan_discount_inter `cond'
+	
+}
