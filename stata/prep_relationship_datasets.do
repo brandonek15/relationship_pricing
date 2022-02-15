@@ -1,10 +1,12 @@
 *This program will prepare the necessary datasets needed to merge on later in the do file that makes the final dataset for 
 *understanding past relationships
 
+*Load the programs.
+do "$code_path/programs_relationship"
+
 *INPUT
 *Number of lenders per deal
 local n_lenders 20
-
 
 *Create the skeleton datasets and save them
 foreach base_type in "sdc" "ds" {
