@@ -5,6 +5,8 @@ duplicates drop
 
 *Since we need lender identities, we will drop those observations without them - small number
 drop if mi(lender)
+*Drop Financials
+drop if inrange(primarysiccode,6000,6999)
 
 *Format dates
 foreach var in facilitystartdate facilityenddate {
