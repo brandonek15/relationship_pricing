@@ -39,6 +39,12 @@ program define clean_sdc
 	gen cusip_6 = parent_ultimate_cusip_6 
 	*Need to have cusip_6
 	drop if mi(cusip_6)
+	*Drop government agencies
+	drop if regex(sic,"999[A-Z]+")
+	*Drop financials (SIC codes 6000-6999)
+	destring sic, force replace
+	*Also drop government agencies (which are missing SIC code)
+	drop if inrange(sic,6000,6999)
 
 	*Create a date to merge on with
 	gen month = substr(issue_date,1,2)
@@ -114,7 +120,7 @@ restore
 preserve
 keep if conv ==1
 *There are no convertable obs for these vars
-drop bookrunner_13-bookrunner_19
+drop bookrunner_13-bookrunner_16
 save "$data_path/sdc_conv_clean", replace
 restore
 

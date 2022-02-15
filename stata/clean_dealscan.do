@@ -139,6 +139,8 @@ keep facilityid lender agent_credit lead_arranger_credit bankallocation lenderro
 gsort facilityid lender -bankallocation -lead_arranger_credit agent_credit
 *Want to keep the role of the observation with the higher allocatoin, but if not allocation, then lead_arranger_credit agent_credit
 collapse (max) agent_credit lead_arranger_credit (sum) bankallocation (first) lenderrole, by(facilityid lender)
+*Want to make bankallocation missing if zero
+replace bankallocation = . if bankallocation==0 | bankallocation>100
 save "$data_path/stata_temp/facilityid_lender_merge_data", replace
 restore
 *
