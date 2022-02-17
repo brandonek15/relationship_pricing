@@ -121,3 +121,19 @@ foreach type in all equity debt {
 	reg hire rel* rev_loan_discount_inter `cond'
 	
 }
+
+*Make some figures
+use "$data_path/sdc_deals_with_past_relationships_20", clear
+gen count =1
+*sort cusip_6 sdc_deal_id lender
+collapse (sum) count (mean) rel_*, by(hire equity_base debt_base conv_base)
+*
+
+*Understand the discount
+use "$data_path/stata_temp/dealscan_discounts_facilityid", clear
+br borrowercompanyid date_quarterly packageid facilityid rev_loan rev_discount* ///
+ allindrawn spread spread_2
+br borrowercompanyid date_quarterly packageid facilityid rev_loan term_loan other_loan rev_discount* ///
+spread if borrowercompanyid == 19196 & date_quarterly == tq(2003q2)
+
+ 
