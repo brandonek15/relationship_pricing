@@ -68,7 +68,7 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 	}
 	*No need to include the missing variables because agent_credit and lead_arranger are never missing if relationsihp ==1
 	if "`vars_set'" == "ds_lender_type" {
-		local rhs rel_* i_agent_credit_* i_lead_arranger_* 
+		local rhs rel_* i_agent_credit_* i_lead_arranger_* i_bankallocation_* mi_bankallocation_*
 		local drop_add 
 	}
 	if "`vars_set'" == "ds_chars" {
@@ -135,7 +135,20 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 *Extensive margin - pricing of dealscan loan (only using hire ==1)
 label var rev_discount_1_simple_base "Disc"
 label var spread_base "Sprd"
-foreach ext_var in spread_base rev_discount_1_simple_base {
+label var log_facilityamt_base "Lg-Amt"
+foreach lhs in spread_base rev_discount_1_simple_base {
+
+	if "`lhs'" == "spread_base" {
+		local rhs_add log_facilityamt_base
+	}
+	if "`lhs'" == "rev_discount_1_simple_base" {
+		local rhs_add log_facilityamt_base
+	}
+	if "`lhs'" == "log_facilityamt_base" {
+		local rhs_add spread_base
+	}
+
+
 	foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 
 		if "`vars_set'" == "baseline" {
@@ -146,6 +159,7 @@ foreach ext_var in spread_base rev_discount_1_simple_base {
 			local rhs rel_* i_days_after_match_*
 			local drop_add 
 		}
+
 		*No need to include the missing variables because agent_credit and lead_arranger are never missing if relationsihp ==1
 		if "`vars_set'" == "ds_lender_type" {
 			local rhs rel_* i_agent_credit_* i_lead_arranger_* 
@@ -193,7 +207,7 @@ foreach ext_var in spread_base rev_discount_1_simple_base {
 					local fe_local "LxR"
 				}
 
-				reghdfe `ext_var' `rhs' `cond' & hire !=0, absorb(`absorb') vce(robust)
+				reghdfe `lhs' `rhs' `rhs_add' `cond' & hire !=0, absorb(`absorb') vce(robust)
 				estadd local fe = "`fe_local'"
 				estadd local sample = "`type'"
 				estimates store est`i'
@@ -204,10 +218,11 @@ foreach ext_var in spread_base rev_discount_1_simple_base {
 		
 		}
 		
-		esttab est* using "$regression_output_path/regressions_ds_exten_`ext_var'_`vars_set'.tex", ///
+		esttab est* using "$regression_output_path/regressions_ds_exten_`lhs'_`vars_set'.tex", ///
 		replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
 		title("Pricing of Dealscan Loans after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
-		addnotes("Robust SEs" "Observation is DS loan x lender when lender is hired" "Fees/Discount in percentage point")
+		addnotes("Robust SEs" "Observation is DS loan x lender when lender is hired" "Fees/Discount in percentage point" ///
+		"Lg-Amt is Log Facility Amount")
 		
 	}
 }
