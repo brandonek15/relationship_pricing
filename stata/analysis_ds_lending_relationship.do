@@ -127,7 +127,7 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 	esttab est* using "$regression_output_path/regressions_ds_inten_`vars_set'.tex", ///
 	replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
 	title("Likelihood of Dealscan hiring after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
-	addnotes("Robust SEs" "Observation is SDC deal x lender" "Hire indicator either 0 or 100 for readability")
+	addnotes("Robust SEs" "Observation is DS Loan x lender" "Hire indicator either 0 or 100 for readability")
 
 	
 }
