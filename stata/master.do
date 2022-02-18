@@ -30,3 +30,4 @@ do "$code_path/create_ds_lending_relationships.do"
 
 *Analysis
 do "$code_path/analysis_sdc_issuance_relationship.do"
+do "$code_path/analysis_ds_lending_relationship.do"
