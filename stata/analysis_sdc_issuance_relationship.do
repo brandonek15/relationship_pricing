@@ -67,10 +67,9 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 		local rhs rel_* i_days_after_match_*
 		local drop_add 
 	}
-	*No need to include the missing variables because agent_credit and lead_arranger are never missing if relationsihp ==1
 	if "`vars_set'" == "ds_lender_type" {
-		local rhs rel_* i_agent_credit_* i_lead_arranger_* 
-		local drop_add 
+		local rhs rel_* i_agent_credit_* i_lead_arranger_* i_bankallocation_* mi_bankallocation_*
+		local drop_add "mi_*"
 	}
 	if "`vars_set'" == "ds_chars" {
 		local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
@@ -156,10 +155,9 @@ foreach lhs in gross_spread_perc_base log_proceeds_base {
 			local rhs rel_* i_days_after_match_*
 			local drop_add 
 		}
-		*No need to include the missing variables because agent_credit and lead_arranger are never missing if relationsihp ==1
 		if "`vars_set'" == "ds_lender_type" {
 			local rhs rel_* i_agent_credit_* i_lead_arranger_* i_bankallocation_* mi_bankallocation_*
-			local drop_add 
+			local drop_add "mi_*"
 		}
 		if "`vars_set'" == "ds_chars" {
 			local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*

@@ -69,7 +69,7 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 	*No need to include the missing variables because agent_credit and lead_arranger are never missing if relationsihp ==1
 	if "`vars_set'" == "ds_lender_type" {
 		local rhs rel_* i_agent_credit_* i_lead_arranger_* i_bankallocation_* mi_bankallocation_*
-		local drop_add 
+		local drop_add  "mi_*"
 	}
 	if "`vars_set'" == "ds_chars" {
 		local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
@@ -136,7 +136,7 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 label var rev_discount_1_simple_base "Disc"
 label var spread_base "Sprd"
 label var log_facilityamt_base "Lg-Amt"
-foreach lhs in spread_base rev_discount_1_simple_base {
+foreach lhs in log_facilityamt_base spread_base rev_discount_1_simple_base {
 
 	if "`lhs'" == "spread_base" {
 		local rhs_add log_facilityamt_base
@@ -162,8 +162,8 @@ foreach lhs in spread_base rev_discount_1_simple_base {
 
 		*No need to include the missing variables because agent_credit and lead_arranger are never missing if relationsihp ==1
 		if "`vars_set'" == "ds_lender_type" {
-			local rhs rel_* i_agent_credit_* i_lead_arranger_* 
-			local drop_add 
+			local rhs rel_* i_agent_credit_* i_lead_arranger_* i_bankallocation_* mi_bankallocation_*
+			local drop_add "mi_*"
 		}
 		if "`vars_set'" == "ds_chars" {
 			local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
