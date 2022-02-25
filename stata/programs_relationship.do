@@ -131,3 +131,114 @@ program define fill_out_skeleton
 
 
 end
+
+*This program does a bunch of things to the dataset to prepare it for analyses
+cap program drop prepare_rel_dataset
+program define prepare_rel_dataset
+	*Create past relationship dummy and FEs
+	egen past_relationship = rowmax(rel_equity rel_debt rel_conv rel_rev_loan rel_term_loan rel_other_loan)
+	gen constant = 1
+	egen cusip_6_lender = group(cusip_6 lender)
+	egen lender_relationship = group(lender past_relationship)
+	*Make hire 0 or 100 for readability
+	replace hire = hire*100
+
+	label var rel_equity "Rel. Equity"
+	label var rel_debt "Rel. Debt"
+	label var rel_conv "Rel. Convertible"
+	label var rel_rev_loan "Rel. Revolver"
+	label var rel_term_loan "Rel. Term Loan"
+	label var rel_other_loan "Rel. Other Loan"
+	
+	*Make labels for lhs variables
+	cap label var rev_discount_1_simple_base "Disc"
+	cap label var spread_base "Sprd"
+	cap label var log_facilityamt_base "Lg-Amt"
+	cap label var gross_spread_perc_base "Fee"
+	cap label var log_proceeds_base "Lg-Amt"
+
+	*Create some interaction variables. These are 0 if there is no previous relationship (or it is missing), and the value otherwise
+	*Note in specifications, having the relationship dummy is all we need whenever the variable is never missing, but we also need to
+	*add the missing dummy if it is missing when the relationships exists (e.g. rev_discount_1_simple)
+	foreach ds_type in rev_loan term_loan other_loan {
+
+		foreach ds_inter_var in rev_discount_1_simple spread maturity log_facilityamt ///
+		agent_credit lead_arranger_credit bankallocation days_after_match {
+
+			if "`ds_inter_var'" == "rev_discount_1_simple" {
+				local label "Disc"
+			}
+			if "`ds_inter_var'" == "spread" {
+				local label "Sprd"
+			}
+			if "`ds_inter_var'" == "maturity" {
+				local label "Maturity"
+			}
+			if "`ds_inter_var'" == "log_facilityamt" {
+				local label "Lg-Amt"
+			}
+			if "`ds_inter_var'" == "agent_credit" {
+				local label "Agent"
+			}
+			if "`ds_inter_var'" == "lead_arranger_credit" {
+				local label "Lead Arranger"
+			}
+			if "`ds_inter_var'" == "bankallocation" {
+				local label "Loan Share"
+			}
+			if "`ds_inter_var'" == "days_after_match" {
+				local label "Days Between Rel."
+			}
+				
+			if "`ds_type'" == "rev_loan" {
+				local type_name "rev"
+			}
+			if "`ds_type'" == "term_loan" {
+				local type_name "term"
+			}
+			if "`ds_type'" == "other_loan" {
+				local type_name "other"
+			}
+		
+			gen i_`ds_inter_var'_`type_name' = 0
+			replace i_`ds_inter_var'_`type_name' = `ds_inter_var'_`ds_type'*rel_`ds_type' if !mi(`ds_inter_var'_`ds_type')
+			gen mi_`ds_inter_var'_`type_name' = mi(`ds_inter_var'_`ds_type')
+			
+			local rel_label : variable label rel_`ds_type'
+			label var i_`ds_inter_var'_`type_name' "`rel_label' X `label'"
+			
+			
+		}
+
+
+	}
+
+	foreach sdc_type in debt equity conv {
+
+		foreach sdc_inter_var in log_proceeds gross_spread_perc days_after_match {
+
+			if "`sdc_inter_var'" == "log_proceeds" {
+				local label "Lg-Amt"
+			}
+			if "`sdc_inter_var'" == "gross_spread_perc" {
+				local label "Sprd"
+			}
+			if "`sdc_inter_var'" == "days_after_match" {
+				local label "Days Between Rel."
+			}
+			
+
+			local type_name `sdc_type'
+			
+			gen i_`sdc_inter_var'_`type_name' = 0
+			replace i_`sdc_inter_var'_`type_name' = `sdc_inter_var'_`sdc_type'*rel_`sdc_type' if !mi(`sdc_inter_var'_`sdc_type')
+			gen mi_`sdc_inter_var'_`type_name' = mi(`sdc_inter_var'_`sdc_type')
+			
+			local rel_label : variable label rel_`sdc_type'
+			label var i_`sdc_inter_var'_`type_name' "`rel_label' X `label'"
+			
+		}
+
+	}
+
+end

@@ -2,6 +2,7 @@
 *on previous deals in either SDC to Dealscan or Dealscan to SDC
 
 use "$data_path/ds_lending_with_past_relationships_20", clear
+/*
 egen past_relationship = rowmax(rel_equity rel_debt rel_conv rel_rev_loan rel_term_loan rel_other_loan)
 gen constant = 1
 egen cusip_6_lender = group(cusip_6 lender)
@@ -55,7 +56,7 @@ foreach sdc_type in debt equity conv {
 reg hire rel_*
 reg hire rel_* i_*
 reg hire rel_* i_* mi_*
-
+*/
 foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 
 	if "`vars_set'" == "baseline" {

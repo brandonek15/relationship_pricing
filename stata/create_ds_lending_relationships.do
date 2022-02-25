@@ -25,5 +25,8 @@ local ds_vars loantype packageid log_facilityamt maturity rev_discount_1_simple 
 local ds_lender_vars lenderrole bankallocation lead_arranger_credit agent_credit
 fill_out_skeleton "`type'" "`base_vars'" "`sdc_vars'" "`ds_vars'" "`ds_lender_vars'" "`n_lenders'"
 
+*Create interactions and label variables
+prepare_rel_dataset
+
 isid facilityid lender
 save "$data_path/ds_lending_with_past_relationships_`n_lenders'", replace 

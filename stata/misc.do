@@ -136,4 +136,83 @@ br borrowercompanyid date_quarterly packageid facilityid rev_loan rev_discount* 
 br borrowercompanyid date_quarterly packageid facilityid rev_loan term_loan other_loan rev_discount* ///
 spread if borrowercompanyid == 19196 & date_quarterly == tq(2003q2)
 
- 
+*Check to see if the first discount given to each firm is bigger than later ones?
+use "$data_path/stata_temp/dealscan_discounts_facilityid", clear
+keep if rev_loan ==1 & !mi(cusip_6)
+bys cusip_6 (facilitystartdate): gen n = _n
+bys cusip_6 (facilitystartdate): gen N = _N
+sum rev_discount_1_simple if n ==1
+sum rev_discount_1_simple if n >1
+
+sum rev_discount_1_simple if n ==1 & N>1
+sum rev_discount_1_simple if n >1 & N>1
+
+reghdfe rev_discount_1_simple n, absorb(cusip_6)
+reghdfe rev_discount_1_simple n, absorb(cusip_6 date_quarterly)
+reghdfe rev_discount_2_simple n, absorb(cusip_6 date_quarterly)
+
+
+*Make a simple graph of the average discount by observation num
+collapse (mean) rev_discount*, by(n)
+twoway line rev_discount_1_simple n
+
+*Do other specifications
+use "$data_path/sdc_deals_with_past_relationships_20", clear
+egen past_relationship = rowmax(rel_equity rel_debt rel_conv rel_rev_loan rel_term_loan rel_other_loan)
+gen constant = 1
+egen cusip_6_lender = group(cusip_6 lender)
+egen lender_relationship = group(lender past_relationship)
+*Make a marker for which deal number for cusip_6 this is
+bys cusip_6 lender (date_daily sdc_deal_id): gen cusip_6_deal_num = _n
+*Intensive margin analyses
+reg hire rel_*
+br issuer cusip_6 lender date_daily sdc_deal_id cusip_6_deal_num debt equity conv
+
+*Make hire 0 or 100 for readability
+replace hire = hire*100
+
+*Create some variables
+foreach ds_type in rev_loan term_loan other_loan {
+
+	foreach ds_inter_var in rev_discount_1_simple spread maturity log_facilityamt ///
+	agent_credit lead_arranger_credit bankallocation days_after_match {
+
+	
+		if "`ds_type'" == "rev_loan" {
+			local type_name "rev"
+		}
+		if "`ds_type'" == "term_loan" {
+			local type_name "term"
+		}
+		if "`ds_type'" == "other_loan" {
+			local type_name "other"
+		}
+	
+		gen i_`ds_inter_var'_`type_name' = 0
+		replace i_`ds_inter_var'_`type_name' = `ds_inter_var'_`ds_type'*rel_`ds_type' if !mi(`ds_inter_var'_`ds_type')
+		gen mi_`ds_inter_var'_`type_name' = mi(`ds_inter_var'_`ds_type')
+	}
+
+}
+
+foreach sdc_type in debt equity conv {
+
+	foreach sdc_inter_var in log_proceeds gross_spread_perc days_after_match {
+
+		local type_name `sdc_type'
+		
+		gen i_`sdc_inter_var'_`type_name' = 0
+		replace i_`sdc_inter_var'_`type_name' = `sdc_inter_var'_`sdc_type'*rel_`sdc_type' if !mi(`sdc_inter_var'_`sdc_type')
+		gen mi_`sdc_inter_var'_`type_name' = mi(`sdc_inter_var'_`sdc_type')
+	}
+
+} 
+
+*Get the first company observation such that a previous revolving relationship exists
+bys cusip_6 lender rel_rev_loan (date_daily sdc_deal_id): gen cusip_6_deal_num_rel_rev_loan = _n
+local absorb constant
+local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple* ///
+	i_agent_credit_* i_lead_arranger_* i_bankallocation_* mi_bankallocation_*
+*reghdfe hire `rhs' if cusip_6_deal_num_rel_rev_loan==1 & rel_rev_loan ==1, absorb(`absorb') vce(robust)
+*local rhs rel_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
+reghdfe hire `rhs' , absorb(`absorb') vce(robust)
