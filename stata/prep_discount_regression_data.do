@@ -35,6 +35,9 @@ foreach spread_type in standard alternate {
 		gen rev_discount_`spread_suffix'_`discount_type' = fe_coeff_term_sp - fe_coeff_rev_sp
 		*Don't want this to be populated for other loans
 		replace rev_discount_`spread_suffix'_`discount_type' = . if other_loan ==1
+		*Want the "discount" to be the negative amount if it is a term loan because I want it then to "term-revolver"
+		replace rev_discount_`spread_suffix'_`discount_type' = -rev_discount_`spread_suffix'_`discount_type' if term_loan ==1
+
 		drop fe_coeff*
 	}
 }
@@ -48,7 +51,7 @@ isid facilityid
 merge m:1 borrowercompanyid date_quarterly using "$data_path/stata_temp/compustat_with_bcid", keep(1 3) keepusing(cusip_6) nogen
 save "$data_path/stata_temp/dealscan_discounts_facilityid", replace
 *Now I only want to keep the borrowercompanyid and rev_discounts
-keep if term_loan ==1 | rev_loan ==1
+keep if rev_loan ==1
 keep borrowercompanyid rev_discount* date_quarterly
 duplicates drop
 isid borrowercompanyid date_quarterly

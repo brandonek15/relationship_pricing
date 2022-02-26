@@ -2,58 +2,99 @@
 *on previous deals in either SDC to Dealscan or Dealscan to SDC
 
 use "$data_path/sdc_deals_with_past_relationships_20", clear
-egen past_relationship = rowmax(rel_equity rel_debt rel_conv rel_rev_loan rel_term_loan rel_other_loan)
-gen constant = 1
-egen cusip_6_lender = group(cusip_6 lender)
-egen lender_relationship = group(lender past_relationship)
-*Make a marker for which deal number for cusip_6 this is
-bys cusip_6 lender (date_daily sdc_deal_id): gen cusip_6_deal_num = _n
-*Intensive margin analyses
-reg hire rel_*
-br issuer cusip_6 lender date_daily sdc_deal_id cusip_6_deal_num debt equity conv
+append using "$data_path/ds_lending_with_past_relationships_20"
 
-*Create some variables
-foreach ds_type in rev_loan term_loan other_loan {
+egen sdc_obs = rowmax(equity_base debt_base conv_base)
+egen ds_obs = rowmax(rev_loan_base term_loan_base other_loan_base)
 
-	foreach ds_inter_var in rev_discount_1_simple spread maturity log_facilityamt ///
-	agent_credit lead_arranger_credit bankallocation days_after_match {
+*Simple past relationship table
+local rhs rel_* 
+local drop_add 
+local absorb constant
+local fe_local "None"
 
-	
-		if "`ds_type'" == "rev_loan" {
-			local type_name "rev"
-		}
-		if "`ds_type'" == "term_loan" {
-			local type_name "term"
-		}
-		if "`ds_type'" == "other_loan" {
-			local type_name "other"
-		}
-	
-		gen i_`ds_inter_var'_`type_name' = 0
-		replace i_`ds_inter_var'_`type_name' = `ds_inter_var'_`ds_type'*rel_`ds_type' if !mi(`ds_inter_var'_`ds_type')
-		gen mi_`ds_inter_var'_`type_name' = mi(`ds_inter_var'_`ds_type')
+estimates clear
+local i = 1
+
+foreach type in all_sdc all_ds equity debt term rev {
+
+	if "`type'" == "all_sdc" {
+		local cond "if sdc_obs==1" 
 	}
-
+	if "`type'" == "all_ds" {
+		local cond "if ds_obs==1" 
+	}
+	if "`type'" == "equity" {
+		local cond "if `type' ==1" 
+	}
+	if "`type'" == "debt" {
+		local cond "if `type' ==1" 
+	}
+	if "`type'" == "term" {
+		local cond "if `type'_loan ==1" 
+	}
+	if "`type'" == "rev" {
+		local cond "if `type'_loan ==1" 
+	}
+	
+	reghdfe hire `rhs' `cond', absorb(`absorb') vce(robust)
+	estadd local fe = "`fe_local'"
+	estadd local sample = "`type'"
+	estimates store est`i'
+	local ++i
 }
 
-foreach sdc_type in debt equity conv {
+esttab est* using "$regression_output_path/regressions_inten_baseline_slides.tex", ///
+replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
+title("Likelihood of hiring after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
+addnotes("Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" ///
+"Hire indicator either 0 or 100 for readability" "Robust SEs" )
 
-	foreach sdc_inter_var in log_proceeds gross_spread_perc days_after_match {
+*Simple past relationship table
+local rhs rel_* 
+local drop_add 
+local absorb constant
+local fe_local "None"
 
-		local type_name `sdc_type'
-		
-		gen i_`sdc_inter_var'_`type_name' = 0
-		replace i_`sdc_inter_var'_`type_name' = `sdc_inter_var'_`sdc_type'*rel_`sdc_type' if !mi(`sdc_inter_var'_`sdc_type')
-		gen mi_`sdc_inter_var'_`type_name' = mi(`sdc_inter_var'_`sdc_type')
+estimates clear
+local i = 1
+
+foreach type in all_sdc all_ds equity debt term rev {
+
+	if "`type'" == "all_sdc" {
+		local cond "if sdc_obs==1" 
 	}
-
+	if "`type'" == "all_ds" {
+		local cond "if ds_obs==1" 
+	}
+	if "`type'" == "equity" {
+		local cond "if `type' ==1" 
+	}
+	if "`type'" == "debt" {
+		local cond "if `type' ==1" 
+	}
+	if "`type'" == "term" {
+		local cond "if `type'_loan ==1" 
+	}
+	if "`type'" == "rev" {
+		local cond "if `type'_loan ==1" 
+	}
+	
+	reghdfe hire `rhs' `cond', absorb(`absorb') vce(robust)
+	estadd local fe = "`fe_local'"
+	estadd local sample = "`type'"
+	estimates store est`i'
+	local ++i
 }
 
-*Intensive Margin - relationship variables only
-reg hire rel_*
-reg hire rel_* i_*
-reg hire rel_* i_* mi_*
+esttab est* using "$regression_output_path/regressions_inten_baseline_slides.tex", ///
+replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
+title("Likelihood of hiring after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
+addnotes("Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" ///
+"Hire indicator either 0 or 100 for readability" "Robust SEs" )
 
+
+/*
 foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 
 	if "`vars_set'" == "baseline" {
@@ -69,7 +110,7 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 		local drop_add "mi_*"
 	}
 	if "`vars_set'" == "ds_chars" {
-		local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
+		local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
 		local drop_add "mi_*"
 	}
 	if "`vars_set'" == "sdc_chars" {
@@ -157,7 +198,7 @@ foreach lhs in gross_spread_perc_base log_proceeds_base {
 			local drop_add "mi_*"
 		}
 		if "`vars_set'" == "ds_chars" {
-			local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
+			local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
 			local drop_add "mi_*"
 		}
 		if "`vars_set'" == "sdc_chars" {

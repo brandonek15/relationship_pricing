@@ -2,61 +2,7 @@
 *on previous deals in either SDC to Dealscan or Dealscan to SDC
 
 use "$data_path/ds_lending_with_past_relationships_20", clear
-/*
-egen past_relationship = rowmax(rel_equity rel_debt rel_conv rel_rev_loan rel_term_loan rel_other_loan)
-gen constant = 1
-egen cusip_6_lender = group(cusip_6 lender)
-egen lender_relationship = group(lender past_relationship)
-*Make a marker for which deal number for cusip_6 this is
-bys cusip_6 lender (date_daily facilityid): gen cusip_6_deal_num = _n
-*Intensive margin analyses
-reg hire rel_*
 
-*Make hire 0 or 100 for readability
-replace hire = hire*100
-
-*Create some variables
-foreach ds_type in rev_loan term_loan other_loan {
-
-	foreach ds_inter_var in rev_discount_1_simple spread maturity log_facilityamt ///
-	agent_credit lead_arranger_credit bankallocation days_after_match {
-
-	
-		if "`ds_type'" == "rev_loan" {
-			local type_name "rev"
-		}
-		if "`ds_type'" == "term_loan" {
-			local type_name "term"
-		}
-		if "`ds_type'" == "other_loan" {
-			local type_name "other"
-		}
-	
-		gen i_`ds_inter_var'_`type_name' = 0
-		replace i_`ds_inter_var'_`type_name' = `ds_inter_var'_`ds_type'*rel_`ds_type' if !mi(`ds_inter_var'_`ds_type')
-		gen mi_`ds_inter_var'_`type_name' = mi(`ds_inter_var'_`ds_type')
-	}
-
-}
-
-foreach sdc_type in debt equity conv {
-
-	foreach sdc_inter_var in log_proceeds gross_spread_perc days_after_match {
-
-		local type_name `sdc_type'
-		
-		gen i_`sdc_inter_var'_`type_name' = 0
-		replace i_`sdc_inter_var'_`type_name' = `sdc_inter_var'_`sdc_type'*rel_`sdc_type' if !mi(`sdc_inter_var'_`sdc_type')
-		gen mi_`sdc_inter_var'_`type_name' = mi(`sdc_inter_var'_`sdc_type')
-	}
-
-}
-
-*Intensive Margin - relationship variables only
-reg hire rel_*
-reg hire rel_* i_*
-reg hire rel_* i_* mi_*
-*/
 foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 
 	if "`vars_set'" == "baseline" {
@@ -73,7 +19,7 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 		local drop_add  "mi_*"
 	}
 	if "`vars_set'" == "ds_chars" {
-		local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
+		local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
 		local drop_add "mi_*"
 	}
 	if "`vars_set'" == "sdc_chars" {
@@ -167,7 +113,7 @@ foreach lhs in log_facilityamt_base spread_base rev_discount_1_simple_base {
 			local drop_add "mi_*"
 		}
 		if "`vars_set'" == "ds_chars" {
-			local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
+			local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
 			local drop_add "mi_*"
 		}
 		if "`vars_set'" == "sdc_chars" {
