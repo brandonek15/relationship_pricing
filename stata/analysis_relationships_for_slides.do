@@ -7,6 +7,43 @@ append using "$data_path/ds_lending_with_past_relationships_20"
 egen sdc_obs = rowmax(equity_base debt_base conv_base)
 egen ds_obs = rowmax(rev_loan_base term_loan_base other_loan_base)
 
+label var past_relationship "Rel."
+cap label var maturity_base "Matu"
+*Past relationship and future pricing
+*Six specifications (discount on any past relationship, then add lender FE and then split up by type of relationship, for discount and spread)
+local drop_add 
+
+estimates clear
+local i = 1
+foreach lhs in spread_base rev_discount_1_simple_base {
+
+	if "`lhs'" == "spread_base" {
+		local rhs_add maturity_base log_facilityamt_base
+	}
+	
+	reghdfe `lhs' past_relationship `rhs_add' `cond' if rev_loan_base ==1 & hire !=0 , absorb(constant) vce(robust)
+	estadd local fe = "None"
+	estadd local sample = "Rev Loan"
+	estimates store est`i'
+	local ++i
+	reghdfe `lhs' past_relationship `rhs_add' `cond' if rev_loan_base ==1 & hire !=0, absorb(lender) vce(robust)
+	estadd local fe = "Lender"
+	estadd local sample = "Rev Loan"
+	estimates store est`i'
+	local ++i
+	reghdfe `lhs' rel_* `rhs_add' `cond' if rev_loan_base ==1 & hire !=0, absorb(lender) vce(robust)
+	estadd local fe = "Lender"
+	estadd local sample = "Rev Loan"
+	estimates store est`i'
+	local ++i
+
+}
+
+esttab est* using "$regression_output_path/regressions_exten_pricing_rel_slides.tex", ///
+replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
+title("Pricing/Discounts after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
+addnotes("Observation is DS loan x lender" "Sample is DS revolving loans x lender on loan" "Robust SEs" )
+
 *Simple past relationship table
 local rhs rel_* 
 local drop_add 
@@ -50,7 +87,7 @@ title("Likelihood of hiring after relationships") scalars("fe Fixed Effects" "sa
 addnotes("Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" ///
 "Hire indicator either 0 or 100 for readability" "Robust SEs" )
 
-*Simple past relationship table
+*Past discounts and future business
 local rhs rel_* 
 local drop_add 
 local absorb constant

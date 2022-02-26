@@ -128,10 +128,10 @@ foreach lhs in log_facilityamt_base spread_base rev_discount_1_simple_base {
 		foreach type in all term rev {
 
 			if "`type'" == "term" {
-				local cond "if `type'_loan ==1" 
+				local cond "if `type'_loan_base ==1" 
 			}
 			if "`type'" == "rev" {
-				local cond "if `type'_loan ==1" 
+				local cond "if `type'_loan_base ==1" 
 			}
 			if "`type'" == "all" {
 				local cond "if 1==1" 

@@ -33,10 +33,10 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 	foreach type in all equity debt {
 
 		if "`type'" == "equity" {
-			local cond "if `type' ==1" 
+			local cond "if `type'_base ==1" 
 		}
 		if "`type'" == "debt" {
-			local cond "if `type' ==1" 
+			local cond "if `type'_base ==1" 
 		}
 		if "`type'" == "all" {
 			local cond "" 

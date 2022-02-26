@@ -137,6 +137,7 @@ cap program drop prepare_rel_dataset
 program define prepare_rel_dataset
 	*Create past relationship dummy and FEs
 	egen past_relationship = rowmax(rel_equity rel_debt rel_conv rel_rev_loan rel_term_loan rel_other_loan)
+	label var past_relationship "Rel."
 	gen constant = 1
 	egen cusip_6_lender = group(cusip_6 lender)
 	egen lender_relationship = group(lender past_relationship)
@@ -154,6 +155,7 @@ program define prepare_rel_dataset
 	cap label var rev_discount_1_simple_base "Disc"
 	cap label var spread_base "Sprd"
 	cap label var log_facilityamt_base "Lg-Amt"
+	cap label var maturity_base "Matu"
 	cap label var gross_spread_perc_base "Fee"
 	cap label var log_proceeds_base "Lg-Amt"
 

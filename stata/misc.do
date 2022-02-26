@@ -216,3 +216,7 @@ local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* i_rev_discount_1_sim
 *reghdfe hire `rhs' if cusip_6_deal_num_rel_rev_loan==1 & rel_rev_loan ==1, absorb(`absorb') vce(robust)
 *local rhs rel_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
 reghdfe hire `rhs' , absorb(`absorb') vce(robust)
+
+*
+use "$data_path/ds_lending_with_past_relationships_20", clear
+reghdfe log_facilityamt_base rel_* spread_base if rev_loan_base ==1 & hire !=0, absorb(constant) vce(robust)
