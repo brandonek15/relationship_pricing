@@ -23,6 +23,8 @@ do "$code_path/clean_fred.do"
 do "$code_path/clean_dealscan.do"
 do "$code_path/clean_sdc.do"
 
+*Make Compustat x dealscan relationships
+
 *Make relationship dataset
 do "$code_path/prep_relationship_datasets.do"
 do "$code_path/create_sdc_issuance_relationships.do"
@@ -30,6 +32,6 @@ do "$code_path/create_ds_lending_relationships.do"
 
 do "$code_path/analysis_relationships_for_slides.do"
 
-*Analysis
+*Relationship Analysis
 do "$code_path/analysis_sdc_issuance_relationship.do"
 do "$code_path/analysis_ds_lending_relationship.do"
