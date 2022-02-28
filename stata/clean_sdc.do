@@ -21,6 +21,9 @@ program define clean_sdc
 	 proceeds_local proceeds_global offer_price orig_price_high orig_price_low  ///
 	 orig_price_mid shares_filed_local shares_filed_global amt_filed_local amt_filed_global ///
 	`add_list'
+	
+	local millions_vars management_fee_dol underwriting_fee_dol selling_conc_dol reallowance_dol ///
+	 gross_spread_dol principal_local principal_global proceeds_local proceeds_global
 
 	local fee_vars management_fee_dol underwriting_fee_dol management_fee_perc underwriting_fee_perc
 	gen comb_fees = 0
@@ -34,6 +37,11 @@ program define clean_sdc
 		replace `num_var' = subinstr(`num_var',",","",.)
 		destring `num_var', replace force
 	}
+	
+	foreach mil_var in `millions_vars' {
+		replace `mil_var' = `mil_var'*1000000
+	}
+
 
 	*Need to be able to merge on the CUSIPs - will be merging based off of the ultimate parent
 	gen cusip_6 = parent_ultimate_cusip_6 
