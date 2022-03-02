@@ -131,8 +131,9 @@ collapse (sum) count (mean) rel_*, by(hire equity_base debt_base conv_base)
 
 *Understand the discount
 use "$data_path/stata_temp/dealscan_discounts_facilityid", clear
-br borrowercompanyid date_quarterly packageid facilityid rev_loan rev_discount* ///
- allindrawn spread spread_2
+br borrowercompanyid date_quarterly packageid facilityid rev_loan rev_discount_1_simple ///
+ spread spread_2 rev_discount* if !mi(rev_discount_1_simple)
+ 
 br borrowercompanyid date_quarterly packageid facilityid rev_loan term_loan other_loan rev_discount* ///
 spread if borrowercompanyid == 19196 & date_quarterly == tq(2003q2)
 
@@ -220,3 +221,11 @@ reghdfe hire `rhs' , absorb(`absorb') vce(robust)
 *
 use "$data_path/ds_lending_with_past_relationships_20", clear
 reghdfe log_facilityamt_base rel_* spread_base if rev_loan_base ==1 & hire !=0, absorb(constant) vce(robust)
+
+*See fraction 0 over time
+use "$data_path/dealscan_compustat_loan_level", clear
+keep if rev_loan ==1
+keep if !mi(rev_discount_1_simple)
+gen zero_discount = abs(rev_discount_1_simple)<10e-6
+collapse (mean) zero_discount, by(date_quarterly)
+twoway line zero_discount date_quarterly

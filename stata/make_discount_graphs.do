@@ -47,8 +47,12 @@ foreach measure_type in mean median weighted_avg {
 
 	foreach sample_type in all comp_merge no_comp_merge {
 		use "$data_path/dealscan_compustat_loan_level", clear
-
-		keep if rev_loan ==1
+		drop if other_loan ==1
+		*Only keep observations where a discount is computed
+		keep if !mi(rev_discount_1_simple)
+		*Keep only one term and one rev loan observation per loan package
+		bys borrowercompanyid date_quarterly rev_loan: keep if _n ==1
+		
 		if "`sample_type'" == "all" {
 			local title_add "All Firms"
 		}
@@ -63,7 +67,7 @@ foreach measure_type in mean median weighted_avg {
 
 		winsor2 rev_*, replace cut(1 99)
 
-		collapse (`measure') rev_* `measure_add', by(date_quarterly)
+		collapse (`measure') rev_discount_* spread `measure_add', by(date_quarterly rev_loan)
 
 
 		preserve
@@ -79,15 +83,26 @@ foreach measure_type in mean median weighted_avg {
 		egen y = rowmax(rev*)
 		qui su y
 		replace USRECM = `r(max)'*USRECM*1.05
-		drop rev_loan
 		
 		tw  (bar USRECM date_quarterly, color(gs14) lcolor(none)) ///
-		(line rev* date_quarterly, ///
+		(line rev_discount* date_quarterly if rev_loan==1, ///
 			legend(order(1 "Recession" 2 "1 (Simple)" 3 "1 (Controls)" 4 "2 (Simple)"  5 "2 (Controls)"))) ///
 			, title("Discounts Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'") 	
 			
 		gr export "$figures_output_path/time_series_discount_`measure_type'_`sample_type'.png", replace 
-
+		
+		*Make a graph of the simplest discount and the corresponding spreads over time
+		local recession (bar USRECM date_quarterly, color(gs14) lcolor(none))
+		local discount (line rev_discount_1_simple date_quarterly if rev_loan==1, col(black) yaxis(1))
+		local term_spr (line spread date_quarterly if rev_loan==0, yaxis(2))
+		local rev_spr (line spread date_quarterly if rev_loan==1, yaxis(2))
+		
+		twoway `recession' `discount' `term_spr' `rev_spr', ///
+			legend(order(1 "Recession" 2 "Discount 1 (Simple)" 3 "Term Spread" 4 "Revolving Spread")) ///
+			title("Discount Decomposition Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'", axis(1)) ///	
+			ytitle("`measure' Spread (bps) `measure_desc' - Term and Rev", axis(2))
+		gr export "$figures_output_path/time_series_discount_decomposition_`measure_type'_`sample_type'.png", replace 
+		
 	}
 }
 
@@ -117,3 +132,15 @@ foreach lhs of varlist rev_* {
 
 		graph export "$figures_output_path/dist_`lhs'.png", replace
 }
+
+*See fraction 0 over time
+use "$data_path/dealscan_compustat_loan_level", clear
+keep if rev_loan ==1
+keep if !mi(rev_discount_1_simple)
+gen zero_discount = abs(rev_discount_1_simple)<10e-6
+collapse (mean) zero_discount, by(date_quarterly)
+twoway line zero_discount date_quarterly, ///
+ytitle("Fraction of Loans with Zero Discount 1 (simple)") title("Fraction of Loans with Zero Discount", size(medsmall)) ///
+		 note("`note'") ///
+		graphregion(color(white))  xtitle("Quarter") 
+		graph export "$figures_output_path/discount_frac_zero.png", replace
