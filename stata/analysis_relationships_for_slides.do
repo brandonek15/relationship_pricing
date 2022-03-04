@@ -10,13 +10,30 @@ egen ds_obs = rowmax(rev_loan_base term_loan_base other_loan_base)
 gen date_quarterly = qofd(date_daily)
 format date_quarterly %tq
 
+winsor2 rev_*, replace cut(1 99)
+
+foreach ds_type in rev_loan term_loan other_loan {
+
+	local rel_label : variable label rel_`ds_type'
+
+	gen i_discount_1_pos_`ds_type' = discount_1_simple_`ds_type'>10e-6 & !mi(discount_1_simple_`ds_type')
+	label var i_discount_1_pos_`ds_type' "`rel_label' X Disc+"
+	gen mi_discount_1_pos_`ds_type' = mi(discount_1_simple_`ds_type')
+
+}
+
+*Create a positive discount indicator 
+gen discount_1_pos_base = discount_1_simple_base >10e-6
+replace discount_1_pos_base = . if mi(discount_1_simple_base)
+label var discount_1_pos_base "Disc+"
+
 *Past relationship and future pricing
 *Six specifications (discount on any past relationship, then add lender FE and then split up by type of relationship, for discount and spread)
 local drop_add 
 
 estimates clear
 local i = 1
-foreach lhs in rev_discount_1_simple_base spread_base {
+foreach lhs in discount_1_simple_base spread_base /*discount_1_pos_base*/ {
 
 	if "`lhs'" == "spread_base" {
 		local rhs_add maturity_base log_facilityamt_base
@@ -40,7 +57,7 @@ foreach lhs in rev_discount_1_simple_base spread_base {
 
 }
 
-esttab est* using "$regression_output_path/regressions_exten_pricing_rel_rev_discount_slides.tex", ///
+esttab est* using "$regression_output_path/regressions_exten_pricing_rel_discount_slides.tex", ///
 replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
 title("Pricing/Discounts after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
 addnotes("Observation is DS loan x lender" "Sample is DS revolving loans x lender on loan" "SEs clustered at firm level" )
@@ -89,7 +106,7 @@ addnotes("Observation is SDC deal x lender or DS loan x lender" "Sample is 20 la
 "Hire indicator either 0 or 100 for readability" "SEs clustered at firm level" )
 
 *Past discounts and future business
-local rhs rel_* i_rev_discount_1_simple* mi_rev_discount_1_simple* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* 
+local rhs rel_*  i_discount_1_simple* mi_discount_1_simple* /* i_discount_1_pos* mi_discount_1_pos* */ i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* 
 local drop_add mi_* rel_* *_other
 local absorb constant
 local fe_local "None"
@@ -184,7 +201,7 @@ addnotes("Observation is DS loan x lender or SDC deal x lender" "Sample is DS lo
 
 
 *Look at price recouping (look at previous discounts and fees charged)
-local rhs rel_* i_rev_discount_1_simple* mi_rev_discount_1_simple* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* 
+local rhs rel_* i_discount_1_simple* mi_discount_1_simple* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* 
 local drop_add mi_* rel_* *_other
 local absorb constant
 local fe_local "None"

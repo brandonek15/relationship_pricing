@@ -25,6 +25,8 @@ do "$code_path/clean_sdc.do"
 
 *Make Compustat x dealscan relationships
 do "$code_path/make_ds_lender_data_with_comp.do"
+*Analysis
+do "$code_path/make_discount_graphs.do"
 
 *Make relationship dataset
 do "$code_path/prep_relationship_datasets.do"

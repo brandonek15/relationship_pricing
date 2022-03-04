@@ -49,7 +49,7 @@ foreach measure_type in mean median weighted_avg {
 		use "$data_path/dealscan_compustat_loan_level", clear
 		drop if other_loan ==1
 		*Only keep observations where a discount is computed
-		keep if !mi(rev_discount_1_simple)
+		keep if !mi(discount_1_simple)
 		*Keep only one term and one rev loan observation per loan package
 		bys borrowercompanyid date_quarterly rev_loan: keep if _n ==1
 		
@@ -67,14 +67,27 @@ foreach measure_type in mean median weighted_avg {
 
 		winsor2 rev_*, replace cut(1 99)
 
-		collapse (`measure') rev_discount_* spread `measure_add', by(date_quarterly rev_loan)
+		collapse (`measure') discount_* spread `measure_add', by(date_quarterly rev_loan)
 
 
 		preserve
-			freduse USRECM, clear
+			freduse USRECM BAMLC0A4CBBB BAMLC0A1CAAA, clear
+			rename BAMLC0A4CBBB bbb_spread
+			rename BAMLC0A1CAAA aaa_spread
+			replace bbb_spread = bbb_spread*100
+			replace aaa_spread = aaa_spread*100
 			gen date_quarterly = qofd(daten)
-			collapse (max) USRECM, by(date_quarterly)
-			keep date_quarterly USRECM
+			collapse (max) USRECM bbb_spread aaa_spread, by(date_quarterly)
+			tsset date_quarterly
+			gen L1_aaa_spread = L.aaa_spread
+			gen L1_bbb_spread = L.bbb_spread
+			gen L2_aaa_spread = L2.aaa_spread
+			gen L2_bbb_spread = L2.bbb_spread
+			gen L3_aaa_spread = L3.aaa_spread
+			gen L3_bbb_spread = L3.bbb_spread
+			gen L4_aaa_spread = L4.aaa_spread
+			gen L4_bbb_spread = L4.bbb_spread
+			keep date_quarterly USRECM *bbb_spread *aaa_spread
 			tempfile rec
 			save `rec', replace
 		restore
@@ -85,7 +98,7 @@ foreach measure_type in mean median weighted_avg {
 		replace USRECM = `r(max)'*USRECM*1.05
 		
 		tw  (bar USRECM date_quarterly, color(gs14) lcolor(none)) ///
-		(line rev_discount* date_quarterly if rev_loan==1, ///
+		(line discount* date_quarterly if rev_loan==1, ///
 			legend(order(1 "Recession" 2 "1 (Simple)" 3 "1 (Controls)" 4 "2 (Simple)"  5 "2 (Controls)"))) ///
 			, title("Discounts Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'") 	
 			
@@ -93,12 +106,13 @@ foreach measure_type in mean median weighted_avg {
 		
 		*Make a graph of the simplest discount and the corresponding spreads over time
 		local recession (bar USRECM date_quarterly, color(gs14) lcolor(none))
-		local discount (line rev_discount_1_simple date_quarterly if rev_loan==1, col(black) yaxis(1))
+		local discount (line discount_1_simple date_quarterly if rev_loan==1, col(black) yaxis(1))
 		local term_spr (line spread date_quarterly if rev_loan==0, yaxis(2))
 		local rev_spr (line spread date_quarterly if rev_loan==1, yaxis(2))
+		local bbb_spr (line bbb_spread date_quarterly if rev_loan==1,yaxis(2))
 		
-		twoway `recession' `discount' `term_spr' `rev_spr', ///
-			legend(order(1 "Recession" 2 "Discount 1 (Simple)" 3 "Term Spread" 4 "Revolving Spread")) ///
+		twoway `recession' `discount' `term_spr' `rev_spr' `bbb_spr', ///
+			legend(order(1 "Recession" 2 "Discount 1 (Simple)" 3 "Term Spread" 4 "Revolving Spread" 5 "BBB Spread")) ///
 			title("Discount Decomposition Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'", axis(1)) ///	
 			ytitle("`measure' Spread (bps) `measure_desc' - Term and Rev", axis(2))
 		gr export "$figures_output_path/time_series_discount_decomposition_`measure_type'_`sample_type'.png", replace 
@@ -136,11 +150,14 @@ foreach lhs of varlist rev_* {
 *See fraction 0 over time
 use "$data_path/dealscan_compustat_loan_level", clear
 keep if rev_loan ==1
-keep if !mi(rev_discount_1_simple)
-gen zero_discount = abs(rev_discount_1_simple)<10e-6
-collapse (mean) zero_discount, by(date_quarterly)
+keep if !mi(discount_1_simple)
+gen zero_discount = abs(discount_1_simple)<10e-6
+replace discount_1_simple = . if zero_discount
+collapse (mean) zero_discount discount_1_simple, by(date_quarterly)
 twoway line zero_discount date_quarterly, ///
 ytitle("Fraction of Loans with Zero Discount 1 (simple)") title("Fraction of Loans with Zero Discount", size(medsmall)) ///
 		 note("`note'") ///
 		graphregion(color(white))  xtitle("Quarter") 
 		graph export "$figures_output_path/discount_frac_zero.png", replace
+		
+twoway line discount_1_simple date_quarterly

@@ -18,7 +18,7 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 		local drop_add "mi_*"
 	}
 	if "`vars_set'" == "ds_chars" {
-		local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
+		local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_discount_1_simple* mi_discount_1_simple*
 		local drop_add "mi_*"
 	}
 	if "`vars_set'" == "sdc_chars" {
@@ -106,7 +106,7 @@ foreach lhs in gross_spread_perc_base log_proceeds_base {
 			local drop_add "mi_*"
 		}
 		if "`vars_set'" == "ds_chars" {
-			local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
+			local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_discount_1_simple* mi_discount_1_simple*
 			local drop_add "mi_*"
 		}
 		if "`vars_set'" == "sdc_chars" {

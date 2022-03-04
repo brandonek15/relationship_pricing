@@ -19,7 +19,7 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 		local drop_add  "mi_*"
 	}
 	if "`vars_set'" == "ds_chars" {
-		local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
+		local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_discount_1_simple* mi_discount_1_simple*
 		local drop_add "mi_*"
 	}
 	if "`vars_set'" == "sdc_chars" {
@@ -80,15 +80,15 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 }
 
 *Extensive margin - pricing of dealscan loan (only using hire ==1)
-label var rev_discount_1_simple_base "Disc"
+label var discount_1_simple_base "Disc"
 label var spread_base "Sprd"
 label var log_facilityamt_base "Lg-Amt"
-foreach lhs in log_facilityamt_base spread_base rev_discount_1_simple_base {
+foreach lhs in log_facilityamt_base spread_base discount_1_simple_base {
 
 	if "`lhs'" == "spread_base" {
 		local rhs_add log_facilityamt_base
 	}
-	if "`lhs'" == "rev_discount_1_simple_base" {
+	if "`lhs'" == "discount_1_simple_base" {
 		local rhs_add log_facilityamt_base
 	}
 	if "`lhs'" == "log_facilityamt_base" {
@@ -113,7 +113,7 @@ foreach lhs in log_facilityamt_base spread_base rev_discount_1_simple_base {
 			local drop_add "mi_*"
 		}
 		if "`vars_set'" == "ds_chars" {
-			local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_rev_discount_1_simple* mi_rev_discount_1_simple*
+			local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_discount_1_simple* mi_discount_1_simple*
 			local drop_add "mi_*"
 		}
 		if "`vars_set'" == "sdc_chars" {
