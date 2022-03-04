@@ -48,10 +48,16 @@ foreach measure_type in mean median weighted_avg {
 	foreach sample_type in all comp_merge no_comp_merge {
 		use "$data_path/dealscan_compustat_loan_level", clear
 		drop if other_loan ==1
-		*Only keep observations where a discount is computed
-		keep if !mi(discount_1_simple)
-		*Keep only one term and one rev loan observation per loan package
-		bys borrowercompanyid date_quarterly rev_loan: keep if _n ==1
+		*Get a sample to keep. Keep if you have an institutional loan and either a rev loan or term loan
+		gen inst_term = category== "Inst. Term"
+		gen noninst_term = category == "Bank Term"
+		egen  rev_loan_max = max(rev_loan), by(borrowercompanyid date_quarterly)
+		egen  inst_term_max = max(inst_term), by(borrowercompanyid date_quarterly)
+		egen  noninst_term_max = max(noninst_term), by(borrowercompanyid date_quarterly)
+		keep if inst_term_max ==1 & (rev_loan_max==1 | noninst_term_max==1)
+		
+		*Keep only pe of loan per category
+		bys borrowercompanyid date_quarterly category: keep if _n ==1
 		
 		if "`sample_type'" == "all" {
 			local title_add "All Firms"
