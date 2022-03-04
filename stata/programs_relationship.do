@@ -152,7 +152,7 @@ program define prepare_rel_dataset
 	label var rel_other_loan "Rel. Other Loan"
 	
 	*Make labels for lhs variables
-	cap label var rev_discount_1_simple_base "Disc"
+	cap label var discount_1_simple_base "Disc"
 	cap label var spread_base "Sprd"
 	cap label var log_facilityamt_base "Lg-Amt"
 	cap label var maturity_base "Matu"
@@ -161,13 +161,13 @@ program define prepare_rel_dataset
 
 	*Create some interaction variables. These are 0 if there is no previous relationship (or it is missing), and the value otherwise
 	*Note in specifications, having the relationship dummy is all we need whenever the variable is never missing, but we also need to
-	*add the missing dummy if it is missing when the relationships exists (e.g. rev_discount_1_simple)
+	*add the missing dummy if it is missing when the relationships exists (e.g. discount_1_simple)
 	foreach ds_type in rev_loan term_loan other_loan {
 
-		foreach ds_inter_var in rev_discount_1_simple spread maturity log_facilityamt ///
+		foreach ds_inter_var in discount_1_simple spread maturity log_facilityamt ///
 		agent_credit lead_arranger_credit bankallocation days_after_match {
 
-			if "`ds_inter_var'" == "rev_discount_1_simple" {
+			if "`ds_inter_var'" == "discount_1_simple" {
 				local label "Disc"
 			}
 			if "`ds_inter_var'" == "spread" {

@@ -65,9 +65,9 @@ foreach measure_type in mean median weighted_avg {
 			local title_add "Non-Compustat Firms"
 		}
 
-		winsor2 rev_*, replace cut(1 99)
+		winsor2 discount_*, replace cut(1 99)
 
-		collapse (`measure') discount_* spread `measure_add', by(date_quarterly rev_loan)
+		collapse (`measure') discount_* spread `measure_add', by(date_quarterly category)
 
 
 		preserve
@@ -93,12 +93,12 @@ foreach measure_type in mean median weighted_avg {
 		restore
 
 		joinby date_quarterly using `rec', unmatched(master)
-		egen y = rowmax(rev*)
+		egen y = rowmax(discount_*)
 		qui su y
 		replace USRECM = `r(max)'*USRECM*1.05
 		
 		tw  (bar USRECM date_quarterly, color(gs14) lcolor(none)) ///
-		(line discount* date_quarterly if rev_loan==1, ///
+		(line discount* date_quarterly if category == "Revolver", ///
 			legend(order(1 "Recession" 2 "1 (Simple)" 3 "1 (Controls)" 4 "2 (Simple)"  5 "2 (Controls)"))) ///
 			, title("Discounts Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'") 	
 			
@@ -106,32 +106,35 @@ foreach measure_type in mean median weighted_avg {
 		
 		*Make a graph of the simplest discount and the corresponding spreads over time
 		local recession (bar USRECM date_quarterly, color(gs14) lcolor(none))
-		local discount (line discount_1_simple date_quarterly if rev_loan==1, col(black) yaxis(1))
-		local term_spr (line spread date_quarterly if rev_loan==0, yaxis(2))
-		local rev_spr (line spread date_quarterly if rev_loan==1, yaxis(2))
-		local bbb_spr (line bbb_spread date_quarterly if rev_loan==1,yaxis(2))
+		local discount (line discount_1_simple date_quarterly if category == "Revolver", col(black) yaxis(1))
+		local term_spr (line spread date_quarterly if category == "Bank Term", yaxis(2))
+		local inst_term_spr (line spread date_quarterly if category == "Inst. Term", yaxis(2))
+		local rev_spr (line spread date_quarterly if category == "Revolver", yaxis(2))
+		local bbb_spr (line bbb_spread date_quarterly if category == "Revolver",yaxis(2))
 		
-		twoway `recession' `discount' `term_spr' `rev_spr' `bbb_spr', ///
-			legend(order(1 "Recession" 2 "Discount 1 (Simple)" 3 "Term Spread" 4 "Revolving Spread" 5 "BBB Spread")) ///
+		twoway `recession' `discount' `inst_term_spr' `rev_spr' `bbb_spr', ///
+			legend(order(1 "Recession" 2 "Discount 1" 3 "Inst. Term Sprd" 4  "Rev Sprd" 5 "BBB Sprd")) ///
 			title("Discount Decomposition Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'", axis(1)) ///	
 			ytitle("`measure' Spread (bps) `measure_desc' - Term and Rev", axis(2))
 		gr export "$figures_output_path/time_series_discount_decomposition_`measure_type'_`sample_type'.png", replace 
-		
+	
+		*To do - make similar graph with term spread
 	}
 }
 
+*Todo - Look at distribution of term spreads
 *Graph distribution of discounts
 *Make three graphs, where we look at the distribution of each of the four discounts
 use "$data_path/dealscan_compustat_loan_level", clear
 
 keep if rev_loan ==1
-winsor2 rev_*, replace cut(1 99)
+winsor2 discount_*, replace cut(1 99)
 drop rev_loan
 local start start(-100)
 local width width(10)
 local note "Winsorized at 1 and 99"
 
-foreach lhs of varlist rev_* {
+foreach lhs of varlist discount_* {
 	local title_add "`lhs'"
 	local cond_add "& `lhs'>=-100 & `lhs'<=500"
 

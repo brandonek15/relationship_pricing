@@ -29,6 +29,7 @@ label var discount_1_pos_base "Disc+"
 
 *Past relationship and future pricing
 *Six specifications (discount on any past relationship, then add lender FE and then split up by type of relationship, for discount and spread)
+*Figure out how to incorporate term loan disocunts
 local drop_add 
 
 estimates clear
@@ -186,7 +187,7 @@ foreach type in all_sdc all_ds equity debt term rev {
 		local rhs_add maturity_base log_facilityamt_base
 	}
 	
-	reghdfe `lhs' rel_* `rhs_add' `cond', absorb(date_quarterly) vce(cl cusip_6)
+	reghdfe `lhs' rel_* `rhs_add' `cond' & hire !=0, absorb(date_quarterly) vce(cl cusip_6)
 	estadd local fe = "Time"
 	estadd local sample = "`type'"
 	estimates store est`i'
@@ -242,7 +243,7 @@ foreach type in all_sdc all_ds equity debt term rev {
 		local rhs_add maturity_base log_facilityamt_base
 	}
 	
-	reghdfe `lhs' `rhs' `rhs_add' `cond', absorb(date_quarterly) vce(cl cusip_6)
+	reghdfe `lhs' `rhs' `rhs_add' `cond' & hire !=0, absorb(date_quarterly) vce(cl cusip_6)
 	estadd local fe = "Time"
 	estadd local sample = "`type'"
 	estimates store est`i'
