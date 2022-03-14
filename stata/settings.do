@@ -17,6 +17,7 @@ cap mkdir "$regression_output_path"
 cap mkdir "$figures_output_path"
 *Create a temporary data folder
 cap mkdir "$data_path/stata_temp"
+cap ssc install corrtex
 
 *Set globals that will be used througout to reduce the amount of code
 global comp_char_vars log_assets leverage market_to_book sales_growth ///

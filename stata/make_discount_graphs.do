@@ -1,4 +1,4 @@
-
+/*
 use "$data_path/stata_temp/dealscan_discounts.dta", clear
 set scheme david4
 
@@ -25,6 +25,7 @@ foreach var1 of varlist rev* {
 
 gr combine `graphs', col(3) xcommon ycommon title("Discount Measures")
 gr export "$figures_output_path/discount_corr.pdf", as(pdf) replace
+*/
 
 * Time Series of Different Measures
 foreach measure_type in mean median weighted_avg {
@@ -102,29 +103,58 @@ foreach measure_type in mean median weighted_avg {
 		egen y = rowmax(discount_*)
 		qui su y
 		replace USRECM = `r(max)'*USRECM*1.05
-		
+
 		tw  (bar USRECM date_quarterly, color(gs14) lcolor(none)) ///
-		(line discount* date_quarterly if category == "Revolver", ///
-			legend(order(1 "Recession" 2 "1 (Simple)" 3 "1 (Controls)" 4 "2 (Simple)"  5 "2 (Controls)"))) ///
-			, title("Discounts Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'") 	
+		(line discount* date_quarterly if category == "Revolver") , ///
+			legend(order(1 "Recession" 2 "1 (Simple)" 3 "1 (Controls)" 4 "2 (Simple)"  5 "2 (Controls)")) ///
+			title("Revolver Discounts Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'") 	
 			
-		gr export "$figures_output_path/time_series_discount_`measure_type'_`sample_type'.png", replace 
+		gr export "$figures_output_path/time_series_discount_`measure_type'_`sample_type'_rev.png", replace 
+
+		*Make the same graph for term loans
+		tw  (bar USRECM date_quarterly, color(gs14) lcolor(none)) ///
+		(line discount* date_quarterly if category == "Bank Term") , ///
+			legend(order(1 "Recession" 2 "1 (Simple)" 3 "1 (Controls)" 4 "2 (Simple)"  5 "2 (Controls)")) ///
+			title("Term Discounts Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'") 	
+			
+		gr export "$figures_output_path/time_series_discount_`measure_type'_`sample_type'_term.png", replace 
+
 		
 		*Make a graph of the simplest discount and the corresponding spreads over time
 		local recession (bar USRECM date_quarterly, color(gs14) lcolor(none))
-		local discount (line discount_1_simple date_quarterly if category == "Revolver", col(black) yaxis(1))
+		local rev_discount (line discount_1_simple date_quarterly if category == "Revolver", col(black) yaxis(1))
+		local term_discount (line discount_1_simple date_quarterly if category == "Bank Term", col(black) yaxis(1))
 		local term_spr (line spread date_quarterly if category == "Bank Term", yaxis(2))
 		local inst_term_spr (line spread date_quarterly if category == "Inst. Term", yaxis(2))
 		local rev_spr (line spread date_quarterly if category == "Revolver", yaxis(2))
 		local bbb_spr (line bbb_spread date_quarterly if category == "Revolver",yaxis(2))
 		
-		twoway `recession' `discount' `inst_term_spr' `rev_spr' `bbb_spr', ///
-			legend(order(1 "Recession" 2 "Discount 1" 3 "Inst. Term Sprd" 4  "Rev Sprd" 5 "BBB Sprd")) ///
-			title("Discount Decomposition Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'", axis(1)) ///	
+		twoway `recession' `rev_discount' `inst_term_spr' `rev_spr' `bbb_spr', ///
+			legend(order(1 "Recession" 2 "Rev Discount 1" 3 "Inst. Term Sprd" 4  "Rev Sprd" 5 "BBB Sprd")) ///
+			title("Revolver Discount Decomposition Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'", axis(1)) ///	
 			ytitle("`measure' Spread (bps) `measure_desc' - Term and Rev", axis(2))
-		gr export "$figures_output_path/time_series_discount_decomposition_`measure_type'_`sample_type'.png", replace 
-	
+		gr export "$figures_output_path/time_series_discount_decomposition_`measure_type'_`sample_type'_rev.png", replace 
+
 		*To do - make similar graph with term spread
+		twoway `recession' `term_discount' `inst_term_spr' `rev_spr' `bbb_spr', ///
+			legend(order(1 "Recession" 2 "Term Discount 1" 3 "Inst. Term Sprd" 4  "Term Sprd" 5 "BBB Sprd")) ///
+			title("Term Discount Decomposition Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'", axis(1)) ///	
+			ytitle("`measure' Spread (bps) `measure_desc' - Term and Rev", axis(2))
+		gr export "$figures_output_path/time_series_discount_decomposition_`measure_type'_`sample_type'_term.png", replace 
+
+		*Similar graph but with only discounts and bbb spread
+		local recession (bar USRECM date_quarterly, color(gs14) lcolor(none))
+		local rev_discount (line discount_1_simple date_quarterly if category == "Revolver", col(black) yaxis(1))
+		local term_discount (line discount_1_simple date_quarterly if category == "Bank Term", col(blue) yaxis(1))
+		local bbb_spr (line bbb_spread date_quarterly if category == "Revolver",yaxis(2))
+		
+		twoway `recession' `rev_discount' `term_discount ' `bbb_spr', ///
+			legend(order(1 "Recession" 2 "Rev Discount 1" 3 "Term Discount 1" 4  "BBB Sprd")) ///
+			title("Revolver Discount Decomposition Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'", axis(1)) ///	
+			ytitle("`measure' Spread (bps) `measure_desc' - Term and Rev", axis(2))
+		gr export "$figures_output_path/time_series_discount_`measure_type'_`sample_type'_both.png", replace 
+
+	
 	}
 }
 
@@ -133,7 +163,7 @@ foreach measure_type in mean median weighted_avg {
 *Make three graphs, where we look at the distribution of each of the four discounts
 use "$data_path/dealscan_compustat_loan_level", clear
 
-keep if rev_loan ==1
+keep if category == "Revolver" | category == "Bank Term"
 winsor2 discount_*, replace cut(1 99)
 drop rev_loan
 local start start(-100)
@@ -144,29 +174,33 @@ foreach lhs of varlist discount_* {
 	local title_add "`lhs'"
 	local cond_add "& `lhs'>=-100 & `lhs'<=500"
 
-		local disc_comp (histogram `lhs' if merge_comp==1 `cond_add', density `width' `start' col(blue%30))
-		local disc_no_comp (histogram `lhs' if merge_comp==0 `cond_add', density `width' `start' col(green%30))
+		local disc_comp_rev (histogram `lhs' if merge_comp==1 `cond_add' & category == "Revolver", density `width' `start' col(blue%30))
+		local disc_no_comp_rev (histogram `lhs' if merge_comp==0 `cond_add' & category == "Revolver", density `width' `start' col(green%30))
+		local disc_comp_term (histogram `lhs' if merge_comp==1 `cond_add' & category == "Bank Term", density `width' `start' col(red%30))
+		local disc_no_comp_term (histogram `lhs' if merge_comp==0 `cond_add' & category == "Bank Term", density `width' `start' col(black%30))
 
-		twoway `disc_comp '  `disc_no_comp '  ///
+		twoway `disc_comp_rev'  `disc_no_comp_rev' `disc_comp_term'  `disc_no_comp_term'  ///
 		, ytitle("Density") title("Distribution of Discounts - `title_add'", size(small)) ///
 		 note("`note'") ///
 		graphregion(color(white))  xtitle("Discounts") ///
-		legend(order(1 "Compustat Firms" 2 "Non-Compustat Firms")) 
+		legend(order(1 "Rev Discount - Compustat Firms" 2 "Rev Discount - Non-Compustat Firms" ///
+		 3 "Term Discount - Compustat Firms" 4 "Term Discount - Non-Compustat Firms") rows(2)) 
 
 		graph export "$figures_output_path/dist_`lhs'.png", replace
 }
 
 *See fraction 0 over time
 use "$data_path/dealscan_compustat_loan_level", clear
-keep if rev_loan ==1
+keep if category == "Revolver" | category == "Bank Term"
 keep if !mi(discount_1_simple)
 gen zero_discount = abs(discount_1_simple)<10e-6
 replace discount_1_simple = . if zero_discount
-collapse (mean) zero_discount discount_1_simple, by(date_quarterly)
-twoway line zero_discount date_quarterly, ///
+collapse (mean) zero_discount discount_1_simple, by(date_quarterly category)
+twoway (line zero_discount date_quarterly if category == "Revolver") (line zero_discount date_quarterly if category == "Bank Term"), ///
 ytitle("Fraction of Loans with Zero Discount 1 (simple)") title("Fraction of Loans with Zero Discount", size(medsmall)) ///
 		 note("`note'") ///
-		graphregion(color(white))  xtitle("Quarter") 
+		graphregion(color(white))  xtitle("Quarter") ///
+		legend(order(1 "Revolving Discount" 2 "Term Discount"))
 		graph export "$figures_output_path/discount_frac_zero.png", replace
 		
 twoway line discount_1_simple date_quarterly

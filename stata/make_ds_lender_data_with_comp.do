@@ -8,6 +8,10 @@ drop _merge
 sort borrowercompanyid date_quarterly cusip_6
 *merge on discount information
 merge m:1 facilityid using "$data_path/stata_temp/dealscan_discounts_facilityid", keep(1 3) nogen
+*Create an indicator whether it is a discount obs or not
+gen not_missing_discount_temp = !mi(discount_1_simple)
+egen discount_obs = max(not_missing_discount_temp), by(borrowercompanyid date_quarterly)
+drop not_missing_discount_temp
 *Save a loan x lender file
 save "$data_path/dealscan_compustat_lender_loan_level", replace
 drop lender agent_credit lead_arranger_credit bankallocation lenderrole
