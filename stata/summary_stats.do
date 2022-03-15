@@ -36,7 +36,7 @@ foreach sample in discount no_discount {
 *matched to dealscan and discount, matched to dealscan and no discount.
 use  "$data_path/dealscan_compustat_loan_level", clear
 
-local loan_vars log_facilityamt maturity leveraged fin_cov nw_cov borrower_base cov_lite asset_based spread salesatclose 
+local loan_vars log_facilityamt maturity leveraged fin_cov nw_cov borrower_base cov_lite asset_based spread institutional salesatclose 
 
 winsor2 `loan_vars', cuts(.5 99.5) replace
 *Todo by loan type
@@ -84,9 +84,34 @@ foreach sample in discount_comp no_discount_comp discount_no_comp no_discount_no
 
 }
 
-/*
+
 *Correlation tables
-use  "$data_path/dealscan_compustat_loan_level", clear
+use  "$data_path/stata_temp/dealscan_discounts_facilityid", clear
+foreach var in discount_1_simple discount_1_controls discount_2_simple discount_2_controls {
+	gen temp_term_disc = `var' if category == "Bank Term" 
+	egen temp_term_disc_sp = max(temp_term_disc), by(borrowercompanyid date_quarterly)
+	gen temp_rev_disc = `var' if category == "Revolver" 
+	egen temp_rev_disc_sp = max(temp_rev_disc), by(borrowercompanyid date_quarterly)
+	*Drop the revolving discount and then recreate it so it is populated for all loans in the quarter x firm
+	drop `var'
+	*Create the term_discount, which will exist 
+	gen term_`var' = temp_term_disc_sp
+	gen rev_`var' = temp_rev_disc_sp
+	drop temp*
+	
+}
+*Need to spread the bank term, inst term, revolver, and other spread 
+gen temp_term_sprd = spread if category == "Bank Term" 
+egen term_sprd_sp = max(temp_term_sprd), by(borrowercompanyid date_quarterly)
+gen temp_rev_sprd = spread if category == "Revolver" 
+egen rev_sprd_sp = max(temp_rev_sprd), by(borrowercompanyid date_quarterly)
+gen temp_inst_term_sprd = spread if category == "Inst. Term" 
+egen inst_term_sprd_sp = max(temp_inst_term_sprd), by(borrowercompanyid date_quarterly)
+gen temp_other_sprd = spread if category == "Other" 
+egen other_sprd_sp = max(temp_other_sprd), by(borrowercompanyid date_quarterly)
+
+keep borrowercompanyid rev_discount* term_discount_* *sprd_sp date_quarterly
+duplicates drop
 
 		preserve
 			freduse USRECM BAMLC0A4CBBB BAMLC0A1CAAA, clear
@@ -112,7 +137,21 @@ use  "$data_path/dealscan_compustat_loan_level", clear
 
 		joinby date_quarterly using `rec', unmatched(master)
 		
-*Need to make a dataset where it is
-		
-corrtex spread *bbb_spread if category == "Revolver", title("Spread Correlations") sig ///
+*Here we have a dataset identified by borrowercompanyid date_quarterly 
+rename *sprd_sp *sprd	
+	
+corrtex *sprd *bbb_spread, title("Spread Correlations") sig ///
+file("$regression_output_path/spread_correlations_both.tex") replace
+
+corrtex *sprd rev_discount* term_discount_*, title("Spread Correlations with Discount") sig ///
 file("$regression_output_path/discount_correlations_both.tex") replace
+
+*Same tables but instead using time series correlations with simple averages
+drop if mi(rev_discount_1_simple) & mi(term_discount_1_simple)
+collapse (mean) *sprd *bbb_spread rev_discount* term_discount_*, by(date_quarterly)
+
+corrtex *sprd *bbb_spread, title("Spread Correlations - Time Series Means") sig ///
+file("$regression_output_path/spread_correlations_both_mean_time_series.tex") replace
+
+corrtex *sprd rev_discount* term_discount_*, title("Spread Correlations with Discount - Time Series Means") sig ///
+file("$regression_output_path/discount_correlations_both_mean_time_series.tex") replace

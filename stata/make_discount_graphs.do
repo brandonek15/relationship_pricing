@@ -132,14 +132,14 @@ foreach measure_type in mean median weighted_avg {
 		twoway `recession' `rev_discount' `inst_term_spr' `rev_spr' `bbb_spr', ///
 			legend(order(1 "Recession" 2 "Rev Discount 1" 3 "Inst. Term Sprd" 4  "Rev Sprd" 5 "BBB Sprd")) ///
 			title("Revolver Discount Decomposition Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'", axis(1)) ///	
-			ytitle("`measure' Spread (bps) `measure_desc' - Term and Rev", axis(2))
+			ytitle("`measure' Spread (bps) `measure_desc' - Term and Rev, BBB Spread", axis(2))
 		gr export "$figures_output_path/time_series_discount_decomposition_`measure_type'_`sample_type'_rev.png", replace 
 
 		*To do - make similar graph with term spread
 		twoway `recession' `term_discount' `inst_term_spr' `rev_spr' `bbb_spr', ///
 			legend(order(1 "Recession" 2 "Term Discount 1" 3 "Inst. Term Sprd" 4  "Term Sprd" 5 "BBB Sprd")) ///
 			title("Term Discount Decomposition Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'", axis(1)) ///	
-			ytitle("`measure' Spread (bps) `measure_desc' - Term and Rev", axis(2))
+			ytitle("`measure' Spread (bps) `measure_desc' - Term and Rev, BBB Spread", axis(2))
 		gr export "$figures_output_path/time_series_discount_decomposition_`measure_type'_`sample_type'_term.png", replace 
 
 		*Similar graph but with only discounts and bbb spread
@@ -151,7 +151,7 @@ foreach measure_type in mean median weighted_avg {
 		twoway `recession' `rev_discount' `term_discount ' `bbb_spr', ///
 			legend(order(1 "Recession" 2 "Rev Discount 1" 3 "Term Discount 1" 4  "BBB Sprd")) ///
 			title("Revolver Discount Decomposition Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'", axis(1)) ///	
-			ytitle("`measure' Spread (bps) `measure_desc' - Term and Rev", axis(2))
+			ytitle("BBB Spread (bps)", axis(2))
 		gr export "$figures_output_path/time_series_discount_`measure_type'_`sample_type'_both.png", replace 
 
 	
