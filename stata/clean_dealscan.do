@@ -28,14 +28,20 @@ rename covenanttype_nw cov_type_nw
 gen fin_cov = (!mi(init_ratio_fin) | !mi(cov_type_fin))
 gen nw_cov = (!mi(base_amt_nw) | !mi(cov_type_nw) | !mi(perc_ni_nw))
 gen borrower_base = (!mi(borrowerbasetype) | !mi(borrowerbasepercentage))
+gen cov = fin_cov ==1 | nw_cov==1
 label var fin_cov "Financial Cov"
 label var nw_cov "Net Worth Cov"
 label var borrower_base "Borrowing Base"
+label var cov "Contains Covenants"
 
 replace marketsegment = "N/A" if mi(marketsegment)
 replace cov_type_fin = "None" if mi(cov_type_fin)
 replace cov_type_nw = "None" if mi(cov_type_nw)
 replace borrowerbasetype = "N/A" if mi(borrowerbasetype)
+
+*Create a variable for seniority
+gen senior = (seniority == "Senior")
+label var senior "Senior Loan"
 
 *Create variables based off of marketsegment
 gen leveraged = (marketsegment == "Leveraged" | marketsegment == "Highly Leveraged")
@@ -93,6 +99,8 @@ label var end_date_quarterly "Quarterly End Date"
 gen date_daily = facilitystartdate
 label var date_daily "Date Daily of Start Date"
 format date_daily %td
+*Need to make an adjustment to cov variable based on Berlin, Nini, Yu. All revolving loans have covenants
+replace cov = 1 if rev_loan==1
 
 *Merge on FRED rate data to make a comparable spread variable
 merge m:1 date_quarterly using "$data_path/fred_rates", nogen keep(1 3)

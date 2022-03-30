@@ -33,7 +33,7 @@ foreach spread_type in standard alternate {
 			local controls 
 		}
 		if "`discount_type'" == "controls" {
-			local controls log_facilityamt maturity
+			local controls log_facilityamt maturity cov cov_lite asset_based senior
 		}
 		*Only want term and rev_loan obs in the regression
 		reghdfe `spread_var' `controls' if term_loan ==1 | rev_loan ==1, absorb(borrowerid_rev_loan_quarter, savefe) keepsingletons
@@ -53,11 +53,18 @@ foreach spread_type in standard alternate {
 		drop fe_coeff*
 	}
 }
-sort borrowercompanyid date_quarterly rev_loan facilityid
+sort borrowercompanyid date_quarterly category facilityid
 /*
 br borrowercompanyid date_quarterly packageid facilityid rev_loan discount* ///
  allindrawn spread spread_2
+ sort borrowercompanyid date_quarterly facilityid
+use "$data_path/stata_temp/dealscan_discounts_facilityid", clear 
+ br facilityid borrowercompanyid date_quarterly  category discount_1_simple spread spread log_facilityamt maturity cov cov_lite asset_based senior
+reghdfe spread log_facilityamt maturity cov cov_lite asset_based senior if term_loan ==1 | rev_loan ==1, absorb(borrowerid_rev_loan_quarter, savefe) keepsingletons	
+reghdfe spread log_facilityamt maturity cov cov_lite asset_based  if term_loan ==1 | rev_loan ==1, absorb(borrowerid_rev_loan_quarter, savefe) keepsingletons	
 */
+*
+
 isid facilityid
 *Merge on cusip_6
 merge m:1 borrowercompanyid date_quarterly using "$data_path/stata_temp/compustat_with_bcid", keep(1 3) keepusing(cusip_6) nogen
