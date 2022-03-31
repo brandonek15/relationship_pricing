@@ -12,14 +12,19 @@ program define make_skeleton
 		local id facilityid
 	}
 
-	*First we will get the set of "lenders" in both SDC and dealscan
-	use "$data_path/sdc_deal_bookrunner", clear
-	append using "$data_path/lender_facilityid_cusip6", gen(type)
+	*First we will get the set of "lenders" in both SDC and dealscan (in dealscan only keep lead arrangers)
+	use "$data_path/lender_facilityid_cusip6", clear
+	merge m:1 facilityid lender using "$data_path/dealscan_facility_lender_level", ///
+	keepusing(lead_arranger_credit) keep(1 3) nogen
+	keep if lead_arranger_credit ==1
+	drop lead_arranger_credit
+	
+	append using "$data_path/sdc_deal_bookrunner", gen(type)
 	bys lender: gen N = _N 
-	assert type == 1 if mi(sdc_deal_id)
-	assert type == 0 if mi(facilityid)
-	gen sdc_deal = (type==1)
-	gen ds_deal = (type==0)
+	assert type == 0 if mi(sdc_deal_id)
+	assert type == 1 if mi(facilityid)
+	gen sdc_deal = (type==0)
+	gen ds_deal = (type==1)
 	*Get a list of the "lenders" that are in both
 	egen total_lender_obs_ds = total(sdc_deal), by(lender)
 	egen total_lender_obs_sdc = total(ds_deal), by(lender)
@@ -135,6 +140,8 @@ end
 *This program does a bunch of things to the dataset to prepare it for analyses
 cap program drop prepare_rel_dataset
 program define prepare_rel_dataset
+	args sdc_vars ds_vars ds_lender_vars
+	
 	*Create past relationship dummy and FEs
 	egen past_relationship = rowmax(rel_equity rel_debt rel_conv rel_rev_loan rel_term_loan rel_other_loan)
 	label var past_relationship "Rel."
@@ -164,52 +171,76 @@ program define prepare_rel_dataset
 	*add the missing dummy if it is missing when the relationships exists (e.g. discount_1_simple)
 	foreach ds_type in rev_loan term_loan other_loan {
 
-		foreach ds_inter_var in discount_1_simple spread maturity log_facilityamt ///
-		agent_credit lead_arranger_credit bankallocation days_after_match {
+		foreach ds_inter_var in `ds_vars' `ds_lender_vars' days_after_match {
+			
+			*Don't want to create interactions for loantype packageid
+			if "`ds_inter_var'" != "loantype" & "`ds_inter_var'" != "packageid" & "`ds_inter_var'" != "lenderrole" {
 
-			if "`ds_inter_var'" == "discount_1_simple" {
-				local label "Disc"
-			}
-			if "`ds_inter_var'" == "spread" {
-				local label "Sprd"
-			}
-			if "`ds_inter_var'" == "maturity" {
-				local label "Maturity"
-			}
-			if "`ds_inter_var'" == "log_facilityamt" {
-				local label "Lg-Amt"
-			}
-			if "`ds_inter_var'" == "agent_credit" {
-				local label "Agent"
-			}
-			if "`ds_inter_var'" == "lead_arranger_credit" {
-				local label "Lead Arranger"
-			}
-			if "`ds_inter_var'" == "bankallocation" {
-				local label "Loan Share"
-			}
-			if "`ds_inter_var'" == "days_after_match" {
-				local label "Days Between Rel."
-			}
+				if "`ds_inter_var'" == "discount_1_simple" {
+					local label "Disc"
+				}
+				if "`ds_inter_var'" == "d_1_simple_le_0" {
+					local label "Disc (-inf,0)"
+				}
+				if "`ds_inter_var'" == "d_1_simple_0" {
+					local label "Disc [0]"
+				}
+				if "`ds_inter_var'" == "d_1_simple_0_25" {
+					local label "Disc (0-25]"
+				}
+				if "`ds_inter_var'" == "d_1_simple_25_50" {
+					local label "Disc (25,50]"
+				}
+				if "`ds_inter_var'" == "d_1_simple_50_100" {
+					local label "Disc (50,100]"
+				}
+				if "`ds_inter_var'" == "d_1_simple_100_200" {
+					local label "Disc (100,200]"
+				}
+				if "`ds_inter_var'" == "d_1_simple_ge_200" {
+					local label "Disc (200,inf)"
+				}
+
+				if "`ds_inter_var'" == "spread" {
+					local label "Sprd"
+				}
+				if "`ds_inter_var'" == "maturity" {
+					local label "Maturity"
+				}
+				if "`ds_inter_var'" == "log_facilityamt" {
+					local label "Lg-Amt"
+				}
+				if "`ds_inter_var'" == "agent_credit" {
+					local label "Agent"
+				}
+				if "`ds_inter_var'" == "lead_arranger_credit" {
+					local label "Lead Arranger"
+				}
+				if "`ds_inter_var'" == "bankallocation" {
+					local label "Loan Share"
+				}
+				if "`ds_inter_var'" == "days_after_match" {
+					local label "Days Between Rel."
+				}
+					
+				if "`ds_type'" == "rev_loan" {
+					local type_name "rev"
+				}
+				if "`ds_type'" == "term_loan" {
+					local type_name "term"
+				}
+				if "`ds_type'" == "other_loan" {
+					local type_name "other"
+				}
+			
+				gen i_`ds_inter_var'_`type_name' = 0
+				replace i_`ds_inter_var'_`type_name' = `ds_inter_var'_`ds_type'*rel_`ds_type' if !mi(`ds_inter_var'_`ds_type')
+				gen mi_`ds_inter_var'_`type_name' = mi(`ds_inter_var'_`ds_type')
 				
-			if "`ds_type'" == "rev_loan" {
-				local type_name "rev"
-			}
-			if "`ds_type'" == "term_loan" {
-				local type_name "term"
-			}
-			if "`ds_type'" == "other_loan" {
-				local type_name "other"
-			}
-		
-			gen i_`ds_inter_var'_`type_name' = 0
-			replace i_`ds_inter_var'_`type_name' = `ds_inter_var'_`ds_type'*rel_`ds_type' if !mi(`ds_inter_var'_`ds_type')
-			gen mi_`ds_inter_var'_`type_name' = mi(`ds_inter_var'_`ds_type')
+				local rel_label : variable label rel_`ds_type'
+				label var i_`ds_inter_var'_`type_name' "`rel_label' X `label'"
 			
-			local rel_label : variable label rel_`ds_type'
-			label var i_`ds_inter_var'_`type_name' "`rel_label' X `label'"
-			
-			
+			}
 		}
 
 
@@ -217,7 +248,7 @@ program define prepare_rel_dataset
 
 	foreach sdc_type in debt equity conv {
 
-		foreach sdc_inter_var in log_proceeds gross_spread_perc days_after_match {
+		foreach sdc_inter_var in `sdc_vars' days_after_match {
 
 			if "`sdc_inter_var'" == "log_proceeds" {
 				local label "Lg-Amt"

@@ -20,13 +20,14 @@ local base_vars issuer equity debt conv gross_spread_perc log_proceeds
 *sdc_vars are the variables you want from the most recent equity,debt,conv offerings
 local sdc_vars gross_spread_perc proceeds log_proceeds
 *ds_vars are the variables you want from the most recent term,rev,other loans 
-local ds_vars loantype packageid log_facilityamt maturity discount_1_simple spread
+local ds_vars loantype packageid log_facilityamt maturity discount_1_simple spread ///
+	d_1_simple_le_0 d_1_simple_0 d_1_simple_0_25 d_1_simple_25_50 d_1_simple_50_100 d_1_simple_100_200 d_1_simple_ge_200
 *ds_lender_vars are the variables you want abou the most recent dealscan lenders.
 local ds_lender_vars lenderrole bankallocation lead_arranger_credit agent_credit
 fill_out_skeleton "`type'" "`base_vars'" "`sdc_vars'" "`ds_vars'" "`ds_lender_vars'" "`n_lenders'"
 
 *Create interactions and label variables
-prepare_rel_dataset
+prepare_rel_dataset "`sdc_vars'" "`ds_vars'" "`ds_lender_vars'"
 
 isid sdc_deal_id lender
 save "$data_path/sdc_deals_with_past_relationships_`n_lenders'", replace 

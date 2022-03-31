@@ -149,6 +149,51 @@ title("Likelihood of hiring after relationships") scalars("fe Fixed Effects" "sa
 addnotes("Table suppresses past relationship indicators and Other Loan characteristics"  "Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" ///
 "Hire indicator either 0 or 100 for readability" "SEs clustered at firm level" )
 
+*Past discount bins and future business
+local rhs rel_*  i_d_1_simple_le_0* i_d_1_simple_0_25* i_d_1_simple_25_50* i_d_1_simple_50_100* i_d_1_simple_100_200* i_d_1_simple_ge_200*  ///
+ mi_discount_1_simple* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* 
+local drop_add mi_* rel_* *_other
+local absorb constant
+local fe_local "None"
+
+estimates clear
+local i = 1
+
+foreach type in all_sdc all_ds equity debt term rev {
+
+	if "`type'" == "all_sdc" {
+		local cond "if sdc_obs==1" 
+	}
+	if "`type'" == "all_ds" {
+		local cond "if ds_obs==1" 
+	}
+	if "`type'" == "equity" {
+		local cond "if `type' ==1" 
+	}
+	if "`type'" == "debt" {
+		local cond "if `type' ==1" 
+	}
+	if "`type'" == "term" {
+		local cond "if `type'_loan ==1" 
+	}
+	if "`type'" == "rev" {
+		local cond "if `type'_loan ==1" 
+	}
+	
+	reghdfe hire `rhs' `cond', absorb(`absorb') vce(cl cusip_6)
+	estadd local fe = "`fe_local'"
+	estadd local sample = "`type'"
+	estimates store est`i'
+	local ++i
+}
+
+esttab est* using "$regression_output_path/regressions_inten_ds_chars_bins_slides.tex", ///
+replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
+title("Likelihood of hiring after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
+addnotes("Table suppresses past relationship indicators and Other Loan characteristics"  "Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" ///
+"Hire indicator either 0 or 100 for readability" "SEs clustered at firm level" )
+
+
 *Look at pricing after previous relationship (sprd and SDC fee) 
 local drop_add 
 estimates clear
@@ -256,6 +301,64 @@ replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01
 title("Pricing After Previous Loan Characteristics") scalars("fe Fixed Effects" "sample Sample" ) ///
 addnotes("Table suppresses past relationship indicators and Other Loan characteristics" ///
   "Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" "SEs clustered at firm level" )
+
+*Look at price recouping (look at previous discounts and fees charged) - using bins for discount
+local rhs rel_* mi_discount_1_simple* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* ///
+i_d_1_simple_le_0* i_d_1_simple_0_25* i_d_1_simple_25_50* i_d_1_simple_50_100* i_d_1_simple_100_200* i_d_1_simple_ge_200* 
+local drop_add mi_* rel_* *_other
+local absorb constant
+local fe_local "None"
+
+estimates clear
+local i = 1
+
+foreach type in all_sdc all_ds equity debt term rev {
+
+	if "`type'" == "all_sdc" {
+		local cond "if sdc_obs==1" 
+		local lhs gross_spread_perc_base
+		local rhs_add log_proceeds_base
+	}
+	if "`type'" == "equity" {
+		local cond "if `type'_base ==1" 
+		local lhs gross_spread_perc_base
+		local rhs_add log_proceeds_base
+	}
+	if "`type'" == "debt" {
+		local cond "if `type'_base ==1" 
+		local lhs gross_spread_perc_base
+		local rhs_add log_proceeds_base
+	}
+	if "`type'" == "all_ds" {
+		local cond "if ds_obs==1" 
+		local lhs spread_base 
+		local rhs_add maturity_base log_facilityamt_base
+	}
+	if "`type'" == "term" {
+		local cond "if `type'_loan_base ==1" 
+		local lhs spread_base 
+		local rhs_add maturity_base log_facilityamt_base
+	}
+	if "`type'" == "rev" {
+		local cond "if `type'_loan_base ==1"
+		local lhs spread_base 
+		local rhs_add maturity_base log_facilityamt_base
+	}
+	
+	reghdfe `lhs' `rhs' `rhs_add' `cond' & hire !=0, absorb(date_quarterly) vce(cl cusip_6)
+	estadd local fe = "Time"
+	estadd local sample = "`type'"
+	estimates store est`i'
+	local ++i
+}
+
+
+esttab est* using "$regression_output_path/regressions_exten_pricing_ds_chars_bins_slides.tex", ///
+replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
+title("Pricing After Previous Loan Characteristics") scalars("fe Fixed Effects" "sample Sample" ) ///
+addnotes("Table suppresses past relationship indicators and Other Loan characteristics" ///
+  "Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" "SEs clustered at firm level" )
+
 
 *Type of lender and likelihood of hiring
 local rhs rel_* i_agent_credit_* i_lead_arranger_* i_bankallocation_* mi_bankallocation_*

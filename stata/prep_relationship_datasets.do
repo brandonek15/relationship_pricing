@@ -29,6 +29,12 @@ foreach sdc_type in equity debt conv {
 *Make the Dealscan datasets. Only contains the cusip_6 lender and facilityid
 use "$data_path/lender_facilityid_cusip6", clear
 merge m:1 facilityid using "$data_path/stata_temp/dealscan_discounts_facilityid", keepusing(rev_loan term_loan other_loan) keep(3) nogen
+*Only want to keep lead arrangers in the dataset as a part of the relationship - don't have relationships with everyone
+merge m:1 facilityid lender using "$data_path/dealscan_facility_lender_level", ///
+keepusing(lead_arranger_credit) keep(1 3) nogen
+keep if lead_arranger_credit ==1
+drop lead_arranger_credit
+
 foreach ds_type in rev_loan term_loan other_loan {
 	preserve
 		keep if `ds_type' ==1

@@ -3,7 +3,7 @@
 
 use "$data_path/ds_lending_with_past_relationships_20", clear
 
-foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
+foreach vars_set in baseline baseline_time ds_lender_type ds_chars ds_chars_bins sdc_chars {
 
 	if "`vars_set'" == "baseline" {
 		local rhs rel_* 
@@ -22,6 +22,12 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 		local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_discount_1_simple* mi_discount_1_simple*
 		local drop_add "mi_*"
 	}
+	if "`vars_set'" == "ds_chars_bins" {
+		local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* mi_discount_1_simple* ///
+			i_d_1_simple_le_0* i_d_1_simple_0_25* i_d_1_simple_25_50* i_d_1_simple_50_100* i_d_1_simple_100_200* i_d_1_simple_ge_200*
+		local drop_add "mi_*"
+	}
+	
 	if "`vars_set'" == "sdc_chars" {
 		local rhs rel_* i_log_proceeds_* i_gross_spread_perc_* mi_gross_spread_perc_*
 		local drop_add "mi_*"
@@ -60,7 +66,7 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 				local fe_local "LxR"
 			}
 
-			reghdfe hire `rhs' `cond', absorb(`absorb') vce(robust)
+			reghdfe hire `rhs' `cond', absorb(`absorb') vce(cl cusip_6)
 			estadd local fe = "`fe_local'"
 			estadd local sample = "`type'"
 			estimates store est`i'
@@ -74,7 +80,7 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
 	esttab est* using "$regression_output_path/regressions_ds_inten_`vars_set'.tex", ///
 	replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
 	title("Likelihood of Dealscan hiring after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
-	addnotes("Robust SEs" "Observation is DS Loan x lender" "Hire indicator either 0 or 100 for readability")
+	addnotes("SEs clustered at firm level" "Observation is DS Loan x lender" "Hire indicator either 0 or 100 for readability")
 
 	
 }
@@ -96,7 +102,7 @@ foreach lhs in log_facilityamt_base spread_base discount_1_simple_base {
 	}
 
 
-	foreach vars_set in baseline baseline_time ds_lender_type ds_chars sdc_chars {
+	foreach vars_set in baseline baseline_time ds_lender_type ds_chars ds_chars_bins  sdc_chars {
 
 		if "`vars_set'" == "baseline" {
 			local rhs rel_* 
@@ -106,14 +112,17 @@ foreach lhs in log_facilityamt_base spread_base discount_1_simple_base {
 			local rhs rel_* i_days_after_match_*
 			local drop_add 
 		}
-
-		*No need to include the missing variables because agent_credit and lead_arranger are never missing if relationsihp ==1
 		if "`vars_set'" == "ds_lender_type" {
 			local rhs rel_* i_agent_credit_* i_lead_arranger_* i_bankallocation_* mi_bankallocation_*
 			local drop_add "mi_*"
 		}
 		if "`vars_set'" == "ds_chars" {
 			local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* i_discount_1_simple* mi_discount_1_simple*
+			local drop_add "mi_*"
+		}
+		if "`vars_set'" == "ds_chars_bins" {
+			local rhs rel_* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* mi_discount_1_simple* ///
+			i_d_1_simple_le_0* i_d_1_simple_0_25* i_d_1_simple_25_50* i_d_1_simple_50_100* i_d_1_simple_100_200* i_d_1_simple_ge_200*
 			local drop_add "mi_*"
 		}
 		if "`vars_set'" == "sdc_chars" {
@@ -154,7 +163,7 @@ foreach lhs in log_facilityamt_base spread_base discount_1_simple_base {
 					local fe_local "LxR"
 				}
 
-				reghdfe `lhs' `rhs' `rhs_add' `cond' & hire !=0, absorb(`absorb') vce(robust)
+				reghdfe `lhs' `rhs' `rhs_add' `cond' & hire !=0, absorb(`absorb') vce(cl cusip_6)
 				estadd local fe = "`fe_local'"
 				estadd local sample = "`type'"
 				estimates store est`i'
@@ -168,7 +177,7 @@ foreach lhs in log_facilityamt_base spread_base discount_1_simple_base {
 		esttab est* using "$regression_output_path/regressions_ds_exten_`lhs'_`vars_set'.tex", ///
 		replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
 		title("Pricing of Dealscan Loans after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
-		addnotes("Robust SEs" "Observation is DS loan x lender when lender is hired" "Fees/Discount in percentage point" ///
+		addnotes("SEs clustered at firm level" "Observation is DS loan x lender when lender is hired" "Fees/Discount in percentage point" ///
 		"Lg-Amt is Log Facility Amount")
 		
 	}
