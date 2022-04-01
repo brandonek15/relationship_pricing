@@ -137,9 +137,9 @@ br borrowercompanyid date_quarterly packageid facilityid rev_loan institutional 
 br borrowercompanyid date_quarterly packageid facilityid rev_loan term_loan other_loan discount* ///
 spread if borrowercompanyid == 19196 & date_quarterly == tq(2003q2)
 
-*Check to see if the first discount given to each firm is bigger than later ones?
-use "$data_path/stata_temp/dealscan_discounts_facilityid", clear
-keep if rev_loan ==1 & !mi(cusip_6)
+*Do the same for term loan
+use "$data_path/dealscan_compustat_loan_level", clear
+keep if category =="Bank Term" & !mi(cusip_6) & !mi(discount_1_simple)
 bys cusip_6 (facilitystartdate): gen n = _n
 bys cusip_6 (facilitystartdate): gen N = _N
 sum discount_1_simple if n ==1
@@ -148,14 +148,27 @@ sum discount_1_simple if n >1
 sum discount_1_simple if n ==1 & N>1
 sum discount_1_simple if n >1 & N>1
 
+gen count = 1
+reghdfe discount_1_simple n, absorb(count)
 reghdfe discount_1_simple n, absorb(cusip_6)
 reghdfe discount_1_simple n, absorb(cusip_6 date_quarterly)
 reghdfe discount_2_simple n, absorb(cusip_6 date_quarterly)
 
 
 *Make a simple graph of the average discount by observation num
-collapse (mean) discount*, by(n)
+collapse (sum) count (mean) discount*, by(n)
 twoway line discount_1_simple n
+
+		local discount_n (line discount_1_simple n, yaxis(1))
+		local count_n (line count n, yaxis(2))
+
+		twoway `discount_n' `count_n' , ///
+			legend(order(1 "Discount" 2 "Number of Obs")) ///
+			title("Avg Revolver Discount and Loan Number in Sample")  ytitle("Discount", axis(1)) ///	
+			ytitle("Number of Observations", axis(2)) xtitle("Revolving Loan Number")
+		gr export "$figures_output_path/bank_discount_across_loan_number.png", replace 
+
+
 
 *
 use "$data_path/ds_lending_with_past_relationships_20", clear

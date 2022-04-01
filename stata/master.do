@@ -25,9 +25,11 @@ do "$code_path/clean_sdc.do"
 *Make Compustat x dealscan relationships
 do "$code_path/make_ds_lender_data_with_comp.do"
 *Analysis
+do "$code_path/figures_dist_chars.do"
 do "$code_path/make_discount_graphs.do"
+do "$code_path/regressions_discount_firm_loan_char.do"
 
-*Make relationship dataset
+*Make relationship dataset (testing invest-then-harvest)
 do "$code_path/prep_relationship_datasets.do"
 do "$code_path/create_sdc_issuance_relationships.do"
 do "$code_path/create_ds_lending_relationships.do"

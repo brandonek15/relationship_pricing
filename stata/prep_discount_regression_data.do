@@ -76,6 +76,11 @@ reghdfe spread log_facilityamt maturity cov cov_lite asset_based senior if term_
 reghdfe spread log_facilityamt maturity cov cov_lite asset_based  if term_loan ==1 | rev_loan ==1, absorb(borrowerid_rev_loan_quarter, savefe) keepsingletons	
 */
 *
+*label discount
+label var discount_1_simple "Di-1-S"
+label var discount_2_simple "Di-2-S"
+label var discount_1_controls "Di-1-C"
+label var discount_2_controls "Di-2-C"
 
 isid facilityid
 *Merge on cusip_6

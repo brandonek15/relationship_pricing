@@ -203,4 +203,33 @@ ytitle("Fraction of Loans with Zero Discount 1 (simple)") title("Fraction of Loa
 		legend(order(1 "Revolving Discount" 2 "Term Discount"))
 		graph export "$figures_output_path/discount_frac_zero.png", replace
 		
-twoway line discount_1_simple date_quarterly
+*Check to see if the first discount given to each firm is bigger than later ones?
+use "$data_path/dealscan_compustat_loan_level", clear
+keep if (category =="Revolver" | category == "Bank Term")  & !mi(cusip_6) & !mi(discount_1_simple)
+bys cusip_6 category (facilitystartdate): gen n = _n
+bys cusip_6 category (facilitystartdate): gen N = _N
+sum discount_1_simple if n ==1
+sum discount_1_simple if n >1
+
+sum discount_1_simple if n ==1 & N>1
+sum discount_1_simple if n >1 & N>1
+
+gen count = 1
+reghdfe discount_1_simple n, absorb(count)
+reghdfe discount_1_simple n, absorb(cusip_6)
+reghdfe discount_1_simple n, absorb(cusip_6 date_quarterly)
+reghdfe discount_2_simple n, absorb(cusip_6 date_quarterly)
+
+
+*Make a simple graph of the average discount by observation num
+
+		local discount_n_rev (line discount_1_simple n if category == "Revolver", col(black) lpattern(solid) yaxis(1))
+		local discount_n_term (line discount_1_simple n if category == "Bank Term", col(blue) lpattern(solid) yaxis(1))
+		local count_n_rev (line count n if category == "Revolver", col(gray) lpattern(solid) yaxis(2))
+		local count_n_term (line count n if category == "Bank Term", col(ltblue) lpattern(solid) yaxis(2))
+
+		twoway `discount_n_rev' `count_n_rev' `discount_n_term' `count_n_term' , ///
+			legend(order(1 "Rev Discount" 2 "Term Discount" 3 "Rev Number of Obs" 4 "Term Number of Obs") size(medium) rows(2)) ///
+			title("Avg Discount and Loan Number in Sample")  ytitle("Discount", axis(1)) ///	
+			ytitle("Number of Observations", axis(2)) xtitle("Loan Number")
+		gr export "$figures_output_path/discounts_across_loan_number.png", replace 

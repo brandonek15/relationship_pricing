@@ -10,7 +10,7 @@ L1_roa L1_sales_growth L1_ebitda_int_exp ///
 L1_working_cap_assets L1_capex_assets
 
 *Drop duplicate observations
-keep borrowercompanyid date_quarterly discount_obs  `firm_chars' 
+keep borrowercompanyid date_quarterly discount_obs discount_1_simple  `firm_chars' 
 duplicates drop
 
 winsor2 `firm_chars', cuts(.5 99.5) replace
@@ -131,6 +131,18 @@ foreach var in `firm_chars' {
 		legend(order(1 "Discount Obs" 2 "Non-Discount Obs")) 
 		
 		graph export "$figures_output_path/dist_`var'_types.png", replace
+		
+		*Look at firm characteristics of zero or less than zero discount firms compared to positive discount firms
+		local discount_leq_0 (histogram `var' if discount_obs ==1 & discount_1_simple<=10e-6 `cond' , density  `width' `start'col(blue%30))
+		local discount_ge_0 (histogram `var' if discount_obs ==1 & discount_1_simple>10e-6 `cond', density  `width' `start'col(red%30))
+		
+		twoway `discount_leq_0'  `discount_ge_0'  ///
+		, ytitle("Density") title("Distribution of `var_lab' Across Discount Size", size(medsmall)) ///
+		 note("Winsorized at 0.5% and 99.5%" "`note'") ///
+		graphregion(color(white))  xtitle("`var_lab'") ///
+		legend(order(1 "Discount (-inf,0]" 2 "Discount (0,inf)")) 
+		
+		graph export "$figures_output_path/dist_`var'_discount_size.png", replace
 }
 
 *Do figures of loan characteristcs.
