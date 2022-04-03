@@ -1,10 +1,7 @@
 *This program will make a lender x loan datasetload in the compustat data, merge on the dealscan data,
 
 use "$data_path/dealscan_facility_lender_level", clear
-merge m:1 facilityid lender using "$data_path/dealscan_facility_lender_level", ///
-keepusing(lead_arranger_credit) keep(1 3) nogen
 keep if lead_arranger_credit ==1
-drop lead_arranger_credit
 
 *For now keep both that can be matched to compustat and those that cannot, which are those that can match to compustat.
 merge m:1 borrowercompanyid date_quarterly using "$data_path/stata_temp/compustat_with_bcid", keep(1 3)
