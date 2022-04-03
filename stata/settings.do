@@ -9,6 +9,7 @@ cap log close _all
 cap set scheme david4
 
 global data_path "$root/intermediate_data"
+global input_data "$root/data/inputs"
 global regression_output_path "$root/output/tables/regression_tables"
 global figures_output_path "$root/output/figures/stata"
 cap mkdir "$root/output/tables"
@@ -24,7 +25,7 @@ global comp_char_vars log_assets leverage market_to_book sales_growth ///
 	 log_sales quick_ratio ebitda_int_exp  ///
 	cash_assets acq_assets shrhlder_payout_assets ///
 	 working_cap_assets capex_assets ppe_assets ///
-	 roa ebitda_assets  sga_assets
+	 roa ebitda_assets  sga_assets firm_age
 
 global comp_outcome_vars cash_assets acq_assets shrhlder_payout_assets ///
 	 working_cap_assets capex_assets ppe_assets ///

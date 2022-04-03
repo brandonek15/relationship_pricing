@@ -2,7 +2,7 @@
 import delimited using "$data_path/compustat_merge.csv", clear
 
 *xtset the data by getting a good date variable and getting rid of duplicates
-foreach var in datadate rdq {
+foreach var in datadate rdq ipodate {
 	gen temp = date(`var',"YMD")
 	format temp %td
 	drop `var' 
@@ -134,6 +134,13 @@ tostring temp, replace
 gen sic_2 =  substr(temp,1,2)
 destring sic_2, replace
 drop temp
+
+*Also create a quarterly ipo date
+gen ipodate_quarterly = qofd(ipodate)
+format ipodate_quarterly %tq
+*Create a variabel for firm age
+gen firm_age = (datadate - ipodate)/365.25
+label var firm_age "Firm Age (yrs)"
 
 *Create the changes variables 4,8,12 quarters.
 foreach change_var in  $comp_outcome_vars {

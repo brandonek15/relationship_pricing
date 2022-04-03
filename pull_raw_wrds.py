@@ -75,6 +75,10 @@ def pull_raw(wrds_conn,conn):
     cols = ['gvkey','conm','cusip','cik','sic','naics']
     retrieve_table(wrds_conn, conn, 'comp', 'names', 'comp_identity', \
                    columns_to_pull=cols,dtypes_for_upload=dtypes)
+    dtypes = {'gvkey': int}
+    cols = ['gvkey','ipodate']
+    retrieve_table(wrds_conn, conn, 'comp', 'company', 'comp_ipo', \
+                   columns_to_pull=cols,dtypes_for_upload=dtypes)
 
 
 def retrieve_table(wrds, connection, library, table, heading, columns_to_pull='all', \

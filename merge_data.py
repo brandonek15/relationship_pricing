@@ -8,7 +8,7 @@ def merge_data():
     '''This program will create the query using IBIS, execute the query, and save the file
     for later use'''
     client = create_client()
-
+    '''
     #Get the dealscan only data
     #Creates the query
     merge = merge_dealscan(client)
@@ -22,7 +22,7 @@ def merge_data():
     #output to CSV
     path = os.path.join(INTERMEDIATE_DATA_PATH,'dealscan_merge.csv')
     merge_df.to_csv(path,index=False)
-
+    '''
     #Also get the compustat file (to play with in another project potentially)
     #Creates the query
     merge = merge_compustat(client)
@@ -126,6 +126,7 @@ def merge_compustat(client):
     # Load in compustat tables
     comp_quarter = client.table('comp_quarter')
     comp_identity = client.table('comp_identity')
+    comp_ipo = client.table('comp_ipo')
     #Load in crosswalk
     crosswalk = client.table('dealscan_compustat_crosswalk')
 
@@ -135,6 +136,10 @@ def merge_compustat(client):
     joined = comp_quarter.inner_join(comp_identity, [
         comp_quarter['gvkey'] == comp_identity['gvkey']
     ])
+    #Get company ipodate
+    joined = joined.inner_join(comp_ipo, [
+        comp_quarter['gvkey'] == comp_ipo['gvkey']
+    ])
     #Merge on crosswalk
     joined = joined.left_join(crosswalk, [
         comp_quarter['gvkey'] == crosswalk['gvkey']
@@ -143,7 +148,9 @@ def merge_compustat(client):
     final_merge = joined[comp_quarter,
                          comp_identity['conm'], comp_identity['cusip'],
                          comp_identity['cik'], comp_identity['sic'],
-                         comp_identity['naics'],crosswalk['bcoid']
+                         comp_identity['naics'],comp_ipo['ipodate'],
+                         crosswalk['bcoid']
+
     ]
 
     return final_merge

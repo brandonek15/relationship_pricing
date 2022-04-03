@@ -4,8 +4,8 @@ keep if category == "Revolver" | category == "Bank Term"
 keep if !mi(discount_1_simple) & merge_compustat ==1
 
 local firm_chars L1_market_to_book L1_ppe_assets L1_log_assets L1_leverage ///
-L1_roa L1_sales_growth L1_ebitda_int_exp ///
-L1_working_cap_assets L1_capex_assets
+L1_roa L1_sales_growth L1_ebitda_int_exp L1_sga_assets ///
+L1_working_cap_assets L1_capex_assets L1_firm_age
 
 winsor2 `firm_chars', cuts(.5 99.5) replace
 
@@ -61,7 +61,7 @@ foreach lhs in discount_1_simple discount_1_controls discount_2_simple discount_
 				local rhs `firm_chars' `loan_vars'
 			}
 		
-			foreach fe_type in  none  time {
+			foreach fe_type in  none  time time_sic_2 {
 			
 				if "`fe_type'" == "none" {
 					local fe "constant"
@@ -70,6 +70,10 @@ foreach lhs in discount_1_simple discount_1_controls discount_2_simple discount_
 				if "`fe_type'" == "time" {
 					local fe "date_quarterly"
 					local fe_add "Time"
+				}
+				if "`fe_type'" == "time_sic_2" {
+					local fe "date_quarterly sic_2"
+					local fe_add "Time,SIC2"
 				}
 				
 				reghdfe `lhs' `rhs' `cond', a(`fe') vce(cl cusip_6)

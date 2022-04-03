@@ -6,8 +6,8 @@ keep if merge_compustat==1
 *Firm characteristics of compustat firms matched to dealscan - split by whether discount is calculated or not - 
 *define firm as discount firm if at any point they had a discount
 local firm_chars L1_market_to_book L1_ppe_assets L1_log_assets L1_leverage ///
-L1_roa L1_sales_growth L1_ebitda_int_exp ///
-L1_working_cap_assets L1_capex_assets
+L1_roa L1_sales_growth L1_ebitda_int_exp L1_sga_assets ///
+L1_working_cap_assets L1_capex_assets L1_firm_age
 
 *Drop duplicate observations
 keep borrowercompanyid date_quarterly discount_obs discount_1_simple  `firm_chars' 
@@ -112,6 +112,12 @@ foreach var in `firm_chars' {
 		local cond "& L1_sga_assets<=.15"
 		local width "width(.005)"
 		local note "Truncated at .15"
+		local start "start(0)"
+		}
+		else if "`var'" == "L1_firm_age" {
+		local cond "& L1_firm_age>=0"
+		local width "width(1)"
+		local note "Truncated at 0"
 		local start "start(0)"
 		}
 		else {

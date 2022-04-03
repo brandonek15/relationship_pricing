@@ -272,3 +272,100 @@ collapse (mean) discount_* , by(date_quarterly)
 		(line discount* date_quarterly, ///
 			legend(order(1 "1 (Simple)" 2 "1 (Controls)" 3 "2 (Simple)"  4 "2 (Controls)"))) ///
 			, title("Discounts Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'") 
+
+*Look at joint distribution of discounts and and rates
+
+use "$data_path/dealscan_compustat_loan_level", clear
+keep if (category =="Revolver" | category == "Bank Term")  & !mi(cusip_6) & !mi(discount_1_simple)
+tddens spread discount_1_simple if category == "Revolver"
+
+*Look at autocorrelation of lender
+use "$data_path/dealscan_compustat_loan_level", clear
+
+*Try calculating discount with fake data - This fake data is perfect and the "base discount" doesn't vary within the same borrowerid_rev_loan_quarter
+import excel "$input_data/fake_data_discount_works_perfectly.xlsx", sheet("Sheet1") firstrow clear
+rename spread_no_noise spread
+rename spread_w_noise spread_2
+egen borrowerid_rev_loan_quarter = group(borrowercompanyid date_quarterly category)
+*Loop over different measures of the discount
+foreach spread_type in standard alternate {
+	if "`spread_type'" == "standard" {
+		local spread_var spread
+		local spread_suffix 1
+	}
+	if "`spread_type'" == "alternate" {
+		local spread_var spread_2
+		local spread_suffix 2
+	}
+	
+	foreach discount_type in simple controls {
+	
+		if "`discount_type'" == "simple" {
+			local controls 
+		}
+		if "`discount_type'" == "controls" {
+			local controls log_facilityamt maturity cov cov_lite asset_based senior
+		}
+		*Only want term and rev_loan obs in the regression
+		reghdfe `spread_var' `controls', absorb(borrowerid_rev_loan_quarter, savefe) keepsingletons
+		rename __hdfe1__ fe_coeff
+		*Need to spread the fe_coeff by
+		gen fe_coeff_term_ins = fe_coeff if category == "Inst. Term"
+		gen fe_coeff_term_bank = fe_coeff if category == "Bank Term"
+		gen fe_coeff_rev = fe_coeff if category == "Revolver"
+		egen fe_coeff_term_ins_sp = max(fe_coeff_term_ins), by(borrowercompanyid date_quarterly)
+		egen fe_coeff_term_bank_sp = max(fe_coeff_term_bank), by(borrowercompanyid date_quarterly)
+		egen fe_coeff_rev_sp = max(fe_coeff_rev), by(borrowercompanyid date_quarterly)
+		gen discount_`spread_suffix'_`discount_type' = fe_coeff_term_ins_sp - fe_coeff_rev_sp if category == "Revolver"
+		replace discount_`spread_suffix'_`discount_type' = fe_coeff_term_ins_sp - fe_coeff_term_bank_sp if category == "Bank Term"
+		*Don't want this to be populated for other loans or institutional term loans
+		replace discount_`spread_suffix'_`discount_type' = . if category == "Inst. Term"
+
+		drop fe_coeff*
+	}
+}
+
+*Try calculating discount with fake data - This fake data is not and the "base spread" varies within the same borrowerid_rev_loan_quarter
+*Note this doesn't work - estimates sometimes are close to the truth, but it depends on the direction that the "base spread" moves along with
+*Things that are being identified.
+import excel "$input_data/fake_data_discount_doesnt_work_perfectly.xlsx", sheet("Sheet1") firstrow clear
+rename spread_no_noise spread
+rename spread_w_noise spread_2
+egen borrowerid_rev_loan_quarter = group(borrowercompanyid date_quarterly category)
+*Loop over different measures of the discount
+foreach spread_type in standard alternate {
+	if "`spread_type'" == "standard" {
+		local spread_var spread
+		local spread_suffix 1
+	}
+	if "`spread_type'" == "alternate" {
+		local spread_var spread_2
+		local spread_suffix 2
+	}
+	
+	foreach discount_type in simple controls {
+	
+		if "`discount_type'" == "simple" {
+			local controls 
+		}
+		if "`discount_type'" == "controls" {
+			local controls log_facilityamt maturity cov cov_lite asset_based senior
+		}
+		*Only want term and rev_loan obs in the regression
+		reghdfe `spread_var' `controls', absorb(borrowerid_rev_loan_quarter, savefe) keepsingletons
+		rename __hdfe1__ fe_coeff
+		*Need to spread the fe_coeff by
+		gen fe_coeff_term_ins = fe_coeff if category == "Inst. Term"
+		gen fe_coeff_term_bank = fe_coeff if category == "Bank Term"
+		gen fe_coeff_rev = fe_coeff if category == "Revolver"
+		egen fe_coeff_term_ins_sp = max(fe_coeff_term_ins), by(borrowercompanyid date_quarterly)
+		egen fe_coeff_term_bank_sp = max(fe_coeff_term_bank), by(borrowercompanyid date_quarterly)
+		egen fe_coeff_rev_sp = max(fe_coeff_rev), by(borrowercompanyid date_quarterly)
+		gen discount_`spread_suffix'_`discount_type' = fe_coeff_term_ins_sp - fe_coeff_rev_sp if category == "Revolver"
+		replace discount_`spread_suffix'_`discount_type' = fe_coeff_term_ins_sp - fe_coeff_term_bank_sp if category == "Bank Term"
+		*Don't want this to be populated for other loans or institutional term loans
+		replace discount_`spread_suffix'_`discount_type' = . if category == "Inst. Term"
+
+		drop fe_coeff*
+	}
+}
