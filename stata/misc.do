@@ -279,9 +279,40 @@ use "$data_path/dealscan_compustat_loan_level", clear
 keep if (category =="Revolver" | category == "Bank Term")  & !mi(cusip_6) & !mi(discount_1_simple)
 tddens spread discount_1_simple if category == "Revolver"
 
-*Look at autocorrelation of lender
-use "$data_path/dealscan_compustat_loan_level", clear
-
+*Look at whether a loan has a previous same lender and then look at the discount
+use "$data_path/dealscan_compustat_lender_loan_level", clear
+isid facilityid lender
+gen prev_lender = 0
+drop if mi(borrowercompanyid)
+*Can either use borrowercompanyid (which will give me all of DS) or use cusip_6, which will give me only merged compustat
+*Say you were a previous lender if you were the same lender to the same firm earlier
+*Or if you were previoulsy a previous lender
+bys borrowercompanyid lender (date_quarterly facilityid): replace prev_lender = 1 if lender[_n] == lender[_n-1] & date_quarterly[_n] != date_quarterly[_n-1]
+bys borrowercompanyid lender (date_quarterly facilityid): replace prev_lender = 1 if prev_lender[_n-1] == 1
+sort borrowercompanyid lender date_quarterly facilityid
+br borrowercompanyid lender date_quarterly facilityid prev_lender
+egen max_prev_lender = max(prev_lender), by(facilityid)
+keep if category == "Revolver"
+keep facilityid borrowercompanyid max_prev_lender discount* date_quarterly
+duplicates drop
+reg discount_1_simple max_prev_lender if date_quarterly >=tq(2005q1), absorb(date_quarterly) 
+reghdfe discount_1_simple max_prev_lender if date_quarterly >=tq(2005q1), absorb(date_quarterly borrowercompanyid) 
+preserve
+collapse (mean) max_prev_lender, by(date_quarterly)
+twoway line max_prev_lender date_quarterly
+restore
+preserve
+collapse (mean) discount_1_simple, by(date_quarterly max_prev_lender)
+twoway (line discount_1_simple date_quarterly if max_prev_lender ==1, color(black)) ///
+	(line discount_1_simple date_quarterly if max_prev_lender ==0, color(blue))
+restore
+preserve
+gen year = yofd(dofq(date_quarterly))
+collapse (mean) discount_1_simple, by(year max_prev_lender)
+twoway (line discount_1_simple year if max_prev_lender ==1, color(black)) ///
+	(line discount_1_simple year if max_prev_lender ==0, color(blue))
+restore
+	
 *Try calculating discount with fake data - This fake data is perfect and the "base discount" doesn't vary within the same borrowerid_rev_loan_quarter
 import excel "$input_data/fake_data_discount_works_perfectly.xlsx", sheet("Sheet1") firstrow clear
 rename spread_no_noise spread

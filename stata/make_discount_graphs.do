@@ -223,13 +223,13 @@ reghdfe discount_2_simple n, absorb(cusip_6 date_quarterly)
 
 *Make a simple graph of the average discount by observation num
 
-		local discount_n_rev (line discount_1_simple n if category == "Revolver", col(black) lpattern(solid) yaxis(1))
-		local discount_n_term (line discount_1_simple n if category == "Bank Term", col(blue) lpattern(solid) yaxis(1))
-		local count_n_rev (line count n if category == "Revolver", col(gray) lpattern(solid) yaxis(2))
-		local count_n_term (line count n if category == "Bank Term", col(ltblue) lpattern(solid) yaxis(2))
+local discount_n_rev (line discount_1_simple n if category == "Revolver", col(black) lpattern(solid) yaxis(1))
+local discount_n_term (line discount_1_simple n if category == "Bank Term", col(blue) lpattern(solid) yaxis(1))
+local count_n_rev (line count n if category == "Revolver", col(gray) lpattern(solid) yaxis(2))
+local count_n_term (line count n if category == "Bank Term", col(ltblue) lpattern(solid) yaxis(2))
 
-		twoway `discount_n_rev' `count_n_rev' `discount_n_term' `count_n_term' , ///
-			legend(order(1 "Rev Discount" 2 "Term Discount" 3 "Rev Number of Obs" 4 "Term Number of Obs") size(medium) rows(2)) ///
-			title("Avg Discount and Loan Number in Sample")  ytitle("Discount", axis(1)) ///	
-			ytitle("Number of Observations", axis(2)) xtitle("Loan Number")
-		gr export "$figures_output_path/discounts_across_loan_number.png", replace 
+twoway `discount_n_rev' `count_n_rev' `discount_n_term' `count_n_term' , ///
+	legend(order(1 "Rev Discount" 2 "Term Discount" 3 "Rev Number of Obs" 4 "Term Number of Obs") size(medium) rows(2)) ///
+	title("Avg Discount and Loan Number in Sample")  ytitle("Discount", axis(1)) ///	
+	ytitle("Number of Observations", axis(2)) xtitle("Loan Number")
+gr export "$figures_output_path/discounts_across_loan_number.png", replace 
