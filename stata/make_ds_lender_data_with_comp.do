@@ -15,6 +15,7 @@ gen not_missing_discount_temp = !mi(discount_1_simple)
 egen discount_obs = max(not_missing_discount_temp), by(borrowercompanyid date_quarterly)
 drop not_missing_discount_temp
 gen constant = 1
+
 *Save a loan x lender file
 save "$data_path/dealscan_compustat_lender_loan_level", replace
 drop lender agent_credit lead_arranger_credit bankallocation lenderrole

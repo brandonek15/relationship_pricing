@@ -16,6 +16,7 @@ replace category = "Other" if other_loan==1
 assert !mi(category)
 
 egen borrowerid_rev_loan_quarter = group(borrowercompanyid date_quarterly category)
+local loan_level_controls log_facilityamt maturity cov cov_lite asset_based senior secured
 *Loop over different measures of the discount
 foreach spread_type in standard alternate {
 	if "`spread_type'" == "standard" {
@@ -33,7 +34,7 @@ foreach spread_type in standard alternate {
 			local controls 
 		}
 		if "`discount_type'" == "controls" {
-			local controls log_facilityamt maturity cov cov_lite asset_based senior
+			local controls `loan_level_controls'
 		}
 		*Only want term and rev_loan obs in the regression
 		reghdfe `spread_var' `controls' if term_loan ==1 | rev_loan ==1, absorb(borrowerid_rev_loan_quarter, savefe) keepsingletons
@@ -66,16 +67,18 @@ foreach spread_type in standard alternate {
 	}
 }
 sort borrowercompanyid date_quarterly category facilityid
-/*
-br borrowercompanyid date_quarterly packageid facilityid rev_loan discount* ///
- allindrawn spread spread_2
- sort borrowercompanyid date_quarterly facilityid
-use "$data_path/stata_temp/dealscan_discounts_facilityid", clear 
- br facilityid borrowercompanyid date_quarterly  category discount_1_simple spread spread log_facilityamt maturity cov cov_lite asset_based senior
-reghdfe spread log_facilityamt maturity cov cov_lite asset_based senior if term_loan ==1 | rev_loan ==1, absorb(borrowerid_rev_loan_quarter, savefe) keepsingletons	
-reghdfe spread log_facilityamt maturity cov cov_lite asset_based  if term_loan ==1 | rev_loan ==1, absorb(borrowerid_rev_loan_quarter, savefe) keepsingletons	
-*/
-*
+
+*For each variable that could vary within loan package (borrowercompanyid date_quarterly), get the average by category
+foreach var in `loan_level_controls' {
+	egen m_`var' = mean(`var'), by(borrowercompanyid date_quarterly category)
+	gen m_`var'_inst_t = m_`var' if category == "Inst. Term"
+	egen m_`var'_inst = max(m_`var'_inst_t), by(borrowercompanyid date_quarterly)
+	gen diff_`var' = m_`var'-m_`var'_inst if category == "Revolver" | category == "Bank Term"
+	drop m_`var'*
+	local var_label: variable label `var'
+	label var diff_`var' "D-`var_label'"
+}
+
 *label discount
 label var discount_1_simple "Di-1-S"
 label var discount_2_simple "Di-2-S"

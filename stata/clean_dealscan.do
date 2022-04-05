@@ -39,9 +39,13 @@ replace cov_type_fin = "None" if mi(cov_type_fin)
 replace cov_type_nw = "None" if mi(cov_type_nw)
 replace borrowerbasetype = "N/A" if mi(borrowerbasetype)
 
-*Create a variable for seniority
+*Create a variable for seniority and secured
 gen senior = (seniority == "Senior")
 label var senior "Senior Loan"
+gen secured_num = (secured == "Yes") 
+drop secured
+rename secured_num secured
+label var secured "Secured"
 
 *Create variables based off of marketsegment
 gen leveraged = (marketsegment == "Leveraged" | marketsegment == "Highly Leveraged")
