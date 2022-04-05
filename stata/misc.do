@@ -201,6 +201,38 @@ collapse (sum) rev_loan term_loan institutional_term_loan total, by(lender)
 gsort -total
 br
 
+*Try to make a table comparing means
+use  "$data_path/dealscan_compustat_loan_level", clear
+keep if merge_compustat==1
+
+local firm_chars L1_market_to_book L1_ppe_assets L1_log_assets L1_leverage ///
+L1_roa L1_sales_growth L1_ebitda_int_exp ///
+L1_working_cap_assets L1_capex_assets
+keep borrowercompanyid date_quarterly discount_obs  `firm_chars' 
+duplicates drop
+
+winsor2 `firm_chars', cuts(.5 99.5) replace
+
+eststo: estpost ttest `firm_chars' , by(discount_obs) unequal
+	
+esttab . using "$regression_output_path/differences_firm_chars_discount_obs.tex", ///
+ label title("Origination Level Loan Characteristics- `title_add'") replace ///
+cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Disc Obs" "Non Disc Obs" "Difference") ///
+ nonum eqlabels(none) addnotes("Sample is Observations Merged to Compustat") 
+
+use  "$data_path/dealscan_compustat_loan_level", clear
+keep if category == "Revolver" | category == "Bank Term"
+
+local loan_vars log_facilityamt maturity leveraged fin_cov nw_cov borrower_base cov_lite asset_based spread institutional salesatclose 
+
+winsor2 `loan_vars', cuts(.5 99.5) replace
+eststo: estpost ttest `loan_vars', by(discount_obs) unequal
+	
+esttab . using "$regression_output_path/differences_loan_chars_discount_obs.tex", ///
+ label title("Origination Level Loan Characteristics- `title_add'") replace ///
+cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Disc Obs" "Non Disc Obs" "Difference") ///
+ nonum eqlabels(none) addnotes("Sample is Revolver and Bank Term Loans") 
+
 
 *Try making alternative discount measures where I drop non institutional term loans
 *Get the facility level data

@@ -32,10 +32,17 @@ foreach sample in discount no_discount {
 
 }
 
+*Make a difference of means table
+eststo: estpost ttest `firm_chars' , by(discount_obs) unequal
+	
+esttab . using "$regression_output_path/differences_firm_chars_discount_obs.tex", ///
+ label title("Origination Level Firm Characteristics") replace ///
+cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Disc Obs" "Non Disc Obs" "Difference") ///
+ nonum eqlabels(none) addnotes("Sample is Observations Merged to Compustat") 
+
 *Loan characteristics - split in four samples - not matched to dealscan and no discount - not matched to dealscan and no discount
 *matched to dealscan and discount, matched to dealscan and no discount.
 use  "$data_path/dealscan_compustat_loan_level", clear
-
 local loan_vars log_facilityamt maturity leveraged fin_cov nw_cov borrower_base cov_lite asset_based spread institutional salesatclose 
 
 winsor2 `loan_vars', cuts(.5 99.5) replace
@@ -78,12 +85,21 @@ foreach sample in discount_comp no_discount_comp discount_no_comp no_discount_no
 
 	estpost tabstat `loan_vars' `cond', s(p5 p25 p50 p75 p95 mean sd count) c(s)
 	esttab . using "$regression_output_path/sumstats_loan_chars_`sample'.tex", ///
-	 label title("Origination Level Loan Characteristics- `title_add'") replace ///
+	 label title("Origination Level Firm Characteristics") replace ///
 	cells("p25(fmt(3)) p50(fmt(3)) p75(fmt(3)) mean(fmt(2)) sd(fmt(2)) count(fmt(0))") ///
 	nomtitle  nonum noobs
 
 }
-
+*Make a difference of means table
+local exclude "institutional"
+local loan_vars: list loan_vars - exclude
+keep if category == "Revolver" | category == "Bank Term"
+eststo: estpost ttest `loan_vars', by(discount_obs) unequal
+	
+esttab . using "$regression_output_path/differences_loan_chars_discount_obs.tex", ///
+ label title("Origination Level Loan Characteristics") replace ///
+cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Disc Obs" "Non Disc Obs" "Difference") ///
+ nonum eqlabels(none) addnotes("Sample is Revolver and Bank Term Loans") 
 
 *Correlation tables
 use  "$data_path/stata_temp/dealscan_discounts_facilityid", clear

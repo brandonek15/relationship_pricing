@@ -15,6 +15,23 @@ keep facilityid borrowercompanyid max_prev_lender discount* date_quarterly categ
 duplicates drop
 label var max_prev_lender "Any previous lender"
 winsor2 discount_*, replace cut(1 99)
+
+		preserve
+			freduse USRECM BAMLC0A4CBBB BAMLC0A1CAAA, clear
+			gen date_quarterly = qofd(daten)
+			collapse (max) USRECM , by(date_quarterly)
+			tsset date_quarterly
+			keep date_quarterly USRECM
+			tempfile rec
+			save `rec', replace
+		restore
+
+*Get recession data
+joinby date_quarterly using `rec', unmatched(master) 
+
+gen max_prev_lender_rec = USRECM * max_prev_lender
+label var max_prev_lender_rec "Rec x Any previous lender"
+
 save "$data_path/stata_temp/dealscan_discount_prev_lender", replace
 
 use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
@@ -33,53 +50,62 @@ foreach lhs in discount_1_simple discount_1_controls {
 			local cond `"if 1==1"'
 			local disc_add "All"
 		}
+		foreach rec_type in yes no {
 		
-		estimates clear
-		local i =1
-		
-		foreach sample_type in all comp_merge no_comp_merge {
+			if "`rec_type'" == "yes" {
+				local rhs_add max_prev_lender_rec
+				local suffix_add _rec
+			}
+			if "`rec_type'" == "no" {
+				local rhs_add 
+				local suffix_add 
+			}
+			estimates clear
+			local i =1
 			
-			if "`sample_type'" == "all" {
-				local title_add "All Firms"
-				local sample_add "All Firms"
-				local sample_cond 
-			}
-			if "`sample_type'" == "comp_merge" {
-				local sample_cond "& merge_comp ==1"
-				local sample_add "Comp Firms"
-				local title_add "Compustat Firms"
-			}
-			if "`sample_type'" == "no_comp_merge" {
-				local sample_cond "& merge_comp ==0"
-				local title_add "Non-Compustat Firms"
-				local sample_add "Non-Comp"
-			}
-
-			foreach fe_type in  time time_borrower {
-
-				if "`fe_type'" == "time" {
-					local fe "date_quarterly"
-					local fe_add "Time"
-				}
-				if "`fe_type'" == "time_borrower" {
-					local fe "date_quarterly borrowercompanyid"
-					local fe_add "Time,Borr"
-				}
+			foreach sample_type in all comp_merge no_comp_merge {
 				
-				reghdfe `lhs' max_prev_lender `cond' `sample_cond' &date_quarterly >=tq(2005q1), a(`fe') vce(cl borrowercompanyid)
-				estadd local fe = "`fe_add'"
-				estadd local disc = "`disc_add'"
-				estadd local sample = "`sample_add'"
-				estimates store est`i'
-				local ++i
+				if "`sample_type'" == "all" {
+					local title_add "All Firms"
+					local sample_add "All Firms"
+					local sample_cond 
+				}
+				if "`sample_type'" == "comp_merge" {
+					local sample_cond "& merge_comp ==1"
+					local sample_add "Comp Firms"
+					local title_add "Compustat Firms"
+				}
+				if "`sample_type'" == "no_comp_merge" {
+					local sample_cond "& merge_comp ==0"
+					local title_add "Non-Compustat Firms"
+					local sample_add "Non-Comp"
+				}
+
+				foreach fe_type in  time time_borrower {
+
+					if "`fe_type'" == "time" {
+						local fe "date_quarterly"
+						local fe_add "Time"
+					}
+					if "`fe_type'" == "time_borrower" {
+						local fe "date_quarterly borrowercompanyid"
+						local fe_add "Time,Borr"
+					}
+					
+					reghdfe `lhs' max_prev_lender `rhs_add' `cond' `sample_cond' &date_quarterly >=tq(2005q1), a(`fe') vce(cl borrowercompanyid)
+					estadd local fe = "`fe_add'"
+					estadd local disc = "`disc_add'"
+					estadd local sample = "`sample_add'"
+					estimates store est`i'
+					local ++i
+				}
+
+
 			}
-
-
+			esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_`discount_type'`suffix_add'.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+			title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
+			addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
 		}
-		esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_`discount_type'.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
-		title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
-		addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
-
 	}
 }
 
@@ -167,3 +193,40 @@ foreach discount_type in rev term all  {
 
 	}
 }
+
+
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+		preserve
+			freduse USRECM BAMLC0A4CBBB BAMLC0A1CAAA, clear
+			rename BAMLC0A4CBBB bbb_spread
+			rename BAMLC0A1CAAA aaa_spread
+			replace bbb_spread = bbb_spread*100
+			replace aaa_spread = aaa_spread*100
+			gen date_quarterly = qofd(daten)
+			collapse (max) USRECM bbb_spread aaa_spread, by(date_quarterly)
+			tsset date_quarterly
+			gen L1_aaa_spread = L.aaa_spread
+			gen L1_bbb_spread = L.bbb_spread
+			gen L2_aaa_spread = L2.aaa_spread
+			gen L2_bbb_spread = L2.bbb_spread
+			gen L3_aaa_spread = L3.aaa_spread
+			gen L3_bbb_spread = L3.bbb_spread
+			gen L4_aaa_spread = L4.aaa_spread
+			gen L4_bbb_spread = L4.bbb_spread
+			keep date_quarterly USRECM *bbb_spread *aaa_spread
+			tempfile rec
+			save `rec', replace
+		restore
+		
+		*Get recession data
+		joinby date_quarterly using `rec', unmatched(master)
+
+gen max_prev_lender_rec = USRECM * max_prev_lender
+local lhs discount_1_simple
+local cond `"if category =="Revolver""'
+local sample_cond 
+local fe date_quarterly 
+
+reghdfe `lhs' max_prev_lender USRECM max_prev_lender_rec `cond' `sample_cond' &date_quarterly >=tq(2005q1), a(`fe') vce(cl borrowercompanyid)
+local fe date_quarterly borrowercompanyid
+reghdfe `lhs' max_prev_lender USRECM max_prev_lender_rec `cond' `sample_cond' &date_quarterly >=tq(2005q1), a(`fe') vce(cl borrowercompanyid)

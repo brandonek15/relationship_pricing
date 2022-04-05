@@ -105,7 +105,7 @@ foreach measure_type in mean median weighted_avg {
 		replace USRECM = `r(max)'*USRECM*1.05
 
 		tw  (bar USRECM date_quarterly, color(gs14) lcolor(none)) ///
-		(line discount* date_quarterly if category == "Revolver") , ///
+		(line discount_1_simple discount_1_controls discount_2_simple discount_2_controls date_quarterly if category == "Revolver") , ///
 			legend(order(1 "Recession" 2 "1 (Simple)" 3 "1 (Controls)" 4 "2 (Simple)"  5 "2 (Controls)")) ///
 			title("Revolver Discounts Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'") 	
 			
@@ -113,7 +113,7 @@ foreach measure_type in mean median weighted_avg {
 
 		*Make the same graph for term loans
 		tw  (bar USRECM date_quarterly, color(gs14) lcolor(none)) ///
-		(line discount* date_quarterly if category == "Bank Term") , ///
+		(line discount_1_simple discount_1_controls discount_2_simple discount_2_controls date_quarterly if category == "Bank Term") , ///
 			legend(order(1 "Recession" 2 "1 (Simple)" 3 "1 (Controls)" 4 "2 (Simple)"  5 "2 (Controls)")) ///
 			title("Term Discounts Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'") 	
 			

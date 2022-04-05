@@ -160,6 +160,19 @@ merge 1:1 facilityid lender using "$data_path/stata_temp/facilityid_lender_merge
 
 isid facilityid lender 
 
+*Label important variables
+label var log_facilityamt "Log Facility Amount"
+label var maturity "Maturity"
+label var leveraged "Leveraged Loan"
+label var fin_cov "Contains Financial Covenants"
+label var nw_cov "Contains Net Worth Covenants"
+label var borrower_base "Borrower Base"
+label var cov_lite "Cov-Lite"
+label var asset_based "Asset-Based Loan"
+label var spread "Spread"
+label var salesatclose "Annual Sales (millions)"
+replace salesatclose = salesatclose/1000000
+
 save "$data_path/dealscan_facility_lender_level", replace
 
 *Create a datset with only facility variables that can used in analyses
