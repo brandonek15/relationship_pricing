@@ -222,6 +222,7 @@ reghdfe discount_2_simple n, absorb(cusip_6 date_quarterly)
 
 
 *Make a simple graph of the average discount by observation num
+collapse (sum) count (mean) discount*, by(n category)
 
 local discount_n_rev (line discount_1_simple n if category == "Revolver", col(black) lpattern(solid) yaxis(1))
 local discount_n_term (line discount_1_simple n if category == "Bank Term", col(blue) lpattern(solid) yaxis(1))
