@@ -29,6 +29,8 @@ do "$code_path/summary_stats.do"
 do "$code_path/figures_dist_chars.do"
 do "$code_path/make_discount_graphs.do"
 do "$code_path/regressions_discount_firm_loan_char.do"
+do "$code_path/regressions_graphs_discount_prev_lender.do"
+do "$code_path/regressions_discount_autocorrelations.do"
 
 *Make relationship dataset (testing invest-then-harvest)
 do "$code_path/prep_relationship_datasets.do"
