@@ -33,7 +33,6 @@ preserve
 	use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
 	local lhs discount_1_simple
 	label var discount_1_simple "Disc"
-	local cond `"if 1==1"'
 	local disc_add "All"
 	label var max_prev_lender_rec "Reces. x Any previous Lender"
 	foreach rec_type in yes no {
@@ -79,7 +78,7 @@ preserve
 					local fe_add "Time,Borr"
 				}
 				
-				reghdfe `lhs' max_prev_lender `rhs_add' `cond' `sample_cond' &date_quarterly >=tq(2005q1), a(`fe') vce(cl borrowercompanyid)
+				reghdfe `lhs' max_prev_lender `rhs_add' if date_quarterly >=tq(2005q1)  `sample_cond' , a(`fe') vce(cl borrowercompanyid)
 				estadd local fe = "`fe_add'"
 				estadd local disc = "`disc_add'"
 				estadd local sample = "`sample_add'"
@@ -122,7 +121,7 @@ foreach lhs in discount_1_simple_base spread_base /* discount_1_pos_base */ {
 		local fe_scalar_add "T"
 	}
 	
-	reghdfe `lhs' past_relationship `rhs_add' `cond' if (rev_loan_base ==1 | term_loan_base==1) & hire !=0 , absorb(`fe_add') vce(cl cusip_6)
+	reghdfe `lhs' past_relationship `rhs_add' if (rev_loan_base ==1 | term_loan_base==1) & hire !=0 , absorb(`fe_add') vce(cl cusip_6)
 	estadd local fe = "`fe_scalar_add'"
 	estadd local sample = "All Discounts"
 	estimates store est`i'
