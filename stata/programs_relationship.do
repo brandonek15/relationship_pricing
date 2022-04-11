@@ -176,8 +176,14 @@ program define prepare_rel_dataset
 			*Don't want to create interactions for loantype packageid
 			if "`ds_inter_var'" != "loantype" & "`ds_inter_var'" != "packageid" & "`ds_inter_var'" != "lenderrole" {
 
+				*Default to initial variable label so they don't get labeled somthing weird
+				local label : variable label `ds_inter_var'_`ds_type'
+
 				if "`ds_inter_var'" == "discount_1_simple" {
 					local label "Disc"
+				}
+				if "`ds_inter_var'" == "discount_1_controls" {
+					local label "D-1-C"
 				}
 				if "`ds_inter_var'" == "d_1_simple_le_0" {
 					local label "Disc (-inf,0)"
@@ -200,7 +206,27 @@ program define prepare_rel_dataset
 				if "`ds_inter_var'" == "d_1_simple_ge_200" {
 					local label "Disc (200,inf)"
 				}
-
+				if "`ds_inter_var'" == "d_1_controls_le_0" {
+					local label "D-1-C (-inf,0)"
+				}
+				if "`ds_inter_var'" == "d_1_controls_0" {
+					local label "D-1-C [0]"
+				}
+				if "`ds_inter_var'" == "d_1_controls_0_25" {
+					local label "D-1-C (0-25]"
+				}
+				if "`ds_inter_var'" == "d_1_controls_25_50" {
+					local label "D-1-C (25,50]"
+				}
+				if "`ds_inter_var'" == "d_1_controls_50_100" {
+					local label "D-1-C (50,100]"
+				}
+				if "`ds_inter_var'" == "d_1_controls_100_200" {
+					local label "D-1-C (100,200]"
+				}
+				if "`ds_inter_var'" == "d_1_controls_ge_200" {
+					local label "D-1-C (200,inf)"
+				}
 				if "`ds_inter_var'" == "spread" {
 					local label "Sprd"
 				}
