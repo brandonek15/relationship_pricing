@@ -53,6 +53,7 @@ winsor2 discount_*, replace cut(1 99)
 
 *Get recession data
 joinby date_quarterly using `rec', unmatched(master) 
+drop _merge
 
 gen max_prev_lender_rec = USRECM * max_prev_lender
 label var max_prev_lender_rec "Rec x Any previous lender"
