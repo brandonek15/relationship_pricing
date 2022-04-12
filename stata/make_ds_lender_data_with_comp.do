@@ -36,7 +36,7 @@ bys borrowercompanyid lender (date_quarterly facilityid): replace prev_lender = 
 egen max_prev_lender = max(prev_lender), by(facilityid)
 *sort borrowercompanyid lender date_quarterly facilityid
 *br borrowercompanyid lender date_quarterly facilityid prev_lender
-keep facilityid borrowercompanyid max_prev_lender discount* date_quarterly category merge_compustat
+keep facilityid borrowercompanyid max_prev_lender discount* d_* date_quarterly category merge_compustat
 duplicates drop
 label var max_prev_lender "Any previous lender"
 winsor2 discount_*, replace cut(1 99)
