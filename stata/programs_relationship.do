@@ -185,6 +185,12 @@ program define prepare_rel_dataset
 				if "`ds_inter_var'" == "discount_1_controls" {
 					local label "D-1-C"
 				}
+				if "`ds_inter_var'" == "d_1_simple_pos" {
+					local label "Disc Pos"
+				}
+				if "`ds_inter_var'" == "d_1_controls_pos" {
+					local label "D-1-C Pos"
+				}
 				if "`ds_inter_var'" == "d_1_simple_le_0" {
 					local label "Disc (-inf,0)"
 				}

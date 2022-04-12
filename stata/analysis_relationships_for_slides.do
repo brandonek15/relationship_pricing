@@ -10,36 +10,11 @@ egen ds_obs = rowmax(rev_loan_base term_loan_base other_loan_base)
 gen date_quarterly = qofd(date_daily)
 format date_quarterly %tq
 
-*Do I want to winsorize anything?
-
-foreach ds_type in rev_loan term_loan other_loan {
-
-	local rel_label : variable label rel_`ds_type'
-
-	gen i_discount_1_pos_`ds_type' = discount_1_simple_`ds_type'>10e-6 & !mi(discount_1_simple_`ds_type')
-	label var i_discount_1_pos_`ds_type' "`rel_label' X Disc+"
-	gen mi_discount_1_pos_`ds_type' = mi(discount_1_simple_`ds_type')
-
-}
-
-*Create a positive discount indicator 
-gen discount_1_pos_base = discount_1_simple_base >10e-6
-replace discount_1_pos_base = . if mi(discount_1_simple_base)
-label var discount_1_pos_base "Disc+"
-
-
 *Past lender and future pricing
 preserve
 	use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
-	
-	foreach table_type in  simple controls {
-
-		if "`table_type'" == "simple" {
-			local lhs discount_1_simple
-		}
-		if "`table_type'" == "controls" {
-			local lhs discount_1_controls
-		}
+	*Make this work - add the pos discount rhs tables to overleaf
+	foreach lhs in  discount_1_simple discount_1_controls d_1_simple_pos d_1_controls_pos {
 
 		label var discount_1_simple "Disc"
 		local disc_add "All"
@@ -107,13 +82,12 @@ restore
 
 *Past relationship and future pricing
 *Six specifications (discount on any past relationship, then add lender FE and then split up by type of relationship, for discount and spread)
-*Figure out how to incorporate term loan disocunts
 local drop_add 
 
 foreach table_type in  simple controls {
 
 	if "`table_type'" == "simple" {
-		local lhs_vars discount_1_simple_base spread_base /* discount_1_pos_base */
+		local lhs_vars discount_1_simple_base spread_base 
 		local table_suffix_add 
 	}
 	if "`table_type'" == "controls" {
@@ -170,6 +144,37 @@ foreach table_type in  simple controls {
 	addnotes("Observation is DS loan x lender" "Sample is DS revolving loans x lender on loan" "SEs clustered at firm level" ///
 		"FE Codes: T= Quarter, F = Firm, L = Lender")
 }
+
+*Use discount >0 as a lhs
+local drop_add 
+estimates clear
+local i = 1
+
+foreach lhs in d_1_simple_pos_base d_1_controls_pos_base {
+	
+	reghdfe `lhs' past_relationship if (rev_loan_base ==1 | term_loan_base==1) & hire !=0 , absorb(date_quarterly) vce(cl cusip_6)
+	estadd local fe = "T"
+	estadd local sample = "All Discounts"
+	estimates store est`i'
+	local ++i
+	reghdfe `lhs' past_relationship  if (rev_loan_base ==1 | term_loan_base==1) & hire !=0, absorb(date_quarterly lender) vce(cl cusip_6)
+	estadd local fe = "T,L"
+	estadd local sample = "All Discounts"
+	estimates store est`i'
+	local ++i
+	reghdfe `lhs' rel_*  if (rev_loan_base ==1 | term_loan_base==1) & hire !=0, absorb(date_quarterly lender) vce(cl cusip_6)
+	estadd local fe = "T,L"
+	estadd local sample = "All Discounts"
+	estimates store est`i'
+	local ++i
+
+}
+esttab est* using "$regression_output_path/regressions_exten_disc_post_rel_slides.tex", ///
+replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
+title("Positive Discount after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
+addnotes("Observation is DS loan x lender" "Sample is DS revolving loans x lender on loan" "SEs clustered at firm level" ///
+	"FE Codes: T= Quarter, F = Firm, L = Lender")
+
 *Simple past relationship table
 local rhs rel_* 
 local drop_add 
@@ -217,7 +222,7 @@ addnotes("Observation is SDC deal x lender or DS loan x lender" "Sample is 20 la
 foreach table_type in  simple controls {
 
 	if "`table_type'" == "simple" {
-		local rhs rel_*  i_discount_1_simple* mi_discount_1_simple* /* i_discount_1_pos* mi_discount_1_pos* */ i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* 
+		local rhs rel_*  i_discount_1_simple* mi_discount_1_simple* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* 
 		local table_suffix_add 
 	}
 	if "`table_type'" == "controls" {
@@ -261,6 +266,59 @@ foreach table_type in  simple controls {
 	}
 
 	esttab est* using "$regression_output_path/regressions_inten_ds_chars`table_suffix_add'_slides.tex", ///
+	replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
+	title("Likelihood of hiring after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
+	addnotes("Table suppresses past relationship indicators and Other Loan characteristics"  "Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" ///
+	"Hire indicator either 0 or 100 for readability" "SEs clustered at firm level" )
+}
+*Past discounts positive indicator and future business
+foreach table_type in  simple controls {
+
+	if "`table_type'" == "simple" {
+		local rhs rel_*  i_d_1_simple_pos* mi_d_1_simple_pos* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* 
+		local table_suffix_add 
+	}
+	if "`table_type'" == "controls" {
+		local rhs rel_*  i_d_1_controls_pos* mi_d_1_controls_pos* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* 
+		local table_suffix_add "_controls"
+	}
+
+	estimates clear
+	local i = 1
+
+	local drop_add mi_* rel_* *_other
+	local absorb constant
+	local fe_local "None"
+
+	foreach type in all_sdc all_ds equity debt term rev {
+
+		if "`type'" == "all_sdc" {
+			local cond "if sdc_obs==1" 
+		}
+		if "`type'" == "all_ds" {
+			local cond "if ds_obs==1" 
+		}
+		if "`type'" == "equity" {
+			local cond "if `type' ==1" 
+		}
+		if "`type'" == "debt" {
+			local cond "if `type' ==1" 
+		}
+		if "`type'" == "term" {
+			local cond "if `type'_loan ==1" 
+		}
+		if "`type'" == "rev" {
+			local cond "if `type'_loan ==1" 
+		}
+		
+		reghdfe hire `rhs' `cond', absorb(`absorb') vce(cl cusip_6)
+		estadd local fe = "`fe_local'"
+		estadd local sample = "`type'"
+		estimates store est`i'
+		local ++i
+	}
+
+	esttab est* using "$regression_output_path/regressions_inten_ds_chars_pos`table_suffix_add'_slides.tex", ///
 	replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
 	title("Likelihood of hiring after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
 	addnotes("Table suppresses past relationship indicators and Other Loan characteristics"  "Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" ///

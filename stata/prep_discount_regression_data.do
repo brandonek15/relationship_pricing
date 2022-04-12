@@ -73,8 +73,18 @@ foreach spread_type in standard alternate {
 		foreach var of varlist d_`spread_suffix'_`discount_type'_* {
 			replace `var' = . if mi(discount_`spread_suffix'_`discount_type')
 		}
+		
+		*Generate postive discount indicator
+		gen d_`spread_suffix'_`discount_type'_pos = (discount_`spread_suffix'_`discount_type'>10e-9)
+		replace d_`spread_suffix'_`discount_type'_pos = . if mi(discount_`spread_suffix'_`discount_type')
 	}
 }
+
+label var d_1_simple_pos "Di-1-S Pos"
+label var d_2_simple_pos "Di-2-S  Pos"
+label var d_1_controls_pos "Di-1-C  Pos"
+label var d_2_controls_pos "Di-2-C  Pos"
+
 
 isid facilityid
 *Merge on cusip_6
