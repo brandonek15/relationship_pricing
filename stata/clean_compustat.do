@@ -1,6 +1,19 @@
 *Import the merged data
 import delimited using "$data_path/compustat_merge.csv", clear
 
+*Go get the list of unique matches of bcoid and gvkey
+preserve
+keep gvkey bcoid
+drop if mi(bcoid)
+duplicates drop
+save "$data_path/stata_temp/gvkey_bcid_pairs", replace
+
+restore
+
+drop bcoid
+duplicates drop
+
+
 *xtset the data by getting a good date variable and getting rid of duplicates
 foreach var in datadate rdq ipodate {
 	gen temp = date(`var',"YMD")
@@ -173,9 +186,7 @@ label var date_quarterly "Quarterly Date"
 *usually match up, but earlier fiscal date is more populated
 bys gvkey date_quarterly (fdate): keep if _n == 1
 
-*Rename borrower Company ID for dealscan merge
-rename bcoid borrowercompanyid
-label var borrowercompanyid "Dealscan Borrower Company ID"
+
 label var gvkey "Compustat Company ID"
 *Get 6 digit cusip for mering
 gen cusip_6 = substr(cusip,1,6)
@@ -187,8 +198,16 @@ isid gvkey date_quarterly
 *Could look at each case individually and choose, but instead I will just keep the biggest one
 bys cusip_6 date_quarterly (atq): keep if _n ==_N
 
+*Now do a left join to get
+joinby gvkey using "$data_path/stata_temp/gvkey_bcid_pairs", unmatched(master)
+drop _merge
+
+*Rename borrower Company ID for dealscan merge
+rename bcoid borrowercompanyid
+label var borrowercompanyid "Dealscan Borrower Company ID"
 *And also need to be able to merge on dealscan data that won't have a unique borrowercompanyid
 
+*Figure stuff out here! For some reason we don't have borrowercompanyid
 *Sometimes two compustat firms have the same borrowercompanyid
 *When this happens, keep the one with the higher assets and if they are still tied, the one with the larger cik
 *What I will do is save two datasets and then append back together. 1st is those with borrowercompanyid and then those without

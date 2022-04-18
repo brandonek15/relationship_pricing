@@ -561,3 +561,12 @@ duplicates drop
 isid borrowercompanyid date_quarterly 
 save "$data_path/stata_temp/dealscan_discounts", replace
 
+*Explore who is matched to compustat and who isn't
+use "$data_path/dealscan_compustat_loan_level", clear
+sort company borrowercompanyid date_quarterly
+br borrowercompanyid company  merge_compustat publicprivate date_quarterly gvkey 
+br borrowercompanyid company  merge_compustat publicprivate date_quarterly gvkey if borrowercompanyid == 113895 | borrowercompanyid == 35357
+
+use "$data_path/compustat_clean", clear
+br conm gvkey date_quarterly borrowercompanyid if  gvkey == 9899
+sort gvkey date_quarterly
