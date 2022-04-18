@@ -158,6 +158,9 @@ local loan_vars log_facilityamt maturity spread salesatclose
 
 winsor2 `loan_vars', cuts(1 99) replace
 
+winsor2 salesatclose, cuts(1 95) replace
+
+
 foreach var in `loan_vars' {
 	local var_lab: variable label `var'
 
@@ -180,9 +183,9 @@ foreach var in `loan_vars' {
 		local start "start(0)"
 		}
 		else if "`var'" == "salesatclose" {
-		local cond "& salesatclose<=5e+10"
-		local width "width(1e+9)"
-		local note "Truncated at 5e+10"
+		local cond ""
+		local width "width(1000)"
+		local note "Winsorized at 1 and 95"
 		local start "start(0)"
 		}
 		else {

@@ -119,6 +119,22 @@ foreach measure_type in mean median weighted_avg {
 			
 		gr export "$figures_output_path/time_series_discount_`measure_type'_`sample_type'_term.png", replace 
 
+				tw  (bar USRECM date_quarterly, color(gs14) lcolor(none)) ///
+		(line discount_1_simple discount_1_controls discount_2_simple discount_2_controls date_quarterly if category == "Revolver") , ///
+			legend(order(1 "Recession" 2 "1 (Simple)" 3 "1 (Controls)" 4 "2 (Simple)"  5 "2 (Controls)")) ///
+			title("Revolver Discounts Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'") 	
+			
+		gr export "$figures_output_path/time_series_discount_`measure_type'_`sample_type'_rev.png", replace 
+
+		*Make the same graph for both term and revolver loans, but only the first
+		tw  (bar USRECM date_quarterly, color(gs14) lcolor(none)) ///
+		(line discount_1_simple discount_1_controls date_quarterly if category == "Revolver") ///
+		(line discount_1_simple discount_1_controls date_quarterly if category == "Bank Term") , ///
+			legend(order(1 "Recession" 2 "Rev Disc (Simple)" 3 "Rev Disc (Controls)" 4 "Term Disc (Simple)"  5 "Term Disc (Controls)")) ///
+			title("Discounts Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'") 	
+			
+		gr export "$figures_output_path/time_series_discount_`measure_type'_`sample_type'_rev_term.png", replace 
+
 		
 		*Make a graph of the simplest discount and the corresponding spreads over time
 		local recession (bar USRECM date_quarterly, color(gs14) lcolor(none))
@@ -188,6 +204,64 @@ foreach lhs of varlist discount_* {
 
 		graph export "$figures_output_path/dist_`lhs'.png", replace
 }
+
+****
+use "$data_path/dealscan_compustat_loan_level", clear
+
+keep if category == "Revolver" | category == "Bank Term"
+winsor2 discount_*, replace cut(1 99)
+drop rev_loan
+local lhs discount_1_simple
+replace `lhs' = 300 if `lhs' >300 & !mi(`lhs')
+
+gen bin = floor(`lhs'/25)
+		
+foreach var in rev term {
+
+	if "`var'" == "rev" {
+		local cond `" & category == "Revolver" "'
+	}
+	if "`var'" == "term" {
+		local cond `" & category == "Bank Term" "'
+	}
+
+	foreach sample_type in comp_merge no_comp_merge {
+
+		if "`sample_type'" == "comp_merge" {
+			local sample_cond if merge_comp ==1
+		}
+		if "`sample_type'" == "no_comp_merge" {
+			local sample_cond if merge_comp ==0
+		}
+		
+		tempfile file_`var'_`sample_type'
+		preserve
+		table bin `sample_cond' `cond', c(freq) replace
+		ren table1 `var'_`sample_type'_freq
+		egen sum = sum(`var'_`sample_type'_freq)
+		gen `var'_`sample_type'_pct = `var'_`sample_type'_freq / sum *100
+		drop sum
+		save `file_`var'_`sample_type'', replace
+		
+		restore
+	}
+}
+
+use `file_rev_comp_merge', clear
+merge 1:1 bin using `file_term_comp_merge', nogen
+merge 1:1 bin using `file_rev_no_comp_merge', nogen
+merge 1:1 bin using `file_term_no_comp_merge', nogen
+replace bin = bin*25
+graph bar rev_comp_merge_pct rev_no_comp_merge_pct term_comp_merge_pct term_no_comp_merge_pct, ///
+over(bin) ytitle("Percentage of Discounts in Bin") title("Distribution of Discounts", size(medsmall)) ///
+		note("X-axis number represents lowest discount in bin" "300 bin contains all discounts greater than 300") ///
+		graphregion(color(white))  ///
+		legend(order(1 "Rev Discount - Compustat Firms" 2 "Rev Discount - Non-Compustat Firms" ///
+		 3 "Term Discount - Compustat Firms" 4 "Term Discount - Non-Compustat Firms") rows(2)) 
+		graph export "$figures_output_path/dist_discount_1_simple_custom.png", replace
+
+***
+
 
 *See fraction 0 over time
 use "$data_path/dealscan_compustat_loan_level", clear

@@ -7,6 +7,8 @@ duplicates drop
 drop if mi(lender)
 *Drop Financials
 drop if inrange(primarysiccode,6000,6999)
+*Keep only US borrowers
+keep if country == "USA"
 
 *Format dates
 foreach var in facilitystartdate facilityenddate {

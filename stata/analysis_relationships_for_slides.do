@@ -13,8 +13,7 @@ format date_quarterly %tq
 *Past lender and future pricing
 preserve
 	use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
-	*Make this work - add the pos discount rhs tables to overleaf
-	foreach lhs in  discount_1_simple discount_1_controls d_1_simple_pos d_1_controls_pos {
+		foreach lhs in  discount_1_simple discount_1_controls d_1_simple_pos d_1_controls_pos {
 
 		label var discount_1_simple "Disc"
 		local disc_add "All"
@@ -732,33 +731,31 @@ foreach discount_type in all {
 			local cond `"if 1==1"'
 			local sample_add "All"
 		}
-		
-		local rhs diff_*
-		
-			foreach fe_type in  none  time {
-			
-				if "`fe_type'" == "none" {
-					local fe "constant"
-					local fe_add "None"
-				}
-				if "`fe_type'" == "time" {
-					local fe "date_quarterly"
-					local fe_add "Time"
-				}
-				if "`fe_type'" == "time_sic_2" {
-					local fe "date_quarterly sic_2"
-					local fe_add "Time,SIC2"
-				}
-				reghdfe `lhs' `rhs' `cond', a(`fe') vce(cl borrowercompanyid)
-				estadd local fe = "`fe_add'"
-				estadd local sample = "`sample_add'"
-				estimates store est`i'
-				local ++i
-			}
+
+			local rhs diff_*
+			*Make the first specification just regress on the constant			
+			reg `lhs' `cond', vce(cl borrowercompanyid)
+			estadd local fe = "None"
+			estadd local sample = "`sample_add'"
+			estimates store est`i'
+			local ++i
+			*Do the normal regression w/out FE
+			reg `lhs' `rhs' `cond', vce(cl borrowercompanyid)
+			estadd local fe = "None"
+			estadd local sample = "`sample_add'"
+			estimates store est`i'
+			local ++i
+	
+			*Do the regression w/ FE
+			reghdfe `lhs' `rhs' `cond', a(date_quarterly) vce(cl borrowercompanyid)
+			estadd local fe = "Time"
+			estadd local sample = "`sample_add'"
+			estimates store est`i'
+			local ++i
 			
 		}
 	
-	esttab est* using "$regression_output_path/discount_loan_chars_diff_`discount_type'_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+	esttab est* using "$regression_output_path/discount_loan_chars_diff_`discount_type'_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) ///
 	title("Discounts and Differences in non-price characteristics") scalars("fe Fixed Effects" "sample Sample") ///
 	addnotes("SEs clustered at firm level" "Sample are all compustat firms with dealscan discounts from 2000Q1-2020Q4")	
 

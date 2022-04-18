@@ -85,7 +85,7 @@ foreach sample in discount_comp no_discount_comp discount_no_comp no_discount_no
 
 	estpost tabstat `loan_vars' `cond', s(p5 p25 p50 p75 p95 mean sd count) c(s)
 	esttab . using "$regression_output_path/sumstats_loan_chars_`sample'.tex", ///
-	 label title("Origination Level Firm Characteristics") replace ///
+	 label title("Origination Level Loan Characteristics - `title_add'") replace ///
 	cells("p25(fmt(3)) p50(fmt(3)) p75(fmt(3)) mean(fmt(2)) sd(fmt(2)) count(fmt(0))") ///
 	nomtitle  nonum noobs
 
