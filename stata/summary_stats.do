@@ -4,12 +4,12 @@ keep if merge_compustat==1
 *Want to do these sets of summary stats
 *Firm characteristics of compustat firms matched to dealscan - split by whether discount is calculated or not - 
 *define firm as discount firm if at any point they had a discount
-local firm_chars L1_market_to_book L1_ppe_assets L1_log_assets L1_leverage ///
+local firm_chars L1_market_to_book L1_ppe_assets L1_current_assets L1_log_assets L1_leverage ///
 L1_roa L1_sales_growth L1_ebitda_int_exp ///
-L1_working_cap_assets L1_capex_assets
+L1_working_cap_assets L1_capex_assets L1_firm_age 
 
 *Drop duplicate observations
-keep borrowercompanyid date_quarterly discount_obs  `firm_chars' 
+keep borrowercompanyid date_quarterly discount_obs d_1_simple_pos  `firm_chars' 
 duplicates drop
 
 winsor2 `firm_chars', cuts(.5 99.5) replace
@@ -32,6 +32,23 @@ foreach sample in discount no_discount {
 
 }
 
+*Make a difference of means table
+*By discount calculated or not
+eststo: estpost ttest `firm_chars' , by(discount_obs) unequal
+	
+esttab . using "$regression_output_path/differences_firm_chars_discount_obs.tex", ///
+ label title("Origination Level Firm Characteristics") replace ///
+cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Disc Obs" "Non Disc Obs" "Difference") ///
+ nonum eqlabels(none) addnotes("Sample is Observations Merged to Compustat") 
+
+*by positive discount or not
+eststo: estpost ttest `firm_chars' , by(d_1_simple_pos) unequal
+	
+esttab . using "$regression_output_path/differences_firm_chars_discount_pos.tex", ///
+ label title("Origination Level Firm Characteristics") replace ///
+cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Pos Disc" "Non Pos Disc" "Difference") ///
+ nonum eqlabels(none) addnotes("Sample is Observations Merged to Compustat")  
+ 
 *Make a difference of means table
 eststo: estpost ttest `firm_chars' , by(discount_obs) unequal
 	

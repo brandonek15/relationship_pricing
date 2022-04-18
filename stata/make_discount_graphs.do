@@ -205,7 +205,7 @@ foreach lhs of varlist discount_* {
 		graph export "$figures_output_path/dist_`lhs'.png", replace
 }
 
-****
+**** Customized distribution of discount graph
 use "$data_path/dealscan_compustat_loan_level", clear
 
 keep if category == "Revolver" | category == "Bank Term"
@@ -279,9 +279,9 @@ ytitle("Fraction of Loans with Zero Discount 1 (simple)") title("Fraction of Loa
 		
 *Check to see if the first discount given to each firm is bigger than later ones?
 use "$data_path/dealscan_compustat_loan_level", clear
-keep if (category =="Revolver" | category == "Bank Term")  & !mi(cusip_6) & !mi(discount_1_simple)
-bys cusip_6 category (facilitystartdate): gen n = _n
-bys cusip_6 category (facilitystartdate): gen N = _N
+keep if (category =="Revolver" | category == "Bank Term")  & !mi(borrowercompanyid) & !mi(discount_1_simple)
+bys borrowercompanyid category (facilitystartdate): gen n = _n
+bys borrowercompanyid category (facilitystartdate): gen N = _N
 sum discount_1_simple if n ==1
 sum discount_1_simple if n >1
 
@@ -290,13 +290,14 @@ sum discount_1_simple if n >1 & N>1
 
 gen count = 1
 reghdfe discount_1_simple n, absorb(count)
-reghdfe discount_1_simple n, absorb(cusip_6)
-reghdfe discount_1_simple n, absorb(cusip_6 date_quarterly)
-reghdfe discount_2_simple n, absorb(cusip_6 date_quarterly)
+reghdfe discount_1_simple n, absorb(borrowercompanyid)
+reghdfe discount_1_simple n, absorb(borrowercompanyid date_quarterly)
+reghdfe discount_2_simple n, absorb(borrowercompanyid date_quarterly)
 
 
 *Make a simple graph of the average discount by observation num
 collapse (sum) count (mean) discount*, by(n category)
+drop if n>10
 
 local discount_n_rev (line discount_1_simple n if category == "Revolver", col(black) lpattern(solid) yaxis(1))
 local discount_n_term (line discount_1_simple n if category == "Bank Term", col(blue) lpattern(solid) yaxis(1))
@@ -308,3 +309,36 @@ twoway `discount_n_rev' `count_n_rev' `discount_n_term' `count_n_term' , ///
 	title("Avg Discount and Loan Number in Sample")  ytitle("Discount", axis(1)) ///	
 	ytitle("Number of Observations", axis(2)) xtitle("Loan Number")
 gr export "$figures_output_path/discounts_across_loan_number.png", replace 
+
+*Alternative graph using coeff plot
+use "$data_path/dealscan_compustat_loan_level", clear
+keep if (category =="Revolver" | category == "Bank Term")  & !mi(borrowercompanyid) & !mi(discount_1_simple)
+bys borrowercompanyid category (facilitystartdate): gen n = _n
+bys borrowercompanyid category (facilitystartdate): gen N = _N
+
+*Make a simple graph of the average discount by observation num
+forval i = 1/10 {
+	gen n_`i' = n == `i'
+	label var n_`i' "Loan Num `i'"
+}
+reg discount_1_simple n_* if category == "Revolver", nocons
+estimates store Rev
+reg discount_1_simple n_* if category == "Bank Term", nocons
+estimates store Term
+
+coefplot (Rev, label(Revolving Discount) pstyle(p3)) (Term, label(Term Discount) pstyle(p4)) ///
+, vertical ytitle("Discount") title("Regression Coefficient of Discount on Loan Number") ///
+	graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
+	 note("Constant Omitted. Loan numbers greater than 10 omitted due to small sample (less than 10)") levels(90)
+	gr export "$figures_output_path/discounts_across_loan_number_coeff.png", replace 
+
+/*	
+reghdfe discount_1_simple n_* if category == "Revolver", absorb(date_quarterly)
+estimates store Rev
+reg discount_1_simple n_* if category == "Bank Term", absorb(date_quarterly)
+estimates store Term
+
+coefplot (Rev, label(Revolving Discount) pstyle(p3)) (Term, label(Term Discount) pstyle(p4)) ///
+, vertical ytitle("Discount") title("Avg Discount and Loan Number in Sample") ///
+	graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
+	 note("Constant Omitted. Loan numbers greater than 10 omitted due to small sample (less than 10)") levels(90)

@@ -94,6 +94,8 @@ gen log_sales = log(saleq)
 label var log_sales "Log(sales)"
 gen quick_ratio = actq/lctq
 label var quick_ratio "Quick Ratio"
+gen current_assets = actq/atq
+label var current_assets "Current Assets/Assets"
 
 *Int Coverage Ratio - (EBITDA) to int expense
 gen ebitdaq = saleq - cogsq -xsgaq

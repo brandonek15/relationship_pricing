@@ -318,9 +318,9 @@ foreach table_type in  simple controls {
 	}
 
 	esttab est* using "$regression_output_path/regressions_inten_ds_chars_pos`table_suffix_add'_slides.tex", ///
-	replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
+	replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) keep(i_d_1_*_rev i_d_1_*_term) ///
 	title("Likelihood of hiring after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
-	addnotes("Table suppresses past relationship indicators and Other Loan characteristics"  "Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" ///
+	addnotes("Table suppresses past relationship indicators and other loan characteristics"  "Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" ///
 	"Hire indicator either 0 or 100 for readability" "SEs clustered at firm level" )
 }
 *Past discount bins and future business
@@ -625,7 +625,7 @@ keep if category == "Revolver" | category == "Bank Term"
 keep if !mi(discount_1_simple) & merge_compustat ==1
 label var discount_1_simple "Disc"
 
-local firm_chars L1_market_to_book L1_ppe_assets L1_log_assets L1_leverage ///
+local firm_chars L1_market_to_book L1_ppe_assets L1_current_assets L1_log_assets L1_leverage ///
 L1_roa L1_sales_growth L1_ebitda_int_exp L1_sga_assets ///
 L1_working_cap_assets L1_capex_assets L1_firm_age
 
