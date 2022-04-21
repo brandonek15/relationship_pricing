@@ -35,6 +35,7 @@ keepusing(lead_arranger_credit) keep(1 3) nogen
 keep if lead_arranger_credit ==1
 drop lead_arranger_credit
 
+*Consider changing the term_loan to not include institutional term loans?
 foreach ds_type in rev_loan term_loan other_loan {
 	preserve
 		keep if `ds_type' ==1

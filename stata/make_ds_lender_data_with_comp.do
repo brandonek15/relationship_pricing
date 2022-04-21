@@ -34,11 +34,25 @@ drop if mi(borrowercompanyid)
 bys borrowercompanyid lender (date_quarterly facilityid): replace prev_lender = 1 if lender[_n] == lender[_n-1] & date_quarterly[_n] != date_quarterly[_n-1]
 bys borrowercompanyid lender (date_quarterly facilityid): replace prev_lender = 1 if prev_lender[_n-1] == 1
 egen max_prev_lender = max(prev_lender), by(facilityid)
+br facilityid borrowercompanyid lender prev_lender max_prev_lender date_quarterly
+sort borrowercompanyid facilityid date_quarterly
 *sort borrowercompanyid lender date_quarterly facilityid
 *br borrowercompanyid lender date_quarterly facilityid prev_lender
 keep facilityid borrowercompanyid max_prev_lender discount* d_* date_quarterly category merge_compustat
 duplicates drop
-label var max_prev_lender "Any previous lender"
+*Create three categories - first loans 
+egen min_date_quarterly = min(date_quarterly), by(borrowercompanyid)
+format min_date_quarterly %tq
+br facilityid borrowercompanyid date_quarterly min_date_quarterly
+sort borrowercompanyid date_quarterly
+gen first_loan = date_quarterly == min_date_quarterly
+label var first_loan "First Loan"
+rename max_prev_lender prev_lender
+label var prev_lender "Prev Lending Relationship"
+gen switcher_loan = (first_loan ==0 & prev_lender==0)
+label var switcher_loan "Switching Lender"
+assert first_loan + prev_lender + switcher_loan ==1
+
 winsor2 discount_*, replace cut(1 99)
 
 		preserve
@@ -55,7 +69,12 @@ winsor2 discount_*, replace cut(1 99)
 joinby date_quarterly using `rec', unmatched(master) 
 drop _merge
 
-gen max_prev_lender_rec = USRECM * max_prev_lender
-label var max_prev_lender_rec "Rec x Any previous lender"
+gen prev_lender_rec = USRECM * prev_lender
+label var prev_lender_rec "Rec x Prev Lending Relationship"
+gen first_loan_rec = USRECM * first_loan
+label var first_loan_rec "Rec x First Loan"
+gen switcher_loan_rec = USRECM * switcher_loan
+label var switcher_loan_rec "Rec x Switching Lender"
+
 
 save "$data_path/stata_temp/dealscan_discount_prev_lender", replace

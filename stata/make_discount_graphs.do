@@ -258,9 +258,54 @@ over(bin) ytitle("Percentage of Discounts in Bin") title("Distribution of Discou
 		graphregion(color(white))  ///
 		legend(order(1 "Rev Discount - Compustat Firms" 2 "Rev Discount - Non-Compustat Firms" ///
 		 3 "Term Discount - Compustat Firms" 4 "Term Discount - Non-Compustat Firms") rows(2)) 
-		graph export "$figures_output_path/dist_discount_1_simple_custom.png", replace
+		graph export "$figures_output_path/dist_discount_1_simple_custom_comp.png", replace
 
-***
+**** Customized distribution of discount graph - using only bank and term discounts
+use "$data_path/dealscan_compustat_loan_level", clear
+
+keep if category == "Revolver" | category == "Bank Term"
+winsor2 discount_*, replace cut(1 99)
+drop rev_loan
+local lhs discount_1_simple
+replace `lhs' = 300 if `lhs' >300 & !mi(`lhs')
+
+gen bin = floor(`lhs'/25)
+		
+foreach var in rev term {
+
+	if "`var'" == "rev" {
+		local cond `" & category == "Revolver" "'
+	}
+	if "`var'" == "term" {
+		local cond `" & category == "Bank Term" "'
+	}
+
+	foreach sample_type in all {
+
+		local sample_cond "if 1==1"
+		
+		tempfile file_`var'_`sample_type'
+		preserve
+		table bin `sample_cond' `cond', c(freq) replace
+		ren table1 `var'_`sample_type'_freq
+		egen sum = sum(`var'_`sample_type'_freq)
+		gen `var'_`sample_type'_pct = `var'_`sample_type'_freq / sum *100
+		drop sum
+		save `file_`var'_`sample_type'', replace
+		
+		restore
+	}
+}
+
+use `file_rev_all', clear
+merge 1:1 bin using `file_term_all', nogen
+replace bin = bin*25
+graph bar rev_all_pct term_all_pct , ///
+over(bin) ytitle("Percentage of Discounts in Bin") title("Distribution of Discounts", size(medsmall)) ///
+		note("X-axis number represents lowest discount in bin" "300 bin contains all discounts greater than 300") ///
+		graphregion(color(white))  ///
+		legend(order(1 "Rev Discount" 2 "Term Discount") rows(1)) 
+		graph export "$figures_output_path/dist_discount_1_simple_custom.png", replace
 
 
 *See fraction 0 over time
