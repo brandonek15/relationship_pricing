@@ -186,6 +186,11 @@ label var date_quarterly "Quarterly Date"
 *usually match up, but earlier fiscal date is more populated
 bys gvkey date_quarterly (fdate): keep if _n == 1
 
+*Now merge on ratings
+merge 1:1 gvkey date_quarterly using "$data_path/gvkey_ratings", keep(1 3)
+gen merge_ratings = _merge ==3
+label var merge_ratings "Rated Firm"
+drop _merge
 
 label var gvkey "Compustat Company ID"
 *Get 6 digit cusip for mering
