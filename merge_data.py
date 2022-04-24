@@ -1,5 +1,6 @@
 from settings import DEALSCAN_MERGE_FILE,INTERMEDIATE_DATA_PATH,START_DATE, \
-    END_DATE,SQLITE_FILE,COMP_MERGE_FILE,EQUITY_ISSUANCE_TABLE,DEBT_ISSUANCE_TABLE
+    END_DATE,SQLITE_FILE,COMP_MERGE_FILE,EQUITY_ISSUANCE_TABLE,DEBT_ISSUANCE_TABLE, \
+    CAPIQ_MERGE_FILE
 import os
 import ibis
 import pandas as pd
@@ -8,7 +9,7 @@ def merge_data():
     '''This program will create the query using IBIS, execute the query, and save the file
     for later use'''
     client = create_client()
-    '''
+
     #Get the dealscan only data
     #Creates the query
     merge = merge_dealscan(client)
@@ -22,7 +23,7 @@ def merge_data():
     #output to CSV
     path = os.path.join(INTERMEDIATE_DATA_PATH,'dealscan_merge.csv')
     merge_df.to_csv(path,index=False)
-    '''
+    
     #Also get the compustat file (to play with in another project potentially)
     #Creates the query
     merge = merge_compustat(client)
@@ -35,6 +36,20 @@ def merge_data():
     merge_df.to_pickle(COMP_MERGE_FILE)
     #output to CSV
     path = os.path.join(INTERMEDIATE_DATA_PATH,'compustat_merge.csv')
+    merge_df.to_csv(path,index=False)
+
+    #Also get the capiq file (to merge onto compustat in Stata)
+    #Creates the query
+    merge = merge_capiq(client)
+
+    # Execute executes the query
+    print("Beginning to execute Capital IQ query")
+    merge_df = merge.execute()
+
+    #Save file
+    merge_df.to_pickle(CAPIQ_MERGE_FILE)
+    #output to CSV
+    path = os.path.join(INTERMEDIATE_DATA_PATH,'capiq_merge.csv')
     merge_df.to_csv(path,index=False)
 
 
@@ -151,6 +166,40 @@ def merge_compustat(client):
                          comp_identity['naics'],comp_ipo['ipodate'],
                          crosswalk['bcoid']
 
+    ]
+
+    return final_merge
+
+def merge_capiq(client):
+    '''This file merges only capitaliq rating data
+    I will end up with a gvkey by ratingdate dataset'''
+
+    # Load in capiq tables
+    capiq_ratings = client.table('capiq_ratings')
+    capiq_ratings_types = client.table('capiq_ratings_types')
+    capiq_gvkey = client.table('capiq_gvkey')
+
+    #Limit the sample to only ones where the rating type code is "Local Currency LT"
+    capiq_ratings_types = capiq_ratings_types[capiq_ratings_types['ratingtypename']== "Local Currency LT"]
+
+    #Get ratingtype description
+    joined = capiq_ratings.inner_join(capiq_ratings_types, [
+        capiq_ratings['ratingtypecode'] == capiq_ratings_types['ratingtypecode']
+    ])
+
+    #Limit the sample to only ones where the rating type code is "Local Currency LT"
+    #joined = joined[capiq_ratings_types['ratingtypecode']== "Local Currency LT"]
+
+    #Merge on GVKEY for the appropriate time periods
+    joined = joined.left_join(capiq_gvkey, [
+        capiq_ratings['company_id'] == capiq_gvkey['companyid'],
+        (capiq_ratings['ratingdate']<= capiq_gvkey['enddate']) | (capiq_gvkey['enddate']==ibis.NA),
+        (capiq_ratings['ratingdate'] >= capiq_gvkey['startdate']) | (capiq_gvkey['startdate'] == ibis.NA)
+    ])
+
+    final_merge = joined[capiq_ratings,
+                         capiq_ratings_types['ratingtypename'],
+                         capiq_gvkey['gvkey']
     ]
 
     return final_merge

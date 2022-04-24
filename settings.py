@@ -24,6 +24,8 @@ SQL_LITE_PATH = os.path.join(ROOT,'sql_lite')
 SQLITE_FILE = os.path.join(SQL_LITE_PATH, 'database_relationship_pricing.sqlite')
 DEALSCAN_MERGE_FILE = os.path.join(INTERMEDIATE_DATA_PATH,'dealscan_merge.pkl')
 COMP_MERGE_FILE = os.path.join(INTERMEDIATE_DATA_PATH,'compustat_merge.pkl')
+CAPIQ_MERGE_FILE = os.path.join(INTERMEDIATE_DATA_PATH,'capiq_merge.pkl')
+
 
 EQUITY_ISSUANCE_TABLE = 'equity_issuance'
 DEBT_ISSUANCE_TABLE = 'debt_issuance'

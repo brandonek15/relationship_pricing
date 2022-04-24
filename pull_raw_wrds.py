@@ -18,6 +18,7 @@ def pull_raw(wrds_conn,conn):
     #Comment 2: Including a dictionary of datatypes for variables we merge on to make sure
     #Pandas doesn't screw it up on accident
     # Add all of the data needed necessary to do the CRSP computstat merge
+
     dtypes = {'borrowercompanyid': int, 'facilityid': int, 'packageid': int}
     cols=['FacilityID','PackageID','BorrowerCompanyID','FacilityStartDate','FacilityEndDate',\
           'comment','LoanType','PrimaryPurpose','SecondaryPurpose','FacilityAmt',\
@@ -79,6 +80,23 @@ def pull_raw(wrds_conn,conn):
     cols = ['gvkey','ipodate']
     retrieve_table(wrds_conn, conn, 'comp', 'company', 'comp_ipo', \
                    columns_to_pull=cols,dtypes_for_upload=dtypes)
+    
+    #Pull Capital IQ Ratings data
+    dtypes = {'company_id': int}
+    cols = ['company_id','ratingdate','ratingsymbol','ratingtypecode']
+    retrieve_table(wrds_conn, conn, 'ciq', 'wrds_erating', 'capiq_ratings', \
+                   columns_to_pull=cols,dtypes_for_upload=dtypes)
+    #MApping fron ratingstypecode to description
+    cols = ['ratingtypename','ratingtypecode']
+    retrieve_table(wrds_conn, conn, 'ciq', 'spratingtype', 'capiq_ratings_types', \
+                   columns_to_pull=cols)
+
+    #Crosswalk to Gvkey
+    dtypes = {'companyid': int,'gvkey': int}
+    cols = ['companyid','gvkey','startdate','enddate']
+    retrieve_table(wrds_conn, conn, 'ciq', 'wrds_gvkey', 'capiq_gvkey', \
+                   columns_to_pull=cols,dtypes_for_upload=dtypes)
+
 
 
 def retrieve_table(wrds, connection, library, table, heading, columns_to_pull='all', \
@@ -93,6 +111,11 @@ def retrieve_table(wrds, connection, library, table, heading, columns_to_pull='a
     wrds_table.drop_duplicates()
     #Convert variables to datatypes
     if dtypes_for_upload != None:
+        #First fill in all of the NAs of the converting variables
+        for key in dtypes_for_upload:
+            #Don't fill in NAs for dates
+            if dtypes_for_upload[key] != 'datetime64':
+                wrds_table[key] = wrds_table[key].fillna(0)
         wrds_table = wrds_table.astype(dtypes_for_upload)
 
     wrds_table.to_sql(heading, connection, if_exists="replace", index=False)
