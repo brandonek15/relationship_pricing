@@ -53,8 +53,6 @@ gen switcher_loan = (first_loan ==0 & prev_lender==0)
 label var switcher_loan "Switching Lender"
 assert first_loan + prev_lender + switcher_loan ==1
 
-winsor2 discount_*, replace cut(1 99)
-
 		preserve
 			freduse USRECM BAMLC0A4CBBB BAMLC0A1CAAA, clear
 			gen date_quarterly = qofd(daten)

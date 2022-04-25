@@ -10,14 +10,17 @@ replace category = "Revolver" if rev_loan ==1
 replace category = "Inst. Term" if term_loan ==1 & institutional ==1
 replace category = "Bank Term" if term_loan ==1 & institutional ==0
 replace category = "Other" if other_loan==1
+*Add loans that are non secured, non senior, or asset backed into "Other" so our measure is better
+replace category = "Other" if secured == 0 | senior ==0 | asset_based ==1
+
 assert !mi(category)
 
-local loan_level_controls log_facilityamt maturity cov cov_lite asset_based senior secured
+
 
 sort borrowercompanyid date_quarterly category facilityid
 
 *For each variable that could vary within loan package (borrowercompanyid date_quarterly), get the average by category
-foreach var in spread spread_2 `loan_level_controls' {
+foreach var in spread spread_2 $loan_level_controls {
 	egen m_`var' = mean(`var'), by(borrowercompanyid date_quarterly category)
 	gen m_`var'_inst_t = m_`var' if category == "Inst. Term"
 	egen m_`var'_inst = max(m_`var'_inst_t), by(borrowercompanyid date_quarterly)
@@ -85,6 +88,8 @@ label var d_2_simple_pos "Di-2-S  Pos"
 label var d_1_controls_pos "Di-1-C  Pos"
 label var d_2_controls_pos "Di-2-C  Pos"
 
+*Winsorize Discounts
+winsor2 discount_*, replace cut(1 99)
 
 isid facilityid
 *Merge on cusip_6

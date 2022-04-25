@@ -9,9 +9,7 @@ L1_working_cap_assets L1_capex_assets L1_firm_age
 
 winsor2 `firm_chars', cuts(.5 99.5) replace
 
-local loan_vars log_facilityamt maturity asset_based
-
-winsor2 `loan_vars', cuts(1 99) replace
+winsor2 $loan_level_controls, cuts(1 99) replace
 
 *Deal with missing vars so we don't lose so much data
 foreach var in `firm_chars' {
@@ -55,7 +53,7 @@ foreach lhs in discount_1_simple discount_1_controls discount_2_simple discount_
 				local rhs `firm_chars'
 			}
 			if "`chars'" == "loan_chars" {
-				local rhs `loan_vars'
+				local rhs $loan_level_controls
 			}
 			if "`chars'" == "both_chars" {
 				local rhs `firm_chars' `loan_vars'

@@ -72,8 +72,6 @@ foreach measure_type in mean median weighted_avg {
 			local title_add "Non-Compustat Firms"
 		}
 
-		winsor2 discount_*, replace cut(1 99)
-
 		collapse (`measure') discount_* spread `measure_add', by(date_quarterly category)
 
 
@@ -180,7 +178,6 @@ foreach measure_type in mean median weighted_avg {
 use "$data_path/dealscan_compustat_loan_level", clear
 
 keep if category == "Revolver" | category == "Bank Term"
-winsor2 discount_*, replace cut(1 99)
 drop rev_loan
 local start start(-100)
 local width width(10)
@@ -209,7 +206,6 @@ foreach lhs of varlist discount_* {
 use "$data_path/dealscan_compustat_loan_level", clear
 
 keep if category == "Revolver" | category == "Bank Term"
-winsor2 discount_*, replace cut(1 99)
 drop rev_loan
 local lhs discount_1_simple
 replace `lhs' = 300 if `lhs' >300 & !mi(`lhs')
@@ -264,7 +260,6 @@ over(bin) ytitle("Percentage of Discounts in Bin") title("Distribution of Discou
 use "$data_path/dealscan_compustat_loan_level", clear
 
 keep if category == "Revolver" | category == "Bank Term"
-winsor2 discount_*, replace cut(1 99)
 drop rev_loan
 local lhs discount_1_simple
 replace `lhs' = 300 if `lhs' >300 & !mi(`lhs')

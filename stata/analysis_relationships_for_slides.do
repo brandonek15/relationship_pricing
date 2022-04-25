@@ -13,6 +13,7 @@ format date_quarterly %tq
 *Past lender and future pricing
 preserve
 	use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+	winsor2 discount_*, replace cut(1 99)
 	foreach lhs in  discount_1_simple discount_1_controls d_1_simple_pos d_1_controls_pos {
 
 		foreach rhs_type in pooled split {
@@ -726,12 +727,6 @@ foreach lhs in discount_1_simple discount_1_controls {
 		
 			if "`chars'" == "firm_chars" {
 				local rhs `firm_chars'
-			}
-			if "`chars'" == "loan_chars" {
-				local rhs `loan_vars'
-			}
-			if "`chars'" == "both_chars" {
-				local rhs `firm_chars' `loan_vars'
 			}
 		
 			foreach fe_type in  none  time time_sic_2 time_firm {

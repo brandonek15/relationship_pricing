@@ -731,7 +731,3 @@ local rhs rel_*  i_d_1_simple_pos* mi_d_1_simple_pos*
 local cond "if ds_obs==1" 
 local absorb constant
 reghdfe hire `rhs' `cond', absorb(`absorb') vce(cl cusip_6)
-
-*Clean CapitalIQ
-*Import the merged data
-import delimited using "$data_path/capiq_merge.csv", clear
