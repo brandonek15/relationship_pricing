@@ -35,12 +35,12 @@ foreach lhs in discount_1_simple discount_1_controls {
 					local sample_cond 
 				}
 				if "`sample_type'" == "comp_merge" {
-					local sample_cond "& merge_comp ==1"
+					local sample_cond "& merge_compustat ==1"
 					local sample_add "Comp Firms"
 					local title_add "Compustat Firms"
 				}
 				if "`sample_type'" == "no_comp_merge" {
-					local sample_cond "& merge_comp ==0"
+					local sample_cond "& merge_compustat ==0"
 					local title_add "Non-Compustat Firms"
 					local sample_add "Non-Comp"
 				}
@@ -97,12 +97,12 @@ foreach discount_type in rev term all  {
 			local sample_cond 
 		}
 		if "`sample_type'" == "comp_merge" {
-			local sample_cond "keep if merge_comp ==1"
+			local sample_cond "keep if merge_compustat ==1"
 			local sample_add "Comp Firms"
 			local title_add "Compustat Firms"
 		}
 		if "`sample_type'" == "no_comp_merge" {
-			local sample_cond "keep if merge_comp ==0"
+			local sample_cond "keep if merge_compustat ==0"
 			local title_add "Non-Compustat Firms"
 			local sample_add "Non-Comp"
 		}

@@ -9,7 +9,7 @@ L1_roa L1_sales_growth L1_ebitda_int_exp ///
 L1_working_cap_assets L1_capex_assets L1_firm_age 
 
 *Drop duplicate observations
-keep borrowercompanyid date_quarterly discount_obs d_1_simple_pos  `firm_chars' 
+keep borrowercompanyid date_quarterly discount_obs d_1_simple_pos merge_ratings `firm_chars' 
 duplicates drop
 
 winsor2 `firm_chars', cuts(.5 99.5) replace
@@ -55,6 +55,14 @@ eststo: estpost ttest `firm_chars' , by(discount_obs) unequal
 esttab . using "$regression_output_path/differences_firm_chars_discount_obs.tex", ///
  label title("Origination Level Firm Characteristics") replace ///
 cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Disc Obs" "Non Disc Obs" "Difference") ///
+ nonum eqlabels(none) addnotes("Sample is Observations Merged to Compustat") 
+
+*Make a difference of means table for ratings
+eststo: estpost ttest `firm_chars' , by(merge_ratings) unequal
+	
+esttab . using "$regression_output_path/differences_firm_chars_ratings_obs.tex", ///
+ label title("Origination Level Firm Characteristics") replace ///
+cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Obs with Ratings" "Obs w/out Ratings" "Difference") ///
  nonum eqlabels(none) addnotes("Sample is Observations Merged to Compustat") 
 
 *Loan characteristics - split in four samples - not matched to dealscan and no discount - not matched to dealscan and no discount
@@ -116,6 +124,15 @@ eststo: estpost ttest `loan_vars', by(discount_obs) unequal
 esttab . using "$regression_output_path/differences_loan_chars_discount_obs.tex", ///
  label title("Origination Level Loan Characteristics") replace ///
 cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Disc Obs" "Non Disc Obs" "Difference") ///
+ nonum eqlabels(none) addnotes("Sample is Revolver and Bank Term Loans") 
+
+local loan_vars discount_1_simple discount_1_controls `loan_vars' 
+keep if category == "Revolver" | category == "Bank Term"
+eststo: estpost ttest `loan_vars', by(merge_ratings) unequal
+	
+esttab . using "$regression_output_path/differences_loan_chars_ratings_obs.tex", ///
+ label title("Origination Level Loan Characteristics") replace ///
+cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Obs with Ratings" "Obs w/out Ratings" "Difference") ///
  nonum eqlabels(none) addnotes("Sample is Revolver and Bank Term Loans") 
 
 *Correlation tables

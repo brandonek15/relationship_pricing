@@ -54,12 +54,12 @@ preserve
 						local sample_cond 
 					}
 					if "`sample_type'" == "comp_merge" {
-						local sample_cond "& merge_comp ==1"
+						local sample_cond "& merge_compustat ==1"
 						local sample_add "Comp Firms"
 						local title_add "Compustat Firms"
 					}
 					if "`sample_type'" == "no_comp_merge" {
-						local sample_cond "& merge_comp ==0"
+						local sample_cond "& merge_compustat ==0"
 						local title_add "Non-Compustat Firms"
 						local sample_add "Non-Comp"
 					}
@@ -85,9 +85,10 @@ preserve
 
 
 				}
-				esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_all`suffix_add'`rhs_suffix_add'_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
-				title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
-				addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
+				
+				*esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_all`suffix_add'`rhs_suffix_add'_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+				*title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
+				*addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
 			}
 		}
 	}
@@ -817,4 +818,42 @@ foreach discount_type in all {
 	title("Discounts and Differences in non-price characteristics") scalars("fe Fixed Effects" "sample Sample") ///
 	addnotes("SEs clustered at firm level" "Sample are all compustat firms with dealscan discounts from 2000Q1-2020Q4")	
 
+}
+
+*See how compustat with ratings vs compustat w/out ratings, vs  non compustat compare
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+gen constant = 1
+foreach lhs in  discount_1_simple discount_1_controls {
+
+	label var discount_1_simple "Disc"		
+	estimates clear
+	local i =1
+		
+	*Regression 1 Regress discount on constant and
+	reghdfe `lhs' merge_compustat_no_ratings merge_ratings if date_quarterly >=tq(2005q1), absorb(constant) nocons  vce(cl borrowercompanyid)
+	estadd local fe = "None"
+	estadd local disc = "All"
+	estadd local sample = "All"
+	estimates store est`i'
+	local ++i
+	*Regression 5 - Add pooled prev_rel and switcher_loan (Time FE)
+	reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+	estadd local fe = "Time"
+	estadd local disc = "All"
+	estadd local sample = "All"
+	estimates store est`i'
+	local ++i
+	*Regression 6 - Add interaction to prev_rel and switcher (Time FE)
+	reghdfe `lhs' prev_no_merge_compustat switc_no_merge_compustat ///
+	merge_compustat_no_ratings merge_ratings prev_merge_compustat_no_ratings switc_merge_compustat_no_ratings prev_merge_ratings ///
+	  switc_merge_ratings if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+	estadd local fe = "Time"
+	estadd local disc = "All"
+	estadd local sample = "All"
+	estimates store est`i'
+	local ++i
+
+	esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_all_rating_cat_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+	title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
+	addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
 }
