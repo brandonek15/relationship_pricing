@@ -234,7 +234,7 @@ use "$data_path/dealscan_compustat_loan_level", clear
 gen rev_loan_cat = (category == "Revolver")
 gen bank_term_loan_cat = (category == "Bank Term")
 gen inst_term_loan_cat = (category == "Inst. Term")
-collapse (max) *_cat, by(borrowercompanyid date_quarterly merge_comp)
+collapse (max) *_cat, by(borrowercompanyid date_quarterly merge_compustat)
 isid borrowercompanyid date_quarterly
 gen package_type = ""
 replace package_type = "Only Revolver" if rev_loan_cat ==1 & bank_term_loan_cat ==0 & inst_term_loan_cat ==0

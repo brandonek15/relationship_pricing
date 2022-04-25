@@ -21,6 +21,7 @@ foreach weird_str in "/A-1" "/A-2" "/A-3" "/NR" "/A" {
 label def Rating 1 "AAA" 2 "AA+" 3 "AA" 4 "AA-" 5 "A+"  6 "A"  7 "A-"  8 "BBB+"  9 "BBB" 10 "BBB-"  11 "BB+" ///
 		12 "BB" 13 "BB-" 14 "B+" 15 "B"  16 "B-" 17 "CCC+" 18 "CCC" 19 "CCC-" 20 "CC" 21 "C" 22 "D"
 encode ratingsymbol, label(Rating) gen(rating_numeric)
+label var rating_numeric "Credit Rating"
 
 gen date_quarterly = qofd(ratingdate)
 format date_quarterly %tq

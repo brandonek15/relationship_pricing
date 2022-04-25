@@ -64,11 +64,11 @@ foreach measure_type in mean median weighted_avg {
 			local title_add "All Firms"
 		}
 		if "`sample_type'" == "comp_merge" {
-			keep if merge_comp ==1
+			keep if merge_compustat ==1
 			local title_add "Compustat Firms"
 		}
 		if "`sample_type'" == "no_comp_merge" {
-			keep if merge_comp ==0
+			keep if merge_compustat ==0
 			local title_add "Non-Compustat Firms"
 		}
 
@@ -172,7 +172,6 @@ foreach measure_type in mean median weighted_avg {
 	}
 }
 
-*Todo - Look at distribution of term spreads
 *Graph distribution of discounts
 *Make three graphs, where we look at the distribution of each of the four discounts
 use "$data_path/dealscan_compustat_loan_level", clear
@@ -187,10 +186,10 @@ foreach lhs of varlist discount_* {
 	local title_add "`lhs'"
 	local cond_add "& `lhs'>=-100 & `lhs'<=500"
 
-		local disc_comp_rev (histogram `lhs' if merge_comp==1 `cond_add' & category == "Revolver", density `width' `start' col(blue%30))
-		local disc_no_comp_rev (histogram `lhs' if merge_comp==0 `cond_add' & category == "Revolver", density `width' `start' col(green%30))
-		local disc_comp_term (histogram `lhs' if merge_comp==1 `cond_add' & category == "Bank Term", density `width' `start' col(red%30))
-		local disc_no_comp_term (histogram `lhs' if merge_comp==0 `cond_add' & category == "Bank Term", density `width' `start' col(black%30))
+		local disc_comp_rev (histogram `lhs' if merge_compustat==1 `cond_add' & category == "Revolver", density `width' `start' col(blue%30))
+		local disc_no_comp_rev (histogram `lhs' if merge_compustat==0 `cond_add' & category == "Revolver", density `width' `start' col(green%30))
+		local disc_comp_term (histogram `lhs' if merge_compustat==1 `cond_add' & category == "Bank Term", density `width' `start' col(red%30))
+		local disc_no_comp_term (histogram `lhs' if merge_compustat==0 `cond_add' & category == "Bank Term", density `width' `start' col(black%30))
 
 		twoway `disc_comp_rev'  `disc_no_comp_rev' `disc_comp_term'  `disc_no_comp_term'  ///
 		, ytitle("Density") title("Distribution of Discounts - `title_add'", size(small)) ///
@@ -200,6 +199,21 @@ foreach lhs of varlist discount_* {
 		 3 "Term Discount - Compustat Firms" 4 "Term Discount - Non-Compustat Firms") rows(2)) 
 
 		graph export "$figures_output_path/dist_`lhs'.png", replace
+
+		local disc_no_comp (histogram `lhs' if no_merge_compustat==1 `cond_add', density `width' `start' col(blue%30))
+		local disc_comp_no_ratings (histogram `lhs' if merge_compustat_no_ratings==1 `cond_add', density `width' `start' col(red%30))
+		local disc_ratings (histogram `lhs' if merge_ratings==1 `cond_add', density `width' `start' col(black%30))
+
+		twoway `disc_no_comp'  `disc_comp_no_ratings' `disc_ratings'  ///
+		, ytitle("Density") title("Distribution of Discounts Across Observation Type- `title_add'", size(small)) ///
+		 note("`note'") ///
+		graphregion(color(white))  xtitle("Discounts") ///
+		legend(order(1 "Non Compustat Firms" 2 "Compustat Firms Without Ratings" ///
+		 3 "Compustat Firms With Ratings" ) rows(2)) 
+
+		graph export "$figures_output_path/dist_`lhs'_ratings.png", replace
+		
+		
 }
 
 **** Customized distribution of discount graph
@@ -224,10 +238,10 @@ foreach var in rev term {
 	foreach sample_type in comp_merge no_comp_merge {
 
 		if "`sample_type'" == "comp_merge" {
-			local sample_cond if merge_comp ==1
+			local sample_cond if merge_compustat ==1
 		}
 		if "`sample_type'" == "no_comp_merge" {
-			local sample_cond if merge_comp ==0
+			local sample_cond if merge_compustat ==0
 		}
 		
 		tempfile file_`var'_`sample_type'

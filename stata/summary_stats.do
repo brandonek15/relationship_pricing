@@ -6,7 +6,7 @@ keep if merge_compustat==1
 *define firm as discount firm if at any point they had a discount
 local firm_chars L1_market_to_book L1_ppe_assets L1_current_assets L1_log_assets L1_leverage ///
 L1_roa L1_sales_growth L1_ebitda_int_exp ///
-L1_working_cap_assets L1_capex_assets L1_firm_age 
+L1_working_cap_assets L1_capex_assets L1_firm_age rating_numeric
 
 *Drop duplicate observations
 keep borrowercompanyid date_quarterly discount_obs d_1_simple_pos merge_ratings `firm_chars' 
@@ -58,6 +58,8 @@ cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Disc Obs" "Non Disc Obs" "
  nonum eqlabels(none) addnotes("Sample is Observations Merged to Compustat") 
 
 *Make a difference of means table for ratings
+local exclude "rating_numeric"
+local firm_chars: list firm_chars - exclude
 eststo: estpost ttest `firm_chars' , by(merge_ratings) unequal
 	
 esttab . using "$regression_output_path/differences_firm_chars_ratings_obs.tex", ///

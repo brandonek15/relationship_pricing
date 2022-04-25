@@ -942,7 +942,27 @@ preserve
 
 restore
 
+*Look at how initial discounts vary across groups
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+sum discount_1_simple if first_loan ==1 & no_merge_compustat, detail
+sum discount_1_simple if first_loan ==1 & merge_compustat_no_ratings, detail
+sum discount_1_simple if first_loan ==1 & merge_ratings, detail
+
+sum discount_1_simple if prev_lender ==1 & no_merge_compustat, detail
+sum discount_1_simple if prev_lender ==1 & merge_compustat_no_ratings, detail
+sum discount_1_simple if prev_lender ==1 & merge_ratings, detail
+
+sum discount_1_simple if switcher_loan ==1 & no_merge_compustat, detail
+sum discount_1_simple if switcher_loan ==1 & merge_compustat_no_ratings, detail
+sum discount_1_simple if switcher_loan ==1 & merge_ratings, detail
+
+
 *See how average discount looks across rating
 use "$data_path/dealscan_compustat_loan_level", clear
 collapse (sum) constant (mean) discount_* , by(rating_numeric)
 twoway line discount_1_simple rating_numeric
+
+*Look at refinancings
+use "$data_path/dealscan_compustat_loan_level", clear
+br borrowercompanyid packageid facilityid date_quarterly  refinancingindicator
+sort borrowercompanyid packageid facilityid date_quarterly 
