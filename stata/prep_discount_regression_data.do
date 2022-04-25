@@ -10,6 +10,8 @@ replace category = "Revolver" if rev_loan ==1
 replace category = "Inst. Term" if term_loan ==1 & institutional ==1
 replace category = "Bank Term" if term_loan ==1 & institutional ==0
 replace category = "Other" if other_loan==1
+*Will temporarily be calling non secured, non senior, or asset backed into "Other"
+gen category_temp = category
 *Add loans that are non secured, non senior, or asset backed into "Other" so our measure is better
 replace category = "Other" if secured == 0 | senior ==0 | asset_based ==1
 
@@ -90,6 +92,9 @@ label var d_2_controls_pos "Di-2-C  Pos"
 
 *Winsorize Discounts
 winsor2 discount_*, replace cut(1 99)
+
+drop category 
+rename category_temp category
 
 isid facilityid
 *Merge on cusip_6

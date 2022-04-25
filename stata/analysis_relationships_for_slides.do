@@ -13,7 +13,6 @@ format date_quarterly %tq
 *Past lender and future pricing
 preserve
 	use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
-	winsor2 discount_*, replace cut(1 99)
 	foreach lhs in  discount_1_simple discount_1_controls d_1_simple_pos d_1_controls_pos {
 
 		foreach rhs_type in pooled split {
@@ -36,10 +35,12 @@ preserve
 				if "`rec_type'" == "yes" {
 					local rhs_add prev_lender_rec `rhs_extra'
 					local suffix_add _rec
+					local fes time 
 				}
 				if "`rec_type'" == "no" {
 					local rhs_add 
 					local suffix_add 
+					local fes time time_borrower
 				}
 
 				estimates clear
@@ -63,7 +64,7 @@ preserve
 						local sample_add "Non-Comp"
 					}
 
-					foreach fe_type in  time time_borrower {
+					foreach fe_type in  `fes' {
 
 						if "`fe_type'" == "time" {
 							local fe "date_quarterly"

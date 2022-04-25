@@ -607,7 +607,7 @@ br borrowercompanyid facilityid date_quarterly first_loan prev_lender switcher_l
 	max_first_loan max_prev_lender max_switcher_loan obs_types mult_obs ///
 	  sample_keep discount_1_simple if !mi(discount_1_simple) & date_quarterly >=tq(2005q1)
 
-*Make the nice regression table
+*Make the nice regression table to decompose
 use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
 gen constant = 1
 egen max_first_loan = max(first_loan) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
@@ -666,6 +666,20 @@ local ++i
 esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_all_stay_leave_decomposition_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
 title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
 addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
+
+*Try to understand how interactions and the FE can produce a giant number for compustat sample
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+gen flag_min_date_quarterly = (USRECM ==1 & date_quarterly == min_date_quarterly & date_quarterly >=tq(2005q1))
+egen drop_obs = max(flag_min_date_quarterly), by(borrowercompanyid)
+br borrowercompanyid date_quarterly  min_date_quarterly  flag_min_date_quarterly  drop_obs USRECM discount_1_simple first_loan
+local extra_cond "&drop_obs==0"
+local lhs discount_1_simple
+*local sample_cond "& merge_comp ==1"
+local rhs prev_lender switcher_loan prev_lender_rec switcher_loan_rec
+local fe date_quarterly borrowercompanyid
+reghdfe `lhs' `rhs'  if date_quarterly >=tq(2005q1)  `sample_cond' `extra_cond' , a(`fe') vce(cl borrowercompanyid)
+
+br borrowercompanyid date_quarterly  min_date_quarterly  drop_obs USRECM discount_1_simple first_loan if drop_obs ==1 
 
 
 *Find a nice example of a loan that I can use in the slides
@@ -731,3 +745,20 @@ local rhs rel_*  i_d_1_simple_pos* mi_d_1_simple_pos*
 local cond "if ds_obs==1" 
 local absorb constant
 reghdfe hire `rhs' `cond', absorb(`absorb') vce(cl cusip_6)
+
+*See if non senior/ non secured (inst. term) loans are the ones that end up producing giant discounts
+use "$data_path/dealscan_compustat_loan_level", clear
+sum discount_1_simple, detail
+sum discount_1_simple if diff_cov==1, detail
+sum discount_1_simple if diff_cov_lite==-1, detail
+sum discount_1_simple if diff_asset_based==1, detail
+sum discount_1_simple if diff_senior==-1, detail
+sum discount_1_simple if diff_secured==-1, detail
+
+tab diff_cov
+tab diff_cov_lite
+tab diff_asset_based
+tab diff_senior
+tab diff_secured
+
+use "$data_path/dealscan_compustat_loan_level", clear
