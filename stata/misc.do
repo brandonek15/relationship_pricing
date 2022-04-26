@@ -964,5 +964,19 @@ twoway line discount_1_simple rating_numeric
 
 *Look at refinancings
 use "$data_path/dealscan_compustat_loan_level", clear
-br borrowercompanyid packageid facilityid date_quarterly  refinancingindicator
+br borrowercompanyid packageid facilityid category date_quarterly  refinancingindicator discount_1_simple if !mi(discount_1_simple)
 sort borrowercompanyid packageid facilityid date_quarterly 
+
+sum discount_1_simple if refinancingindicator =="No"
+sum discount_1_simple if refinancingindicator =="Yes"
+
+*Look at CDS data
+use "$data_path/cds_spreads_cleaned", clear
+isid cusip_6 date_quarterly
+
+*Naive merge
+use "$data_path/dealscan_compustat_loan_level", clear
+drop if mi(cusip_6)
+collapse (mean) 
+replace cusip_6 = "-1" if mi(cusip_6)
+merge 1:1 cusip_6 date_quarterly using "$data_path/cds_spreads_cleaned"
