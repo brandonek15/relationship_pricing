@@ -17,6 +17,7 @@ else if "`c(os)'" == "MacOSX" {
 do "$code_path/settings.do"
 
 *Clean merged data
+do "$code_path/clean_capiq.do"
 do "$code_path/clean_compustat.do"
 do "$code_path/clean_fred.do"
 do "$code_path/clean_dealscan.do"

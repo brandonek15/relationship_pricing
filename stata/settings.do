@@ -25,11 +25,13 @@ global comp_char_vars log_assets leverage market_to_book sales_growth ///
 	 log_sales quick_ratio ebitda_int_exp  ///
 	cash_assets acq_assets shrhlder_payout_assets ///
 	 working_cap_assets capex_assets ppe_assets ///
-	 roa ebitda_assets  sga_assets firm_age
+	 roa ebitda_assets  sga_assets firm_age current_assets
 
 global comp_outcome_vars cash_assets acq_assets shrhlder_payout_assets ///
 	 working_cap_assets capex_assets ppe_assets ///
 	 roa ebitda_assets  sga_assets
+	 
+global loan_level_controls log_facilityamt maturity cov cov_lite
 	 
 global lower_cut_wins 2.5
 global upper_cut_wins 97.5

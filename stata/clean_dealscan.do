@@ -7,6 +7,8 @@ duplicates drop
 drop if mi(lender)
 *Drop Financials
 drop if inrange(primarysiccode,6000,6999)
+*Keep only US borrowers
+keep if country == "USA"
 
 *Format dates
 foreach var in facilitystartdate facilityenddate {
@@ -118,15 +120,6 @@ gen spread_2 = minbps
 replace spread_2 = allindrawn + dprime - lior3m if baserate == "Prime"
 replace spread_2 = allindrawn if baserate == "Fixed Rate"
 *Will assume all other rates are spreads over libor (they are very small, collectively like 100 obs)
-
-/*
-*Todo
-*Do other data cleaning? Maybe only keep certain observations ?
-*Keep only US,USD loans?
-*May want to change later
-keep if country == "USA"
-keep if currency == "United States Dollars"
-*/
 
 *Make variables for discount regression
 *First make sure the currencies match up

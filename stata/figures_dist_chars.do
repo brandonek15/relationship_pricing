@@ -158,6 +158,9 @@ local loan_vars log_facilityamt maturity spread salesatclose
 
 winsor2 `loan_vars', cuts(1 99) replace
 
+winsor2 salesatclose, cuts(1 95) replace
+
+
 foreach var in `loan_vars' {
 	local var_lab: variable label `var'
 
@@ -180,9 +183,9 @@ foreach var in `loan_vars' {
 		local start "start(0)"
 		}
 		else if "`var'" == "salesatclose" {
-		local cond "& salesatclose<=5e+10"
-		local width "width(1e+9)"
-		local note "Truncated at 5e+10"
+		local cond ""
+		local width "width(1000)"
+		local note "Winsorized at 1 and 95"
 		local start "start(0)"
 		}
 		else {
@@ -225,3 +228,38 @@ foreach var in `loan_vars' {
 		
 
 }
+
+*Split up the dealscan loans into how many packages have each combination
+use "$data_path/dealscan_compustat_loan_level", clear
+gen rev_loan_cat = (category == "Revolver")
+gen bank_term_loan_cat = (category == "Bank Term")
+gen inst_term_loan_cat = (category == "Inst. Term")
+collapse (max) *_cat, by(borrowercompanyid date_quarterly merge_compustat)
+isid borrowercompanyid date_quarterly
+gen package_type = ""
+replace package_type = "Only Revolver" if rev_loan_cat ==1 & bank_term_loan_cat ==0 & inst_term_loan_cat ==0
+replace package_type = "Only Bank Term" if rev_loan_cat ==0 & bank_term_loan_cat ==1 & inst_term_loan_cat ==0
+replace package_type = "Only Inst. Term" if rev_loan_cat ==0 & bank_term_loan_cat ==0 & inst_term_loan_cat ==1
+replace package_type = "Rev + Bank Term" if rev_loan_cat ==1 & bank_term_loan_cat ==1 & inst_term_loan_cat ==0
+replace package_type = "Rev + Inst. Term" if rev_loan_cat ==1 & bank_term_loan_cat ==0 & inst_term_loan_cat ==1
+replace package_type = "Bank Term + Inst. Term" if rev_loan_cat ==0 & bank_term_loan_cat ==1 & inst_term_loan_cat ==1
+replace package_type = "Rev + Bank Term + Inst. Term" if rev_loan_cat ==1 & bank_term_loan_cat ==1 & inst_term_loan_cat ==1
+drop if mi(package_type)
+*Specify order
+gen order = .
+replace order = 1 if package_type == "Only Revolver"
+replace order = 2 if package_type == "Only Bank Term"
+replace order = 3 if package_type == "Only Inst. Term"
+replace order = 4 if package_type == "Rev + Bank Term"
+replace order = 5 if package_type == "Rev + Inst. Term"
+replace order = 6 if package_type == "Bank Term + Inst. Term"
+replace order = 7 if package_type == "Rev + Bank Term + Inst. Term"
+
+qui sum rev_loan_cat
+local num_obs = `r(N)'
+
+graph pie, over(package_type) ///
+allcategories sort(order) ///
+	 graphregion(color(white)) title("Distribution of Loans Packages") ///
+	  note("Number of Packages: `num_obs'" "Loans to the same firm in the same quarter considered to be in the same package") legend(rows(2))
+	graph export "$figures_output_path/package_type_pie.png", replace

@@ -17,7 +17,7 @@ foreach lhs in discount_1_simple discount_1_controls {
 		foreach rec_type in yes no {
 		
 			if "`rec_type'" == "yes" {
-				local rhs_add max_prev_lender_rec
+				local rhs_add prev_lender_rec
 				local suffix_add _rec
 			}
 			if "`rec_type'" == "no" {
@@ -35,12 +35,12 @@ foreach lhs in discount_1_simple discount_1_controls {
 					local sample_cond 
 				}
 				if "`sample_type'" == "comp_merge" {
-					local sample_cond "& merge_comp ==1"
+					local sample_cond "& merge_compustat ==1"
 					local sample_add "Comp Firms"
 					local title_add "Compustat Firms"
 				}
 				if "`sample_type'" == "no_comp_merge" {
-					local sample_cond "& merge_comp ==0"
+					local sample_cond "& merge_compustat ==0"
 					local title_add "Non-Compustat Firms"
 					local sample_add "Non-Comp"
 				}
@@ -56,7 +56,7 @@ foreach lhs in discount_1_simple discount_1_controls {
 						local fe_add "Time,Borr"
 					}
 					
-					reghdfe `lhs' max_prev_lender `rhs_add' `cond' `sample_cond' &date_quarterly >=tq(2005q1), a(`fe') vce(cl borrowercompanyid)
+					reghdfe `lhs' prev_lender `rhs_add' `cond' `sample_cond' &date_quarterly >=tq(2005q1), a(`fe') vce(cl borrowercompanyid)
 					estadd local fe = "`fe_add'"
 					estadd local disc = "`disc_add'"
 					estadd local sample = "`sample_add'"
@@ -97,12 +97,12 @@ foreach discount_type in rev term all  {
 			local sample_cond 
 		}
 		if "`sample_type'" == "comp_merge" {
-			local sample_cond "keep if merge_comp ==1"
+			local sample_cond "keep if merge_compustat ==1"
 			local sample_add "Comp Firms"
 			local title_add "Compustat Firms"
 		}
 		if "`sample_type'" == "no_comp_merge" {
-			local sample_cond "keep if merge_comp ==0"
+			local sample_cond "keep if merge_compustat ==0"
 			local title_add "Non-Compustat Firms"
 			local sample_add "Non-Comp"
 		}
@@ -132,9 +132,9 @@ foreach discount_type in rev term all  {
 		preserve
 		`sample_cond' 
 		`cond'
-		collapse (sum) count (mean) discount_1_simple, by(date_quarterly max_prev_lender)
+		collapse (sum) count (mean) discount_1_simple, by(date_quarterly prev_lender)
 		egen total_count = total(count), by(date_quarterly)
-		gen frac_no_prev_lend = count/total_count if max_prev_lender ==0
+		gen frac_no_prev_lend = count/total_count if prev_lender ==0
 		
 		*Get recession data
 		joinby date_quarterly using `rec', unmatched(master)
@@ -143,9 +143,9 @@ foreach discount_type in rev term all  {
 		replace USRECM = `r(max)'*USRECM*1.05
 
 			local recession (bar USRECM date_quarterly, color(gs14) lcolor(none))
-			local prev_lend (line discount_1_simple date_quarterly if max_prev_lender ==1, color(black) yaxis(1))
-			local no_prev_lend (line discount_1_simple date_quarterly if max_prev_lender ==0, color(blue) yaxis(1))
-			local frac_no_prev_lend (line frac_no_prev_lend date_quarterly if max_prev_lender ==0, color(green) yaxis(2))
+			local prev_lend (line discount_1_simple date_quarterly if prev_lender ==1, color(black) yaxis(1))
+			local no_prev_lend (line discount_1_simple date_quarterly if prev_lender ==0, color(blue) yaxis(1))
+			local frac_no_prev_lend (line frac_no_prev_lend date_quarterly if prev_lender ==0, color(green) yaxis(2))
 			
 			twoway `recession' `prev_lend' `no_prev_lend' `frac_no_prev_lend', ///
 				legend(order(1 "Recession" 2 "Any Previous Lender" 3 "No Previous Lender" 4 "Fraction with Previous Lender")) ///

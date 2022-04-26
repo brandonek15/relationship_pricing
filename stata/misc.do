@@ -561,3 +561,408 @@ duplicates drop
 isid borrowercompanyid date_quarterly 
 save "$data_path/stata_temp/dealscan_discounts", replace
 
+*Explore who is matched to compustat and who isn't
+use "$data_path/dealscan_compustat_loan_level", clear
+sort company borrowercompanyid date_quarterly
+br borrowercompanyid company  merge_compustat publicprivate date_quarterly gvkey 
+br borrowercompanyid company  merge_compustat publicprivate date_quarterly gvkey if borrowercompanyid == 113895 | borrowercompanyid == 35357
+
+use "$data_path/compustat_clean", clear
+br conm gvkey date_quarterly borrowercompanyid if  gvkey == 9899
+sort gvkey date_quarterly
+
+*Figure out how the prev_lender and switcher are identified - explore more
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+gen constant = 1
+egen max_first_loan = max(first_loan) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
+egen max_prev_lender = max(prev_lender) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
+egen max_switcher_loan = max(switcher_loan) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
+gen obs_types = max_first_loan + max_prev_lend + max_switcher_loan
+gen mult_obs = (obs_types) >=2 & !mi(max_first_loan)
+gen all_types = (obs_types) ==3 & !mi(max_first_loan)
+qui reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
+gen sample_keep = e(sample)
+
+reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) &sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
+reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) &mult_obs==1 &sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
+reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) &max_prev_lender==1 &max_switcher_loan==1 &sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
+reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
+
+reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) &max_first_loan ==1, a(date_quarterly) vce(cl borrowercompanyid)
+reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) &max_first_loan ==1, a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
+
+
+reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) &sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
+
+
+reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) &all_types==1 , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
+reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) &all_types==1, a(date_quarterly) vce(cl borrowercompanyid)
+
+
+reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) &max_first_loan ==1, a(date_quarterly) vce(cl borrowercompanyid)
+reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) &max_first_loan ==1, a(date_quarterly borrowercompanyid) vce(cl borrowercompanyid)
+
+br borrowercompanyid facilityid date_quarterly first_loan prev_lender switcher_loan ///
+	max_first_loan max_prev_lender max_switcher_loan obs_types mult_obs ///
+	  sample_keep discount_1_simple if !mi(discount_1_simple) & date_quarterly >=tq(2005q1)
+
+*Make the nice regression table to decompose
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+gen constant = 1
+egen max_first_loan = max(first_loan) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
+egen max_prev_lender = max(prev_lender) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
+egen max_switcher_loan = max(switcher_loan) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
+gen obs_types = max_first_loan + max_prev_lend + max_switcher_loan
+gen mult_obs = (obs_types) >=2 & !mi(max_first_loan)
+gen all_types = (obs_types) ==3 & !mi(max_first_loan)
+qui reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
+gen sample_keep = e(sample)
+
+estimates clear
+local i =1
+
+local lhs discount_1_simple
+*Try to decompose why firm FE changes result of switchers
+*First start with simplest regression, only time FE
+reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+estadd local fe = "Time"
+estadd local disc = "All Disc"
+estadd local sample = "All"
+estimates store est`i'
+local ++i
+*Keep only sample from FE regression
+reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) &sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
+estadd local fe = "Time"
+estadd local disc = "All Disc"
+estadd local sample = "FE Reg Obs"
+estimates store est`i'
+local ++i
+
+*Keep only observations that can identify coefficients
+reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) &mult_obs==1 &sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
+estadd local fe = "Time"
+estadd local disc = "All Disc"
+estadd local sample = "Coeff Identifying Obs"
+estimates store est`i'
+local ++i
+
+*Keep only firms that have both gone back to the previous lender and switched
+reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) &max_prev_lender==1 &max_switcher_loan==1 &sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
+estadd local fe = "Time"
+estadd local disc = "All Disc"
+estadd local sample = "Prev Lender and Switch Firms"
+estimates store est`i'
+local ++i
+
+*The FE regression
+reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
+estadd local fe = "Firm, Time"
+estadd local disc = "All Disc"
+estadd local sample = "FE Reg Obs"
+estimates store est`i'
+local ++i
+
+esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_all_stay_leave_decomposition_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
+addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
+
+*Try to understand how interactions and the FE can produce a giant number for compustat sample
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+gen flag_min_date_quarterly = (USRECM ==1 & date_quarterly == min_date_quarterly & date_quarterly >=tq(2005q1))
+egen drop_obs = max(flag_min_date_quarterly), by(borrowercompanyid)
+br borrowercompanyid date_quarterly  min_date_quarterly  flag_min_date_quarterly  drop_obs USRECM discount_1_simple first_loan
+local extra_cond "&drop_obs==0"
+local lhs discount_1_simple
+*local sample_cond "& merge_comp ==1"
+local rhs prev_lender switcher_loan prev_lender_rec switcher_loan_rec
+local fe date_quarterly borrowercompanyid
+reghdfe `lhs' `rhs'  if date_quarterly >=tq(2005q1)  `sample_cond' `extra_cond' , a(`fe') vce(cl borrowercompanyid)
+
+br borrowercompanyid date_quarterly  min_date_quarterly  drop_obs USRECM discount_1_simple first_loan if drop_obs ==1 
+
+
+*Find a nice example of a loan that I can use in the slides
+use "$data_path/dealscan_compustat_loan_level", clear
+bys packageid date_quarterly: gen num_packages = _N
+sort borrowercompanyid packageid date_quarterly facilityid
+br conm borrowercompanyid packageid facilityid date_quarterly category loantype merge_compustat discount_1_simple sic_2 ///
+if merge_compustat ==1 & (!mi(discount_1_simple) | category== "Inst. Term") & num_packages==3 & date_quarterly >=tq(2013q1)
+
+*Yum Brands 2016Q2 - has one term, n
+br conm borrowercompanyid packageid facilityid date_quarterly category loantype merge_compustat discount_1_simple ///
+ if packageid == 254937
+
+br conm date_quarterly category loantype ///
+ spread facilityamt maturity cov cov_lite asset_based senior secured if packageid == 254937 & date_quarterly == tq(2016q2)
+
+*Find lenders
+use "$data_path/dealscan_compustat_lender_loan_level", clear
+br conm date_quarterly facilityid lender lenderrole bankallocation lead_arranger_credit agent_credit ///
+	if (facilityid == 360935 | facilityid == 360936 | facilityid == 360937) & date_quarterly == tq(2016q2) & lead_arranger_credit ==1
+br if (facilityid == 360935 | facilityid == 360936 | facilityid == 360937) & date_quarterly == tq(2016q2) 
+
+*Check Boyd gaming
+use "$data_path/dealscan_compustat_lender_loan_level", clear
+br conm date_quarterly facilityid lender lenderrole bankallocation lead_arranger_credit agent_credit ///
+	if (facilityid == 365049) & lead_arranger_credit ==1
+
+
+
+*Avis Budge packageid == 234741 - negative discount
+
+*Lannett co inc 
+br conm borrowercompanyid packageid facilityid date_quarterly category loantype merge_compustat discount_1_simple ///
+ if packageid == 245911
+ 
+br conm date_quarterly category loantype ///
+ facilityamt maturity cov cov_lite asset_based senior secured if packageid == 245911 & date_quarterly == tq(2015q4)
+
+*Try to see if the term pos discount indicator matters if I don't include the revolving characteristics
+*This program will do analyses on fraction/likelihood of future deals conditional 
+*on previous deals in either SDC to Dealscan or Dealscan to SDC
+
+use "$data_path/sdc_deals_with_past_relationships_20", clear
+append using "$data_path/ds_lending_with_past_relationships_20"
+
+egen sdc_obs = rowmax(equity_base debt_base conv_base)
+egen ds_obs = rowmax(rev_loan_base term_loan_base other_loan_base)
+*Date quarterly
+gen date_quarterly = qofd(date_daily)
+format date_quarterly %tq
+
+local rhs rel_*  i_d_1_simple_pos* mi_d_1_simple_pos* i_maturity_* i_log_facilityamt_* i_spread_* mi_spread_* 
+local cond "if ds_obs==1" 
+local absorb constant
+reghdfe hire `rhs' `cond', absorb(`absorb') vce(cl cusip_6)
+
+local rhs rel_*  i_d_1_simple_pos*term mi_d_1_simple_pos*term i_maturity_*term i_log_facilityamt_*term i_spread_*term mi_spread_*term 
+local cond "if ds_obs==1" 
+local absorb constant
+reghdfe hire `rhs' `cond', absorb(`absorb') vce(cl cusip_6)
+
+local rhs rel_*  i_d_1_simple_pos* mi_d_1_simple_pos*
+local cond "if ds_obs==1" 
+local absorb constant
+reghdfe hire `rhs' `cond', absorb(`absorb') vce(cl cusip_6)
+
+*See if non senior/ non secured (inst. term) loans are the ones that end up producing giant discounts
+use "$data_path/dealscan_compustat_loan_level", clear
+sum discount_1_simple, detail
+sum discount_1_simple if diff_cov==1, detail
+sum discount_1_simple if diff_cov_lite==-1, detail
+sum discount_1_simple if diff_asset_based==1, detail
+sum discount_1_simple if diff_senior==-1, detail
+sum discount_1_simple if diff_secured==-1, detail
+
+tab diff_cov
+tab diff_cov_lite
+tab diff_asset_based
+tab diff_senior
+tab diff_secured
+
+
+*Past lender and future pricing - Only compustat firms - comparing bond market vs no bond market
+preserve
+	use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+	keep if merge_compustat ==1
+	foreach lhs in  discount_1_simple discount_1_controls {
+
+		label var discount_1_simple "Disc"		
+		estimates clear
+		local i =1
+			
+		*Regression 1 Regress discount on constant and
+		reg `lhs' merge_ratings if date_quarterly >=tq(2005q1) , vce(cl borrowercompanyid)
+		estadd local fe = "None"
+		estadd local disc = "All"
+		estadd local sample = "Compustat"
+		estimates store est`i'
+		local ++i
+		/*
+		*Regression 3 - Add pooled  prev_rel (Time FE)
+		reghdfe `lhs' prev_lender if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+		estadd local fe = "Time"
+		estadd local disc = "All"
+		estadd local sample = "Compustat"
+		estimates store est`i'
+		local ++i
+		*Regression 4 - Add interaction to prev_rel (Time FE)
+		reghdfe `lhs' prev_lender merge_ratings prev_merge_ratings if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+		estadd local fe = "Time"
+		estadd local disc = "All"
+		estadd local sample = "Compustat"
+		estimates store est`i'
+		local ++i
+		*/
+		*Regression 5 - Add pooled prev_rel and switcher_loan (Time FE)
+		reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+		estadd local fe = "Time"
+		estadd local disc = "All"
+		estadd local sample = "Compustat"
+		estimates store est`i'
+		local ++i
+		*Regression 6 - Add interaction to prev_rel and switcher (Time FE)
+		reghdfe `lhs' merge_ratings  prev_merge_compustat_no_ratings switc_merge_compustat_no_ratings ///
+		prev_merge_ratings switc_merge_ratings if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+		estadd local fe = "Time"
+		estadd local disc = "All"
+		estadd local sample = "Compustat"
+		estimates store est`i'
+		local ++i
+
+		esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_all_comp_rating_cat_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+		title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
+		addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
+	}
+
+restore
+
+*Past lender and future pricing - all three categories
+preserve
+	use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+	gen constant = 1
+	foreach lhs in  discount_1_simple discount_1_controls {
+
+		label var discount_1_simple "Disc"		
+		estimates clear
+		local i =1
+			
+		*Regression 1 Regress discount on constant and
+		reghdfe `lhs' merge_compustat_no_ratings merge_ratings if date_quarterly >=tq(2005q1), absorb(constant) nocons  vce(cl borrowercompanyid)
+		estadd local fe = "None"
+		estadd local disc = "All"
+		estadd local sample = "All"
+		estimates store est`i'
+		local ++i
+		/*
+		*Regression 2 - Add Firm and Time FE
+		reghdfe `lhs' merge_compustat_no_ratings merge_ratings if date_quarterly >=tq(2005q1) , a(date_quarterly borrowercompanyid) vce(cl borrowercompanyid)
+		estadd local fe = "Time,Firm"
+		estadd local disc = "All"
+		estadd local sample = "All"
+		estimates store est`i'
+		local ++i
+		*Regression 3 - Add pooled  prev_rel (Time FE)
+		reghdfe `lhs' prev_lender if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+		estadd local fe = "Time"
+		estadd local disc = "All"
+		estadd local sample = "All"
+		estimates store est`i'
+		local ++i
+		*Regression 4 - Add interaction to prev_rel (Time FE)
+		reghdfe `lhs' merge_compustat_no_ratings merge_ratings prev_no_merge_compustat prev_merge_compustat_no_ratings prev_merge_ratings if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+		estadd local fe = "Time"
+		estadd local disc = "All"
+		estadd local sample = "All"
+		estimates store est`i'
+		local ++i
+		*/
+		*Regression 5 - Add pooled prev_rel and switcher_loan (Time FE)
+		reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+		estadd local fe = "Time"
+		estadd local disc = "All"
+		estadd local sample = "All"
+		estimates store est`i'
+		local ++i
+		*Regression 6 - Add interaction to prev_rel and switcher (Time FE)
+		reghdfe `lhs' prev_no_merge_compustat switc_no_merge_compustat ///
+		merge_compustat_no_ratings merge_ratings prev_merge_compustat_no_ratings switc_merge_compustat_no_ratings prev_merge_ratings ///
+		  switc_merge_ratings if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+		estadd local fe = "Time"
+		estadd local disc = "All"
+		estadd local sample = "All"
+		estimates store est`i'
+		local ++i
+
+		esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_all_rating_cat_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+		title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
+		addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
+	}
+
+restore
+
+*What if I try to do this same analysis with firm FE
+*Past lender and future pricing - all three categories
+preserve
+	use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+	gen constant = 1
+	foreach lhs in  discount_1_simple discount_1_controls {
+
+		label var discount_1_simple "Disc"		
+		estimates clear
+		local i =1
+			
+		*Regression 1 Regress discount on constant and
+		reghdfe `lhs' merge_compustat_no_ratings merge_ratings if date_quarterly >=tq(2005q1), absorb(constant) nocons  vce(cl borrowercompanyid)
+		estadd local fe = "None"
+		estadd local disc = "All"
+		estadd local sample = "All"
+		estimates store est`i'
+		local ++i
+
+		*Regression 5 - Add pooled prev_rel and switcher_loan (Time FE)
+		reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+		estadd local fe = "Time"
+		estadd local disc = "All"
+		estadd local sample = "All"
+		estimates store est`i'
+		local ++i
+		*Regression 6 - Add interaction to prev_rel and switcher (Time FE)
+		reghdfe `lhs' prev_no_merge_compustat switc_no_merge_compustat ///
+		merge_compustat_no_ratings merge_ratings prev_merge_compustat_no_ratings switc_merge_compustat_no_ratings prev_merge_ratings ///
+		  switc_merge_ratings if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+		estadd local fe = "Time"
+		estadd local disc = "All"
+		estadd local sample = "All"
+		estimates store est`i'
+		local ++i
+		
+		*Regression 5 - Add pooled prev_rel and switcher_loan (Time FE)
+		reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
+		estadd local fe = "Time"
+		estadd local disc = "All"
+		estadd local sample = "All"
+		estimates store est`i'
+		local ++i
+		*Regression 6 - Add interaction to prev_rel and switcher (Time FE)
+		reghdfe `lhs' prev_no_merge_compustat switc_no_merge_compustat ///
+		merge_compustat_no_ratings merge_ratings prev_merge_compustat_no_ratings switc_merge_compustat_no_ratings prev_merge_ratings ///
+		  switc_merge_ratings if date_quarterly >=tq(2005q1) , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
+		estadd local fe = "Time"
+		estadd local disc = "All"
+		estadd local sample = "All"
+		estimates store est`i'
+		local ++i		
+
+		esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_all_rating_cat_ffe_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+		title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
+		addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
+	}
+
+restore
+
+*Look at how initial discounts vary across groups
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+sum discount_1_simple if first_loan ==1 & no_merge_compustat, detail
+sum discount_1_simple if first_loan ==1 & merge_compustat_no_ratings, detail
+sum discount_1_simple if first_loan ==1 & merge_ratings, detail
+
+sum discount_1_simple if prev_lender ==1 & no_merge_compustat, detail
+sum discount_1_simple if prev_lender ==1 & merge_compustat_no_ratings, detail
+sum discount_1_simple if prev_lender ==1 & merge_ratings, detail
+
+sum discount_1_simple if switcher_loan ==1 & no_merge_compustat, detail
+sum discount_1_simple if switcher_loan ==1 & merge_compustat_no_ratings, detail
+sum discount_1_simple if switcher_loan ==1 & merge_ratings, detail
+
+
+*See how average discount looks across rating
+use "$data_path/dealscan_compustat_loan_level", clear
+collapse (sum) constant (mean) discount_* , by(rating_numeric)
+twoway line discount_1_simple rating_numeric
+
+*Look at refinancings
+use "$data_path/dealscan_compustat_loan_level", clear
+br borrowercompanyid packageid facilityid date_quarterly  refinancingindicator
+sort borrowercompanyid packageid facilityid date_quarterly 
