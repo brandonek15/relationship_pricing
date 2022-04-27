@@ -777,7 +777,7 @@ foreach discount_type in all {
 	estimates clear
 	local i =1
 	
-	foreach lhs in discount_1_simple discount_1_controls {
+	foreach lhs in discount_1_simple /* discount_1_controls */ {
 		if "`discount_type'" == "rev" {
 			local cond `"if category =="Revolver""'
 			local sample_add "Rev"

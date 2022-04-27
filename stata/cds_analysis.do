@@ -54,6 +54,16 @@ reshape wide spread, i(borrowercompanyid date_quarterly cusip_6) j(loan_type) st
 * Merge together Spreads with CDS Spreads
 joinby cusip_6 date_quarterly using "$data_path/cds_spreads_cleaned_name.dta", unmatched(master)
 
+keep if _merge ==3
+drop _merge
+
+*Merge on the discount data
+merge 1:1 borrowercompanyid date_quarterly using "$data_path/stata_temp/dealscan_discounts", nogen
+
+corr cds_spread_mean spreadrev
+corr cds_spread_mean spreadinstitutional
+corr cds_spread_mean spreadbank
+
 
 // keep if _merge == 1
 // drop _merge
@@ -89,9 +99,16 @@ label var spreadinstitutional "Institutional Term Loan Spread"
 					fmt(%9.2f %12.0gc))
 					;
 #de cr;
-stop
 
 				
-				
-					
-					    
+/*				
+reg cds_spread_mean  spreadinstitutional spreadrev
+reg cds_spread_mean spreadinstitutional rev_discount_1_simple
+
+reg cds_spread_mean spreadinstitutional spreadbank 
+reg cds_spread_mean spreadinstitutional term_discount_1_simple
+
+reg cds_spread_mean  spreadinstitutional spreadrev spreadbank
+reg cds_spread_mean spreadinstitutional rev_discount_1_simple term_discount_1_simple
+
+

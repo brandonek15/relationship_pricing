@@ -980,3 +980,21 @@ drop if mi(cusip_6)
 collapse (mean) 
 replace cusip_6 = "-1" if mi(cusip_6)
 merge 1:1 cusip_6 date_quarterly using "$data_path/cds_spreads_cleaned"
+
+
+*Get example for relationship figure
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+egen max_first_loan = max(first_loan) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
+egen max_prev_lender = max(prev_lender) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
+egen max_switcher_loan = max(switcher_loan) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
+br  borrowercompanyid date_quarterly first_loan prev_lender switcher_loan ///
+ if max_first_loan == 1 & max_prev_lender ==1 & max_switcher_loan ==1 & !mi(discount_1_simple) ///
+ & merge_compustat==1
+
+use "$data_path/dealscan_compustat_lender_loan_level", clear
+*Dyncorp International
+br company borrowercompanyid publicprivate facilityid date_quarterly lender merge_compustat if /// 
+borrowercompanyid == 3785 &  (date_quarterly==tq(2005q1) | date_quarterly==tq(2006q2) | date_quarterly==tq(2010q3))
+*borrowercompanyid == 3785 &  (date_quarterly==tq(2005q1) | date_quarterly==tq(2006q2) | date_quarterly==tq(2010q3))
+*borrowercompanyid == 31461 & (date_quarterly==tq(2006q2) | date_quarterly==tq(2011q2) | date_quarterly==tq(2014q3))
+*borrowercompanyid == 118826 & (date_quarterly==tq(2007q1) | date_quarterly==tq(2012q1) | date_quarterly==tq(2013q1))
