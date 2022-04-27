@@ -61,5 +61,37 @@ joinby cusip_6 date_quarterly using "$data_path/cds_spreads_cleaned_name.dta", u
 
 
 * Run Regressions
-reg cds_spread_mean spreadrev spreadinstitutional
-reg cds_spread_mean spreadbank spreadinstitutional
+
+foreach var of varlist cds_spread_mean cds_spread_median {
+	replace `var' = `var'*1000
+}
+
+* Run Regressions
+eststo clear
+eststo: reg cds_spread_mean spreadrev spreadinstitutional 
+eststo: reg cds_spread_mean spreadbank spreadinstitutional
+
+eststo: reg cds_spread_median spreadrev spreadinstitutional
+eststo: reg cds_spread_median spreadbank spreadinstitutional
+
+label var spreadrev "Revolving Loan Spread"
+label var spreadbank "Bank Term Loan Spread"
+label var spreadinstitutional "Institutional Term Loan Spread"
+
+#de ;
+	esttab * using "$regression_output_path/cds_spread_regs.tex", se b(3) label replace tex 
+	nodepvars nonumbers nomtitles
+	drop(_cons) order(spreadrev spreadbank)
+		title("CDS Spreads vs. Loan Spreads")
+				mgroups("Mean CDS" "Median CDS" , pattern(1 0 1 0 )
+				prefix(\multicolumn{@span}{c}{) suffix(}) span erepeat(\cmidrule(lr){@span}))
+				stats( r2 N , label("$ R^2$" "$ N $ ")
+					fmt(%9.2f %12.0gc))
+					;
+#de cr;
+stop
+
+				
+				
+					
+					    

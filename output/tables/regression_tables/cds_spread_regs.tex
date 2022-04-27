@@ -1,0 +1,23 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{CDS Spreads vs. Loan Spreads}
+\begin{tabular}{l*{4}{c}}
+\hline\hline
+                    &\multicolumn{2}{c}{Mean CDS}               &\multicolumn{2}{c}{Median CDS}             \\\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+\hline
+Revolving Loan Spread&      -0.011         &                     &      -0.004         &                     \\
+                    &     (0.058)         &                     &     (0.054)         &                     \\
+[1em]
+Bank Term Loan Spread&                     &      -0.512         &                     &      -0.501         \\
+                    &                     &     (0.265)         &                     &     (0.260)         \\
+[1em]
+Institutional Term Loan Spread&       0.076\sym{*}  &       0.627\sym{***}&       0.070\sym{*}  &       0.602\sym{**} \\
+                    &     (0.038)         &     (0.177)         &     (0.035)         &     (0.173)         \\
+\hline
+$ R^2$              &        0.04         &        0.24         &        0.04         &        0.23         \\
+$ N $               &         146         &          50         &         146         &          50         \\
+\hline\hline
+\multicolumn{5}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{5}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+\end{table}
