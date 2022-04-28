@@ -140,13 +140,15 @@ foreach table_type in  simple controls {
 		estadd local sample = "All Discounts"
 		estimates store est`i'
 		local ++i
+		/*
 		reghdfe `lhs' past_relationship `rhs_add' `cond' if (rev_loan_base ==1 | term_loan_base==1) & hire !=0, absorb(`fe_add' lender) vce(cl cusip_6)
 		estadd local fe = "`fe_scalar_add',L"
 		estadd local sample = "All Discounts"
 		estimates store est`i'
 		local ++i
-		reghdfe `lhs' rel_* `rhs_add' `cond' if (rev_loan_base ==1 | term_loan_base==1) & hire !=0, absorb(`fe_add' lender) vce(cl cusip_6)
-		estadd local fe = "`fe_scalar_add',L"
+		*/
+		reghdfe `lhs' rel_* `rhs_add' `cond' if (rev_loan_base ==1 | term_loan_base==1) & hire !=0, absorb(`fe_add') vce(cl cusip_6)
+		estadd local fe = "`fe_scalar_add'"
 		estadd local sample = "All Discounts"
 		estimates store est`i'
 		local ++i
@@ -777,7 +779,7 @@ foreach discount_type in all {
 	estimates clear
 	local i =1
 	
-	foreach lhs in discount_1_simple discount_1_controls {
+	foreach lhs in discount_1_simple /* discount_1_controls */ {
 		if "`discount_type'" == "rev" {
 			local cond `"if category =="Revolver""'
 			local sample_add "Rev"
@@ -836,6 +838,7 @@ foreach lhs in  discount_1_simple discount_1_controls {
 	estadd local sample = "All"
 	estimates store est`i'
 	local ++i
+	/*
 	*Regression 5 - Add pooled prev_rel and switcher_loan (Time FE)
 	reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
 	estadd local fe = "Time"
@@ -843,6 +846,7 @@ foreach lhs in  discount_1_simple discount_1_controls {
 	estadd local sample = "All"
 	estimates store est`i'
 	local ++i
+	*/
 	*Regression 6 - Add interaction to prev_rel and switcher (Time FE)
 	reghdfe `lhs' prev_no_merge_compustat switc_no_merge_compustat ///
 	merge_compustat_no_ratings merge_ratings prev_merge_compustat_no_ratings switc_merge_compustat_no_ratings prev_merge_ratings ///
