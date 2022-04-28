@@ -78,6 +78,8 @@ label var spreadrev "Revolving Loan Spread"
 label var spreadbank "Bank Term Loan Spread"
 label var spreadinstitutional "Institutional Term Loan Spread"
 
+
+
 #de ;
 	esttab * using "$regression_output_path/cds_spread_regs.tex", se b(3) label replace tex 
 	nodepvars nonumbers nomtitles
