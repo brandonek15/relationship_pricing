@@ -94,11 +94,11 @@ make_skeleton "ds" `n_lenders'
 use "$data_path/sdc_deals_with_past_relationships_20", clear
 
 /*
-egen past_relationship = rowmax(rel_equity rel_debt rel_conv rel_rev_loan rel_term_loan rel_other_loan)
+egen past_relationship = rowmax(rel_equity rel_debt rel_conv rel_institutional_loan rel_term_loan rel_other_loan)
 reg hire past_relationship
 */
 
-gen rev_loan_discount_inter = 0
+gen institutional_loan_discount_inter = 0
 replace rev_loan_discount_inter = discount_1_simple_rev_loan*rel_rev_loan if !mi(discount_1_simple_rev_loan)
 *br rev_loan_discount_inter discount_1_simple_rev_loan rel_rev_loan
 
@@ -564,7 +564,7 @@ save "$data_path/stata_temp/dealscan_discounts", replace
 *Explore who is matched to compustat and who isn't
 use "$data_path/dealscan_compustat_loan_level", clear
 sort company borrowercompanyid date_quarterly
-br borrowercompanyid company  merge_compustat publicprivate date_quarterly gvkey 
+br borrowercompanyid company  merge_compustat publicprivate date_quarterly gvkey discount_1_simple  if !mi(discount_1_simple)
 br borrowercompanyid company  merge_compustat publicprivate date_quarterly gvkey if borrowercompanyid == 113895 | borrowercompanyid == 35357
 
 use "$data_path/compustat_clean", clear
@@ -998,3 +998,197 @@ borrowercompanyid == 3785 &  (date_quarterly==tq(2005q1) | date_quarterly==tq(20
 *borrowercompanyid == 3785 &  (date_quarterly==tq(2005q1) | date_quarterly==tq(2006q2) | date_quarterly==tq(2010q3))
 *borrowercompanyid == 31461 & (date_quarterly==tq(2006q2) | date_quarterly==tq(2011q2) | date_quarterly==tq(2014q3))
 *borrowercompanyid == 118826 & (date_quarterly==tq(2007q1) | date_quarterly==tq(2012q1) | date_quarterly==tq(2013q1))
+
+/*
+* Run Regressions
+*Get the sample of firms that are in the first regression
+qui reg cds_spread_mean spreadrev spreadinstitutional 
+gen sample_rev = e(sample)
+qui reg cds_spread_mean spreadbank spreadinstitutional
+gen sample_term = e(sample)
+
+eststo clear
+
+eststo: reg cds_spread_mean spreadrev if sample_rev==1
+eststo: reg cds_spread_mean spreadrev spreadinstitutional 
+eststo: reg cds_spread_mean spreadbank if sample_term==1 
+eststo: reg cds_spread_mean spreadbank spreadinstitutional
+*/
+*Try to decompose discount
+*Correlation tables
+use  "$data_path/stata_temp/dealscan_discounts_facilityid", clear
+replace category = "Other" if secured == 0 | senior ==0 | asset_based ==1
+*Keep only observations that have less than two of each type of discount
+gen count = 1
+egen count_bank_term_temp = total(count) if category == "Bank Term", by(borrowercompanyid date_quarterly)
+egen count_rev_temp = total(count) if category == "Revolver", by(borrowercompanyid date_quarterly)
+egen count_inst_term_temp = total(count) if category == "Inst. Term", by(borrowercompanyid date_quarterly)
+egen count_bank_term = max(count_bank_term_temp), by(borrowercompanyid date_quarterly)
+egen count_rev = max(count_rev_temp), by(borrowercompanyid date_quarterly)
+egen count_inst_term = max(count_inst_term_temp), by(borrowercompanyid date_quarterly)
+
+
+drop if count_bank_term >1 & !mi(count_bank_term)
+drop if count_inst_term >1 & !mi(count_inst_term)
+drop if count_rev >1 & !mi(count_rev)
+
+foreach var in discount_1_simple discount_1_controls discount_2_simple discount_2_controls {
+	gen temp_term_disc = `var' if category == "Bank Term" 
+	egen temp_term_disc_sp = max(temp_term_disc), by(borrowercompanyid date_quarterly)
+	gen temp_rev_disc = `var' if category == "Revolver" 
+	egen temp_rev_disc_sp = max(temp_rev_disc), by(borrowercompanyid date_quarterly)
+	*Drop the revolving discount and then recreate it so it is populated for all loans in the quarter x firm
+	drop `var'
+	*Create the term_discount, which will exist 
+	gen term_`var' = temp_term_disc_sp
+	gen rev_`var' = temp_rev_disc_sp
+	drop temp*
+	
+}
+
+*Need to spread the bank term, inst term, revolver, and other spread 
+gen temp_term_sprd = spread if category == "Bank Term" 
+egen term_sprd_sp = max(temp_term_sprd), by(borrowercompanyid date_quarterly)
+gen temp_rev_sprd = spread if category == "Revolver" 
+egen rev_sprd_sp = max(temp_rev_sprd), by(borrowercompanyid date_quarterly)
+gen temp_inst_term_sprd = spread if category == "Inst. Term" 
+egen inst_term_sprd_sp = max(temp_inst_term_sprd), by(borrowercompanyid date_quarterly)
+gen temp_other_sprd = spread if category == "Other" 
+egen other_sprd_sp = max(temp_other_sprd), by(borrowercompanyid date_quarterly)
+
+keep borrowercompanyid rev_discount* term_discount_* *sprd_sp date_quarterly
+duplicates drop
+
+		preserve
+			freduse USRECM BAMLC0A4CBBB BAMLC0A1CAAA, clear
+			rename BAMLC0A4CBBB bbb_spread
+			rename BAMLC0A1CAAA aaa_spread
+			replace bbb_spread = bbb_spread*100
+			replace aaa_spread = aaa_spread*100
+			gen date_quarterly = qofd(daten)
+			collapse (max) USRECM bbb_spread aaa_spread, by(date_quarterly)
+			tsset date_quarterly
+			gen L1_aaa_spread = L.aaa_spread
+			gen L1_bbb_spread = L.bbb_spread
+			gen L2_aaa_spread = L2.aaa_spread
+			gen L2_bbb_spread = L2.bbb_spread
+			gen L3_aaa_spread = L3.aaa_spread
+			gen L3_bbb_spread = L3.bbb_spread
+			gen L4_aaa_spread = L4.aaa_spread
+			gen L4_bbb_spread = L4.bbb_spread
+			keep date_quarterly USRECM *bbb_spread *aaa_spread
+			tempfile rec
+			save `rec', replace
+		restore
+
+		joinby date_quarterly using `rec', unmatched(master)
+		
+*Here we have a dataset identified by borrowercompanyid date_quarterly 
+rename *sprd_sp *sprd
+
+gen diff_rev = inst_term_sprd - rev_sprd
+*br if diff_rev != rev_discount_1_simple
+
+gen diff_bank_term = inst_term_sprd - term_sprd
+*br if diff_bank_term != term_discount_1_simple
+
+*Indeed it is working as expected
+reg diff_rev inst_term_sprd rev_sprd
+reg diff_bank_term term_sprd inst_term_sprd
+
+winsor2 diff_rev diff_bank_term, replace cut(1 99)
+br if diff_rev != rev_discount_1_simple
+	
+
+reg rev_discount_1_simple rev_sprd inst_term_sprd
+reg diff_rev inst_term_sprd rev_sprd
+reg term_discount_1_simple term_sprd inst_term_sprd
+reg diff_bank_term term_sprd inst_term_sprd
+reg diff_bank_term term_sprd inst_term_sprd
+
+
+use "$data_path/dealscan_compustat_loan_level", clear
+br if borrowercompanyid == 163 & date_quarterly == tq(2007q1)
+br if borrowercompanyid == 45 & date_quarterly == tq(2001q3)
+br if borrowercompanyid == 719 & date_quarterly == tq(2011q1)
+
+*Get the aggregate discount series to get discount decomposition
+use "$data_path/dealscan_compustat_loan_level", clear
+		drop if other_loan ==1
+		*Get a sample to keep. Keep if you have an institutional loan and either a rev loan or term loan
+		gen inst_term = category== "Inst. Term"
+		gen noninst_term = category == "Bank Term"
+		egen  rev_loan_max = max(rev_loan), by(borrowercompanyid date_quarterly)
+		egen  inst_term_max = max(inst_term), by(borrowercompanyid date_quarterly)
+		egen  noninst_term_max = max(noninst_term), by(borrowercompanyid date_quarterly)
+		keep if inst_term_max ==1 & (rev_loan_max==1 | noninst_term_max==1)
+			
+		gen loan_type = "other"
+		replace loan_type = "rev" if category == "Revolver"
+		replace loan_type = "bank" if category=="Bank Term"
+		replace loan_type = "institutional" if category=="Inst. Term"
+
+		*Keep only pe of loan per category
+		bys borrowercompanyid date_quarterly category: keep if _n ==1
+		drop category
+		
+		collapse (mean) discount_1_simple spread , by(date_quarterly loan_type)
+		reshape wide discount_1_simple spread, i(date_quarterly) j(loan_type) string
+		tset date_quarterly
+		foreach var in spreadbank spreadinstitutional spreadrev {
+			forval i = 1/4 {
+				gen L`i'_`var' = L`i'.`var'
+			}
+		}
+		reg discount_1_simplerev spreadrev
+		reg discount_1_simplerev spreadrev L1_spreadrev
+		reg discount_1_simplerev spreadrev L1_spreadrev L2_spreadrev 
+		reg discount_1_simplerev spreadrev L1_spreadrev L2_spreadrev L3_spreadrev 
+		reg discount_1_simplerev spreadrev L1_spreadrev L2_spreadrev L3_spreadrev L4_spreadrev
+		
+		reg discount_1_simplerev spreadinstitutional
+		reg discount_1_simplerev spreadinstitutional L1_spreadinstitutional
+		reg discount_1_simplerev spreadinstitutional L1_spreadinstitutional L2_spreadinstitutional 
+		reg discount_1_simplerev spreadinstitutional L1_spreadinstitutional L2_spreadinstitutional L3_spreadinstitutional 
+		reg discount_1_simplerev spreadinstitutional L1_spreadinstitutional L2_spreadinstitutional L3_spreadinstitutional L4_spreadinstitutional
+
+		reg discount_1_simplebank spreadbank
+		reg discount_1_simplebank spreadbank L1_spreadbank
+		reg discount_1_simplebank spreadbank L1_spreadbank L2_spreadbank 
+		reg discount_1_simplebank spreadbank L1_spreadbank L2_spreadbank L3_spreadbank 
+		reg discount_1_simplebank spreadbank L1_spreadbank L2_spreadbank L3_spreadbank L4_spreadbank
+		
+		reg discount_1_simplebank spreadinstitutional
+		reg discount_1_simplebank spreadinstitutional L1_spreadinstitutional
+		reg discount_1_simplebank spreadinstitutional L1_spreadinstitutional L2_spreadinstitutional 
+		reg discount_1_simplebank spreadinstitutional L1_spreadinstitutional L2_spreadinstitutional L3_spreadinstitutional 
+		reg discount_1_simplebank spreadinstitutional L1_spreadinstitutional L2_spreadinstitutional L3_spreadinstitutional L4_spreadinstitutional
+
+*Do a variance decomposition
+use "$data_path/dealscan_compustat_loan_level", clear
+* Collapse data to borrower - date - loantype level
+collapse (mean) spread discount_1_simple, by(borrowercompanyid category date_quarterly cusip_6)
+
+gen loan_type = "other"
+replace loan_type = "rev" if category == "Revolver"
+replace loan_type = "bank" if category=="Bank Term"
+replace loan_type = "institutional" if category=="Inst. Term"
+keep date_quarterly borrowercompanyid discount_1_simple spread loan_type
+
+* Reshape data so it is identified by borrower - loantype
+reshape wide spread discount_1_simple, i(borrowercompanyid date_quarterly) j(loan_type) string
+
+/*
+*Roughly: discount = institutional - revolver
+take covariance => var(discount) = cov(inst,discount) - cov(rev,discount)
+divide by var(discount) => 1 = cov(inst,discount)/var(discount) - cov(rev,discount)/var(discount)
+*Can estiamate (1) by regressing inst. spread on discount and
+(2) by regressing negative revolving spread on discount
+*/
+gen neg_spreadrev = -spreadrev 
+reg spreadinstitutional discount_1_simplerev
+reg neg_spreadrev discount_1_simplerev
+
+gen neg_spreadbank = -spreadbank
+reg spreadinstitutional discount_1_simplebank
+reg neg_spreadbank discount_1_simplebank

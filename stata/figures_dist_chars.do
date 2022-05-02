@@ -231,10 +231,12 @@ foreach var in `loan_vars' {
 
 *Split up the dealscan loans into how many packages have each combination
 use "$data_path/dealscan_compustat_loan_level", clear
+*br if borrowercompanyid == 11649 & date_quarterly == tq(2007q3)
+drop if category == "Other"
 gen rev_loan_cat = (category == "Revolver")
 gen bank_term_loan_cat = (category == "Bank Term")
 gen inst_term_loan_cat = (category == "Inst. Term")
-collapse (max) *_cat, by(borrowercompanyid date_quarterly merge_compustat)
+collapse (sum) facilityamt (max) *_cat, by(borrowercompanyid date_quarterly merge_compustat)
 isid borrowercompanyid date_quarterly
 gen package_type = ""
 replace package_type = "Only Revolver" if rev_loan_cat ==1 & bank_term_loan_cat ==0 & inst_term_loan_cat ==0
@@ -261,5 +263,11 @@ local num_obs = `r(N)'
 graph pie, over(package_type) ///
 allcategories sort(order) ///
 	 graphregion(color(white)) title("Distribution of Loans Packages") ///
-	  note("Number of Packages: `num_obs'" "Loans to the same firm in the same quarter considered to be in the same package") legend(rows(2))
+	  note("Number of Packages: `num_obs'" "Loans to the same firm in the same quarter considered to be in the same package" "Not including other categories of loans") legend(rows(2))
 	graph export "$figures_output_path/package_type_pie.png", replace
+
+graph pie [aweight=facilityamt], over(package_type) ///
+allcategories sort(order) ///
+	 graphregion(color(white)) title("Distribution of Loans Packages - Weighted by Loan Amount") ///
+	  note("Number of Packages: `num_obs'" "Loans to the same firm in the same quarter considered to be in the same package" "Not including categories of loans") legend(rows(2))
+	graph export "$figures_output_path/package_type_pie_wtd.png", replace

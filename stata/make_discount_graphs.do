@@ -125,10 +125,15 @@ foreach measure_type in mean median weighted_avg {
 		gr export "$figures_output_path/time_series_discount_`measure_type'_`sample_type'_rev.png", replace 
 
 		*Make the same graph for both term and revolver loans, but only the first
-		tw  (bar USRECM date_quarterly, color(gs14) lcolor(none)) ///
-		(line discount_1_simple discount_1_controls date_quarterly if category == "Revolver") ///
-		(line discount_1_simple discount_1_controls date_quarterly if category == "Bank Term") , ///
-			legend(order(1 "Recession" 2 "Rev Disc (Simple)" 3 "Rev Disc (Controls)" 4 "Term Disc (Simple)"  5 "Term Disc (Controls)")) ///
+		local recession (bar USRECM date_quarterly, color(gs14) lcolor(none))
+		local rev_discount_simple (line discount_1_simple date_quarterly if category == "Revolver", color(midblue) yaxis(1))
+		local rev_discount_controls (scatter discount_1_controls date_quarterly if category == "Revolver", mcolor(midblue) msymbol(triangle) msize(small) yaxis(1))
+		local term_discount_simple (line discount_1_simple date_quarterly if category == "Bank Term", col(orange) yaxis(1))
+		local term_discount_controls(scatter discount_1_controls date_quarterly if category == "Bank Term", msymbol(triangle) msize(small) mcolor(orange) yaxis(1))
+		
+
+		tw  `recession' `rev_discount_simple' `rev_discount_controls' `term_discount_simple' `term_discount_controls' , ///
+			legend(order(1 "Recession" 2 "Rev Disc (Simple)" 3 "Rev Disc (Controls)" 4 "Term Disc (Simple)"  5 "Term Disc (Controls)") rows(2)) ///
 			title("Discounts Over Time - `title_add'")  ytitle("`measure' Discount (bps) `measure_desc'") 	
 			
 		gr export "$figures_output_path/time_series_discount_`measure_type'_`sample_type'_rev_term.png", replace 
@@ -315,6 +320,60 @@ over(bin) ytitle("Percentage of Discounts in Bin") title("Distribution of Discou
 		graphregion(color(white))  ///
 		legend(order(1 "Rev Discount" 2 "Term Discount") rows(1)) 
 		graph export "$figures_output_path/dist_discount_1_simple_custom.png", replace
+
+*Make a version where I am only keeping observations that have both types of discounts
+
+use "$data_path/dealscan_compustat_loan_level", clear
+
+gen not_mi_discount = !mi(discount_1_simple)
+egen max_not_mi_discount_rev_t = max(not_mi_discount) if category == "Revolver", by(borrowercompanyid date_quarterly)
+egen max_not_mi_discount_term_t = max(not_mi_discount) if category == "Bank Term", by(borrowercompanyid date_quarterly)
+egen max_not_mi_discount_rev = mean(max_not_mi_discount_rev_t), by(borrowercompanyid date_quarterly)
+egen max_not_mi_discount_term = mean(max_not_mi_discount_term_t), by(borrowercompanyid date_quarterly)
+*br borrowercompanyid date_quarterly category discount_1_simple max_not* 
+keep if max_not_mi_discount_rev ==1 & max_not_mi_discount_term==1
+keep if category == "Revolver" | category == "Bank Term"
+drop rev_loan
+local lhs discount_1_simple
+replace `lhs' = 300 if `lhs' >300 & !mi(`lhs')
+
+gen bin = floor(`lhs'/25)
+		
+foreach var in rev term {
+
+	if "`var'" == "rev" {
+		local cond `" & category == "Revolver" "'
+	}
+	if "`var'" == "term" {
+		local cond `" & category == "Bank Term" "'
+	}
+
+	foreach sample_type in all {
+
+		local sample_cond "if 1==1"
+		
+		tempfile file_`var'_`sample_type'
+		preserve
+		table bin `sample_cond' `cond', c(freq) replace
+		ren table1 `var'_`sample_type'_freq
+		egen sum = sum(`var'_`sample_type'_freq)
+		gen `var'_`sample_type'_pct = `var'_`sample_type'_freq / sum *100
+		drop sum
+		save `file_`var'_`sample_type'', replace
+		
+		restore
+	}
+}
+
+use `file_rev_all', clear
+merge 1:1 bin using `file_term_all', nogen
+replace bin = bin*25
+graph bar rev_all_pct term_all_pct , ///
+over(bin) ytitle("Percentage of Discounts in Bin") title("Distribution of Discounts", size(medsmall)) ///
+		note("X-axis number represents lowest discount in bin" "300 bin contains all discounts greater than 300") ///
+		graphregion(color(white))  ///
+		legend(order(1 "Rev Discount" 2 "Term Discount") rows(1)) 
+		graph export "$figures_output_path/dist_discount_1_simple_custom_only_both.png", replace
 
 
 *See fraction 0 over time
