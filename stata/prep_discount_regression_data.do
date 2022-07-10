@@ -16,10 +16,11 @@ gen category_temp = category
 replace category = "Other" if secured == 0 | senior ==0 | asset_based ==1
 
 assert !mi(category)
-
-
+*Create a new "package" id to be used when residualizing
+egen borrower_date_quarterly = group(borrowercompanyid date_quarterly)
 
 sort borrowercompanyid date_quarterly category facilityid
+gen diff_obs = 0
 
 *For each variable that could vary within loan package (borrowercompanyid date_quarterly), get the average by category
 foreach var in spread spread_2 $loan_level_controls {
@@ -27,27 +28,50 @@ foreach var in spread spread_2 $loan_level_controls {
 	gen m_`var'_inst_t = m_`var' if category == "Inst. Term"
 	egen m_`var'_inst = max(m_`var'_inst_t), by(borrowercompanyid date_quarterly)
 	gen diff_`var' = m_`var'- m_`var'_inst if category == "Revolver" | category == "Bank Term"
+	replace diff_obs = 1 if !mi(m_`var') & !mi(m_`var'_inst)
 	drop m_`var'*
 	local var_label: variable label `var'
 	label var diff_`var' "D-`var_label'"
 }
 
+*Get residualized spreads, which will be used to calculate the discount with controls
+*Only calculate on observations where we can calculate a difference
+foreach spreads in spread spread_2 {
+	reg `spreads' $loan_level_controls , absorb(borrower_date_quarterly)
+	predict `spreads'_resid, residual
+}
+foreach var in spread_resid spread_2_resid  {
+	egen m_`var' = mean(`var'), by(borrowercompanyid date_quarterly category)
+	gen m_`var'_inst_t = m_`var' if category == "Inst. Term"
+	egen m_`var'_inst = max(m_`var'_inst_t), by(borrowercompanyid date_quarterly)
+	gen diff_`var' = m_`var'- m_`var'_inst if category == "Revolver" | category == "Bank Term"
+	replace diff_obs = 1 if !mi(m_`var') & !mi(m_`var'_inst)
+	drop m_`var'*
+	local var_label: variable label `var'
+	label var diff_`var' "D-`var_label'"
+}
+
+
 *Now rename the simple discounts
 rename diff_spread discount_1_simple
 rename diff_spread_2 discount_2_simple
+rename diff_spread_resid discount_1_controls
+rename diff_spread_2_resid discount_2_controls
 
 *Want the direction of the discount to be in the right. Discount is inst_spread - bank_spread
 *But want the differences to be the differences between the bank and the institutional - easier to interpret
 replace discount_1_simple = discount_1_simple*-1
 replace discount_2_simple = discount_2_simple*-1
+replace discount_1_controls = discount_1_controls*-1
+replace discount_2_controls = discount_2_controls*-1
 
 *Calculate the discount, residualized for loan level controls
 foreach disc in discount_1 discount_2 {
 	*Regress discount on loan characteristics
-	reg `disc'_simple diff_*
-	predict `disc'_controls, residual
+	reg `disc'_simple diff_* 
+	predict `disc'_controls_diff, residual
 	*Don't want to take out the constant so the level is interpretable
-	replace `disc'_controls =  `disc'_controls + _b[_cons]
+	replace `disc'_controls_diff =  `disc'_controls_diff + _b[_cons]
 }
 
 *label discount
@@ -55,8 +79,11 @@ label var discount_1_simple "Di-1-S"
 label var discount_2_simple "Di-2-S"
 label var discount_1_controls "Di-1-C"
 label var discount_2_controls "Di-2-C"
+label var discount_1_controls_diff "Di-1-C-Diff"
+label var discount_2_controls_diff "Di-2-C-Diff"
 
-		*Make buckets for discount
+
+*Make buckets for discount
 foreach spread_type in standard alternate {
 	if "`spread_type'" == "standard" {
 		local spread_suffix 1
@@ -65,7 +92,7 @@ foreach spread_type in standard alternate {
 		local spread_suffix 2
 	}
 	
-	foreach discount_type in simple controls {
+	foreach discount_type in simple controls controls_diff {
 		
 		gen d_`spread_suffix'_`discount_type'_le_0 = (discount_`spread_suffix'_`discount_type'<-10e-9) 
 		gen d_`spread_suffix'_`discount_type'_0 = (discount_`spread_suffix'_`discount_type'>=-10e-9 & discount_`spread_suffix'_`discount_type' <=10e-9) 
@@ -89,6 +116,8 @@ label var d_1_simple_pos "Di-1-S Pos"
 label var d_2_simple_pos "Di-2-S  Pos"
 label var d_1_controls_pos "Di-1-C  Pos"
 label var d_2_controls_pos "Di-2-C  Pos"
+label var d_1_controls_diff_pos "Di-1-C  Pos"
+label var d_2_controls_diff_pos "Di-2-C  Pos"
 
 *Winsorize Discounts
 winsor2 discount_*, replace cut(1 99)
