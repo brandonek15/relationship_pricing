@@ -39,7 +39,8 @@ preserve
 			}			
 
 			label var discount_1_simple "Disc"
-			local disc_add "All"
+			local cond `"& category =="Revolver""'
+			local disc_add "Rev"
 			foreach rec_type in yes no {
 
 				if "`rec_type'" == "yes" {
@@ -85,7 +86,7 @@ preserve
 							local fe_add "Time,Borr"
 						}
 						
-						reghdfe `lhs' `rhs' `rhs_add' if date_quarterly >=tq(2005q1)  `sample_cond' , a(`fe') vce(cl borrowercompanyid)
+						reghdfe `lhs' `rhs' `rhs_add' if date_quarterly >=tq(2005q1) `cond' `sample_cond' , a(`fe') vce(cl borrowercompanyid)
 						estadd local fe = "`fe_add'"
 						estadd local disc = "`disc_add'"
 						estadd local sample = "`sample_add'"
@@ -846,22 +847,25 @@ use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
 gen constant = 1
 foreach lhs in  discount_1_simple discount_1_controls {
 
+	local cond `"& category =="Revolver""'
+	local disc_add "Rev"
+
 	label var discount_1_simple "Disc"		
 	estimates clear
 	local i =1
 		
 	*Regression 1 Regress discount on constant and
-	reghdfe `lhs' merge_compustat_no_ratings merge_ratings if date_quarterly >=tq(2005q1), absorb(constant) nocons  vce(cl borrowercompanyid)
+	reghdfe `lhs' merge_compustat_no_ratings merge_ratings if date_quarterly >=tq(2005q1) `cond', absorb(constant) nocons  vce(cl borrowercompanyid)
 	estadd local fe = "None"
-	estadd local disc = "All"
+	estadd local disc = "`disc_add'"
 	estadd local sample = "All"
 	estimates store est`i'
 	local ++i
 	/*
 	*Regression 5 - Add pooled prev_rel and switcher_loan (Time FE)
-	reghdfe `lhs' no_prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+	reghdfe `lhs' no_prev_lender switcher_loan if date_quarterly >=tq(2005q1) `cond' , a(date_quarterly) vce(cl borrowercompanyid)
 	estadd local fe = "Time"
-	estadd local disc = "All"
+	estadd local disc = "`disc_add'"
 	estadd local sample = "All"
 	estimates store est`i'
 	local ++i
@@ -869,9 +873,9 @@ foreach lhs in  discount_1_simple discount_1_controls {
 	*Regression 6 - Add interaction to prev_rel and switcher (Time FE)
 	reghdfe `lhs' prev_no_merge_compustat switc_no_merge_compustat ///
 	merge_compustat_no_ratings merge_ratings prev_merge_compustat_no_ratings switc_merge_compustat_no_ratings prev_merge_ratings ///
-	  switc_merge_ratings if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+	  switc_merge_ratings if date_quarterly >=tq(2005q1) `cond' , a(date_quarterly) vce(cl borrowercompanyid)
 	estadd local fe = "Time"
-	estadd local disc = "All"
+	estadd local disc = "`disc_add'"
 	estadd local sample = "All"
 	estimates store est`i'
 	local ++i
