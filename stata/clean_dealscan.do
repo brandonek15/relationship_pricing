@@ -89,11 +89,26 @@ gen institutional_term_loan = 0
 foreach type in B C D E F G H I J K {
 	replace institutional_term_loan = 1 if loantype == "Term Loan `type'"
 }
+
 gen amortizing_term_loan = (loantype == "Term Loan" | loantype == "Term Loan A")
 *Create a generic term loan indicator
 gen term_loan = institutional_term_loan + amortizing_term_loan
 *Create indicitator for other loan that isn't term or revolving credit
 gen other_loan = rev_loan ==0 & term_loan ==0
+
+*Create categories
+gen i_term_loan = term_loan ==1 & institutional ==1
+gen b_term_loan =  term_loan ==1 & institutional ==0
+label var i_term_loan "Inst. Term Loan"
+label var b_term_loan "Bank Term Loan"
+label var rev_loan  "Revolver"
+label var other_loan "Other Loan"
+
+gen category = ""
+replace category = "Revolver" if rev_loan ==1
+replace category = "Inst. Term" if i_term_loan ==1
+replace category = "Bank Term" if b_term_loan ==1 
+replace category = "Other" if other_loan==1
 *Create quarter date variable.
 gen date_quarterly = qofd(facilitystartdate)
 format date_quarterly %tq

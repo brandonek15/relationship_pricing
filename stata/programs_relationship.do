@@ -89,13 +89,18 @@ program define fill_out_skeleton
 	*I am making 6 types of matches. For each type of match, first I merge on the most recent match for each
 	*deal id x lender. Then I get the relevant variables by using the id
 
-	foreach subset_type in equity debt conv rev_loan term_loan other_loan {
-		if "`subset_type'" == "equity" | "`subset_type'" == "debt" | "`subset_type'" == "conv" {
+	foreach subset_type in $sdc_types $ds_types {
+		*If they are derived from SDC, then need to note these
+		local sdc_subset: list local(subset_type) in global(sdc_types)
+		local ds_subset: list local(subset_type) in global(ds_types)
+
+		local ds_subset: list local(subset_type) in global(ds_types)
+		if `sdc_subset' ==1 {
 			local subset_deal_data "$data_path/sdc_all_clean"
 			local subset_id sdc_deal_id
 			local merge_vars `sdc_vars'
 		}
-		else if "`subset_type'" == "rev_loan" | "`subset_type'" == "term_loan" | "`subset_type'" == "other_loan" {
+		else if `ds_subset' ==1 {
 			local subset_deal_data "$data_path/stata_temp/dealscan_discounts_facilityid"
 			local subset_id facilityid
 			local merge_vars `ds_vars'
@@ -114,7 +119,7 @@ program define fill_out_skeleton
 		drop _merge
 
 		*If I am dealing with ds data, want to merge on data about lender
-		if "`subset_type'" == "rev_loan" | "`subset_type'" == "term_loan" | "`subset_type'" == "other_loan" {
+		if `ds_subset' ==1 {
 			*We will also merge on lender information
 			merge m:1 `subset_id' lender using "$data_path/dealscan_facility_lender_level", ///
 			keepusing(`ds_lender_vars') keep(1 3) nogen
@@ -123,7 +128,6 @@ program define fill_out_skeleton
 		else {
 			local rename_add 
 		}
-		di "got here"
 		*Make them missing again
 		replace `subset_id' = . if `subset_id'==-1
 		*Rename all of the variables with the suffix _`subset_type'
@@ -142,8 +146,13 @@ cap program drop prepare_rel_dataset
 program define prepare_rel_dataset
 	args sdc_vars ds_vars ds_lender_vars
 	
+	local relationships
+	foreach subset_type in $sdc_types $ds_types {
+		local relationships `relationships' rel_`subset_type'
+	}
+	
 	*Create past relationship dummy and FEs
-	egen past_relationship = rowmax(rel_equity rel_debt rel_conv rel_rev_loan rel_term_loan rel_other_loan)
+	egen past_relationship = rowmax(`relationships')
 	label var past_relationship "Rel."
 	gen constant = 1
 	egen cusip_6_lender = group(cusip_6 lender)
@@ -155,8 +164,9 @@ program define prepare_rel_dataset
 	label var rel_debt "Rel. Debt"
 	label var rel_conv "Rel. Convertible"
 	label var rel_rev_loan "Rel. Revolver"
-	label var rel_term_loan "Rel. Term Loan"
+	label var rel_b_term_loan "Rel. Term Loan"
 	label var rel_other_loan "Rel. Other Loan"
+	label var rel_i_term_loan "Rel. Inst. Term Loan"
 	
 	*Make labels for lhs variables
 	cap label var discount_1_simple_base "Disc"
@@ -169,7 +179,7 @@ program define prepare_rel_dataset
 	*Create some interaction variables. These are 0 if there is no previous relationship (or it is missing), and the value otherwise
 	*Note in specifications, having the relationship dummy is all we need whenever the variable is never missing, but we also need to
 	*add the missing dummy if it is missing when the relationships exists (e.g. discount_1_simple)
-	foreach ds_type in rev_loan term_loan other_loan {
+	foreach ds_type in $ds_types {
 
 		foreach ds_inter_var in `ds_vars' `ds_lender_vars' days_after_match {
 			
@@ -254,16 +264,8 @@ program define prepare_rel_dataset
 				if "`ds_inter_var'" == "days_after_match" {
 					local label "Days Between Rel."
 				}
-					
-				if "`ds_type'" == "rev_loan" {
-					local type_name "rev"
-				}
-				if "`ds_type'" == "term_loan" {
-					local type_name "term"
-				}
-				if "`ds_type'" == "other_loan" {
-					local type_name "other"
-				}
+				
+				local type_name = substr("`ds_type'",1,length("`ds_type'")-5)
 			
 				gen i_`ds_inter_var'_`type_name' = 0
 				replace i_`ds_inter_var'_`type_name' = `ds_inter_var'_`ds_type'*rel_`ds_type' if !mi(`ds_inter_var'_`ds_type')
@@ -278,7 +280,7 @@ program define prepare_rel_dataset
 
 	}
 
-	foreach sdc_type in debt equity conv {
+	foreach sdc_type in $sdc_types {
 
 		foreach sdc_inter_var in `sdc_vars' days_after_match {
 

@@ -37,3 +37,6 @@ global lower_cut_wins 2.5
 global upper_cut_wins 97.5
 
 global run_big_data_code 1
+
+global sdc_types equity debt conv
+global ds_types rev_loan b_term_loan i_term_loan other_loan

@@ -16,7 +16,7 @@ use "$data_path/stata_temp/skeleton_ds_`n_lenders'", clear
 *Type is either SDC or DS (it is what the baseline structure of the skeleton is made of)
 local type "ds"
 *base_vars are the variables you want about the current observation (meaning the deal/loan is the unit)
-local base_vars borrowercompanyid rev_loan term_loan other_loan spread discount_1_simple discount_1_controls d_1_simple_pos d_1_controls_pos log_facilityamt maturity
+local base_vars borrowercompanyid $ds_types spread discount_1_simple discount_1_controls d_1_simple_pos d_1_controls_pos log_facilityamt maturity
 *sdc_vars are the variables you want from the most recent equity,debt,conv offerings
 local sdc_vars gross_spread_perc proceeds log_proceeds
 *ds_vars are the variables you want from the most recent term,rev,other loans 

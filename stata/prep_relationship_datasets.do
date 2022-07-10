@@ -18,17 +18,17 @@ foreach base_type in "sdc" "ds" {
 *First need to prepare datasets for joining on cusip_6 lender." Will eventually do joinbys to do the matches.
 *Make SDC ones first. ONly contain the cusip_6 lender and sdc_deal_id
 use "$data_path/sdc_deal_bookrunner", clear
-merge m:1 sdc_deal_id using "$data_path/sdc_all_clean", keepusing(equity debt conv) keep(3) nogen
-foreach sdc_type in equity debt conv {
+merge m:1 sdc_deal_id using "$data_path/sdc_all_clean", keepusing($sdc_types) keep(3) nogen
+foreach sdc_type in $sdc_types {
 	preserve
 		keep if `sdc_type' ==1
-		drop equity debt conv
+		drop $sdc_types
 		save "$data_path/stata_temp/sdc_deal_bookrunner_`sdc_type'" , replace
 	restore	
 }
 *Make the Dealscan datasets. Only contains the cusip_6 lender and facilityid
 use "$data_path/lender_facilityid_cusip6", clear
-merge m:1 facilityid using "$data_path/stata_temp/dealscan_discounts_facilityid", keepusing(rev_loan term_loan other_loan) keep(3) nogen
+merge m:1 facilityid using "$data_path/stata_temp/dealscan_discounts_facilityid", keepusing($ds_types) keep(3) nogen
 *Only want to keep lead arrangers in the dataset as a part of the relationship - don't have relationships with everyone
 merge m:1 facilityid lender using "$data_path/dealscan_facility_lender_level", ///
 keepusing(lead_arranger_credit) keep(1 3) nogen
@@ -36,10 +36,10 @@ keep if lead_arranger_credit ==1
 drop lead_arranger_credit
 
 *Consider changing the term_loan to not include institutional term loans?
-foreach ds_type in rev_loan term_loan other_loan {
+foreach ds_type in $ds_types {
 	preserve
 		keep if `ds_type' ==1
-		drop rev_loan term_loan other_loan
+		drop $ds_types
 		save "$data_path/stata_temp/lender_facilityid_cusip6_`ds_type'", replace
 	restore	
 }
@@ -66,18 +66,23 @@ foreach base_type in sdc ds {
 	rename date_daily date_daily_base
 	rename `id' `id'_base
 	*I am making 6 types of matches,
-	foreach subset_type in equity debt conv rev_loan term_loan other_loan {
+	foreach subset_type in $sdc_types $ds_types {
 		*If they are derived from SDC, then need to note these
-		if "`subset_type'" == "equity" | "`subset_type'" == "debt" | "`subset_type'" == "conv" {
+		local sdc_subset: list local(subset_type) in global(sdc_types)
+		local ds_subset: list local(subset_type) in global(ds_types)
+
+		local ds_subset: list local(subset_type) in global(ds_types)
+		if `sdc_subset' ==1 {
 			local subset_match_data "$data_path/stata_temp/sdc_deal_bookrunner_`subset_type'"
 			local subset_deal_data "$data_path/sdc_all_clean"
 			local subset_id sdc_deal_id
 		}
-		else if "`subset_type'" == "rev_loan" | "`subset_type'" == "term_loan" | "`subset_type'" == "other_loan" {
+		else if `ds_subset' ==1 {
 			local subset_match_data "$data_path/stata_temp/lender_facilityid_cusip6_`subset_type'"
 			local subset_deal_data "$data_path/stata_temp/dealscan_discounts_facilityid"
 			local subset_id facilityid
 		}
+
 		preserve
 			*Get matches
 			joinby lender cusip_6 using  `subset_match_data' , unmatched(none)
@@ -107,13 +112,3 @@ foreach base_type in sdc ds {
 	}
 
 }
-/*
-use "$data_path/sdc_all_clean", clear
-isid sdc_deal_id
-use "$data_path/stata_temp/dealscan_discounts_facilityid", clear
-isid facilityid
-use "$data_path/sdc_deal_bookrunner", clear
-isid sdc_deal_id lender
-use "$data_path/lender_facilityid_cusip6", clear
-isid facilityid lender
-*/
