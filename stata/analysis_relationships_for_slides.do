@@ -4,8 +4,18 @@
 use "$data_path/sdc_deals_with_past_relationships_20", clear
 append using "$data_path/ds_lending_with_past_relationships_20"
 
-egen sdc_obs = rowmax(equity_base debt_base conv_base)
-egen ds_obs = rowmax(rev_loan_base term_loan_base other_loan_base)
+local sdc_obs_types
+foreach sdc in $sdc_types {
+	local sdc_obs_types `sdc_obs_types' `sdc'_base
+}
+local ds_obs_types
+foreach ds in $ds_types {
+	local ds_obs_types `ds_obs_types' `ds'_base
+}
+
+
+egen sdc_obs = rowmax(`sdc_obs_types')
+egen ds_obs = rowmax(`ds_obs_types')
 *Date quarterly
 gen date_quarterly = qofd(date_daily)
 format date_quarterly %tq
@@ -86,9 +96,9 @@ preserve
 
 				}
 				
-				*esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_all`suffix_add'`rhs_suffix_add'_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
-				*title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
-				*addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
+				esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_all`suffix_add'`rhs_suffix_add'_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+				title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
+				addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
 			}
 		}
 	}
@@ -135,19 +145,19 @@ foreach table_type in  simple controls {
 			local fe_scalar_add "T"
 		}
 		
-		reghdfe `lhs' past_relationship `rhs_add' if (rev_loan_base ==1 | term_loan_base==1) & hire !=0 , absorb(`fe_add') vce(cl cusip_6)
+		reghdfe `lhs' past_relationship `rhs_add' if (rev_loan_base ==1 | b_term_loan_base==1) & hire !=0 , absorb(`fe_add') vce(cl cusip_6)
 		estadd local fe = "`fe_scalar_add'"
 		estadd local sample = "All Discounts"
 		estimates store est`i'
 		local ++i
 		/*
-		reghdfe `lhs' past_relationship `rhs_add' `cond' if (rev_loan_base ==1 | term_loan_base==1) & hire !=0, absorb(`fe_add' lender) vce(cl cusip_6)
+		reghdfe `lhs' past_relationship `rhs_add' `cond' if (rev_loan_base ==1 | b_term_loan_base==1) & hire !=0, absorb(`fe_add' lender) vce(cl cusip_6)
 		estadd local fe = "`fe_scalar_add',L"
 		estadd local sample = "All Discounts"
 		estimates store est`i'
 		local ++i
 		*/
-		reghdfe `lhs' rel_* `rhs_add' `cond' if (rev_loan_base ==1 | term_loan_base==1) & hire !=0, absorb(`fe_add') vce(cl cusip_6)
+		reghdfe `lhs' rel_* `rhs_add' `cond' if (rev_loan_base ==1 | b_term_loan_base==1) & hire !=0, absorb(`fe_add') vce(cl cusip_6)
 		estadd local fe = "`fe_scalar_add'"
 		estadd local sample = "All Discounts"
 		estimates store est`i'
@@ -169,17 +179,17 @@ local i = 1
 
 foreach lhs in d_1_simple_pos_base d_1_controls_pos_base {
 	
-	reghdfe `lhs' past_relationship if (rev_loan_base ==1 | term_loan_base==1) & hire !=0 , absorb(date_quarterly) vce(cl cusip_6)
+	reghdfe `lhs' past_relationship if (rev_loan_base ==1 | b_term_loan_base==1) & hire !=0 , absorb(date_quarterly) vce(cl cusip_6)
 	estadd local fe = "T"
 	estadd local sample = "All Discounts"
 	estimates store est`i'
 	local ++i
-	reghdfe `lhs' past_relationship  if (rev_loan_base ==1 | term_loan_base==1) & hire !=0, absorb(date_quarterly lender) vce(cl cusip_6)
+	reghdfe `lhs' past_relationship  if (rev_loan_base ==1 | b_term_loan_base==1) & hire !=0, absorb(date_quarterly lender) vce(cl cusip_6)
 	estadd local fe = "T,L"
 	estadd local sample = "All Discounts"
 	estimates store est`i'
 	local ++i
-	reghdfe `lhs' rel_*  if (rev_loan_base ==1 | term_loan_base==1) & hire !=0, absorb(date_quarterly lender) vce(cl cusip_6)
+	reghdfe `lhs' rel_*  if (rev_loan_base ==1 | b_term_loan_base==1) & hire !=0, absorb(date_quarterly lender) vce(cl cusip_6)
 	estadd local fe = "T,L"
 	estadd local sample = "All Discounts"
 	estimates store est`i'
@@ -200,11 +210,11 @@ local fe_local "None"
 foreach table in sdc ds {
 
 	if "`table'" == "sdc" {
-		local lhs all_sdc equity debt conv
+		local lhs all_sdc $sdc_types
 		local notes_add "SDC deal x lender"
 	}
 	if "`table'" == "ds" {
-		local lhs all_ds  term rev other
+		local lhs all_ds  $ds_types
 		local notes_add "Dealscan loan x lender"
 	}
 	
@@ -217,6 +227,7 @@ foreach table in sdc ds {
 			local cond "if sdc_obs==1" 
 			local scalar_label "All Securities"
 		}
+		
 		if "`type'" == "equity" {
 			local cond "if `type' ==1" 
 			local scalar_label "Equity Issuance"
@@ -233,13 +244,17 @@ foreach table in sdc ds {
 			local cond "if ds_obs==1" 
 			local scalar_label "All Loans"
 		}
-		if "`type'" == "term" {
+		if "`type'" == "b_term" {
 			local cond "if `type'_loan ==1" 
-			local scalar_label "Term Loans"
+			local scalar_label "Bank Term Loans"
 		}
 		if "`type'" == "rev" {
 			local cond "if `type'_loan ==1" 
 			local scalar_label "Rev Loans"
+		}
+		if "`type'" == "i_term" {
+			local cond "if `type'_loan ==1" 
+			local scalar_label "Inst. Term Loans"
 		}
 		if "`type'" == "other" {
 			local cond "if `type'_loan ==1" 
@@ -278,7 +293,7 @@ foreach table_type in  simple controls {
 	local absorb constant
 	local fe_local "None"
 
-	foreach type in all_sdc all_ds equity debt term rev {
+	foreach type in all_sdc all_ds equity debt b_term rev {
 
 		if "`type'" == "all_sdc" {
 			local cond "if sdc_obs==1" 
@@ -316,11 +331,11 @@ foreach table_type in  simple controls {
 foreach table in sdc ds {
 
 	if "`table'" == "sdc" {
-		local lhs all_sdc equity debt conv
+		local lhs all_sdc $sdc_types
 		local notes_add "SDC deal x lender"
 	}
 	if "`table'" == "ds" {
-		local lhs all_ds  term rev other
+		local lhs all_ds $ds_types
 		local notes_add "Dealscan loan x lender"
 	}
 	foreach table_type in  simple controls {
@@ -363,9 +378,13 @@ foreach table in sdc ds {
 				local cond "if ds_obs==1" 
 				local scalar_label "All Loans"
 			}
-			if "`type'" == "term" {
+			if "`type'" == "b_term" {
 				local cond "if `type'_loan ==1" 
-				local scalar_label "Term Loans"
+				local scalar_label "Bank Term Loans"
+			}
+			if "`type'" == "i_term" {
+				local cond "if `type'_loan ==1" 
+				local scalar_label "Inst. Term Loans"
 			}
 			if "`type'" == "rev" {
 				local cond "if `type'_loan ==1" 
@@ -384,7 +403,7 @@ foreach table in sdc ds {
 		}
 
 		esttab est* using "$regression_output_path/regressions_inten_ds_chars_pos_`table'`table_suffix_add'_slides.tex", ///
-		replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) keep(i_d_1_*_rev i_d_1_*_term) ///
+		replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) keep(i_d_1_*_rev i_d_1_*_b_term) ///
 		title("Likelihood of hiring after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
 		addnotes("Table suppresses past relationship indicators and other loan characteristics"  "Observation is `notes_add'" ///
 		"Hire indicator either 0 or 100 for readability" "SEs clustered at firm level" )
@@ -404,14 +423,14 @@ foreach table_type in  simple controls {
 		local table_suffix_add "_controls"
 	}
 
-	local drop_add mi_* rel_* *_other
+	local drop_add mi_* rel_* *_other *_i_term
 	local absorb constant
 	local fe_local "None"
 
 	estimates clear
 	local i = 1
 
-	foreach type in all_sdc all_ds equity debt term rev {
+	foreach type in all_sdc all_ds equity debt b_term rev {
 
 		if "`type'" == "all_sdc" {
 			local cond "if sdc_obs==1" 
@@ -425,7 +444,7 @@ foreach table_type in  simple controls {
 		if "`type'" == "debt" {
 			local cond "if `type' ==1" 
 		}
-		if "`type'" == "term" {
+		if "`type'" == "b_term" {
 			local cond "if `type'_loan ==1" 
 		}
 		if "`type'" == "rev" {
@@ -440,7 +459,7 @@ foreach table_type in  simple controls {
 	}
 
 	esttab est* using "$regression_output_path/regressions_inten_ds_chars_bins_rev_disp`table_suffix_add'_slides.tex", ///
-	replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons *_term `drop_add') ///
+	replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons *_b_term `drop_add') ///
 	title("Likelihood of hiring after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
 	addnotes("Table suppresses past relationship indicators and Other Loan characteristics"  "Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" ///
 	"Hire indicator either 0 or 100 for readability" "SEs clustered at firm level" )
@@ -457,7 +476,7 @@ local drop_add
 estimates clear
 local i = 1
 
-foreach type in all_sdc all_ds equity debt term rev {
+foreach type in all_sdc all_ds equity debt b_term rev {
 
 	if "`type'" == "all_sdc" {
 		local cond "if sdc_obs==1" 
@@ -479,7 +498,7 @@ foreach type in all_sdc all_ds equity debt term rev {
 		local lhs spread_base 
 		local rhs_add maturity_base log_facilityamt_base
 	}
-	if "`type'" == "term" {
+	if "`type'" == "b_term" {
 		local cond "if `type'_loan_base ==1" 
 		local lhs spread_base 
 		local rhs_add maturity_base log_facilityamt_base
@@ -513,7 +532,7 @@ local fe_local "None"
 estimates clear
 local i = 1
 
-foreach type in all_sdc all_ds equity debt term rev {
+foreach type in all_sdc all_ds equity debt b_term rev {
 
 	if "`type'" == "all_sdc" {
 		local cond "if sdc_obs==1" 
@@ -535,7 +554,7 @@ foreach type in all_sdc all_ds equity debt term rev {
 		local lhs spread_base 
 		local rhs_add maturity_base log_facilityamt_base
 	}
-	if "`type'" == "term" {
+	if "`type'" == "b_term" {
 		local cond "if `type'_loan_base ==1" 
 		local lhs spread_base 
 		local rhs_add maturity_base log_facilityamt_base
@@ -570,7 +589,7 @@ local fe_local "None"
 estimates clear
 local i = 1
 
-foreach type in all_sdc all_ds equity debt term rev {
+foreach type in all_sdc all_ds equity debt b_term rev {
 
 	if "`type'" == "all_sdc" {
 		local cond "if sdc_obs==1" 
@@ -592,7 +611,7 @@ foreach type in all_sdc all_ds equity debt term rev {
 		local lhs spread_base 
 		local rhs_add maturity_base log_facilityamt_base
 	}
-	if "`type'" == "term" {
+	if "`type'" == "b_term" {
 		local cond "if `type'_loan_base ==1" 
 		local lhs spread_base 
 		local rhs_add maturity_base log_facilityamt_base
@@ -612,7 +631,7 @@ foreach type in all_sdc all_ds equity debt term rev {
 
 
 esttab est* using "$regression_output_path/regressions_exten_pricing_ds_chars_bins_rev_disp_slides.tex", ///
-replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons *_term `drop_add') ///
+replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons *_b_term `drop_add') ///
 title("Pricing After Previous Loan Characteristics") scalars("fe Fixed Effects" "sample Sample" ) ///
 addnotes("Table suppresses past relationship indicators and Other Loan characteristics" ///
   "Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" "SEs clustered at firm level" )
@@ -633,7 +652,7 @@ local fe_local "None"
 estimates clear
 local i = 1
 
-foreach type in all_sdc all_ds equity debt term rev {
+foreach type in all_sdc all_ds equity debt b_term rev {
 
 	if "`type'" == "all_sdc" {
 		local cond "if sdc_obs==1" 
@@ -655,7 +674,7 @@ foreach type in all_sdc all_ds equity debt term rev {
 		local lhs log_facilityamt_base
 		local rhs_add maturity_base 
 	}
-	if "`type'" == "term" {
+	if "`type'" == "b_term" {
 		local cond "if `type'_loan_base ==1" 
 		local lhs log_facilityamt_base
 		local rhs_add maturity_base 
@@ -675,7 +694,7 @@ foreach type in all_sdc all_ds equity debt term rev {
 
 
 esttab est* using "$regression_output_path/regressions_exten_amt_ds_chars_bins_rev_disp_slides.tex", ///
-replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons *_term `drop_add') ///
+replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons *_b_term `drop_add') ///
 title("Pricing After Previous Loan Characteristics") scalars("fe Fixed Effects" "sample Sample" ) ///
 addnotes("Table suppresses past relationship indicators and Other Loan characteristics" ///
   "Observation is SDC deal x lender or DS loan x lender" "Sample is 20 largest lenders x each deal/loan" "SEs clustered at firm level" )
@@ -715,7 +734,7 @@ foreach lhs in discount_1_simple discount_1_controls {
 			local cond `"if category =="Revolver""'
 			local sample_add "Rev"
 		}
-		if "`discount_type'" == "term" {
+		if "`discount_type'" == "b_term" {
 			local cond `"if category =="Bank Term""'
 			local sample_add "Term"
 		}
@@ -784,7 +803,7 @@ foreach discount_type in all {
 			local cond `"if category =="Revolver""'
 			local sample_add "Rev"
 		}
-		if "`discount_type'" == "term" {
+		if "`discount_type'" == "b_term" {
 			local cond `"if category =="Bank Term""'
 			local sample_add "Term"
 		}

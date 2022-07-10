@@ -37,9 +37,9 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars ds_chars_bins
 	local i = 1
 
 	
-	foreach type in all term rev {
+	foreach type in all b_term rev {
 
-		if "`type'" == "term" {
+		if "`type'" == "b_term" {
 			local cond "if `type'_loan ==1" 
 		}
 		if "`type'" == "rev" {
@@ -134,9 +134,9 @@ foreach lhs in log_facilityamt_base spread_base discount_1_simple_base {
 		local i = 1
 
 		
-		foreach type in all term rev {
+		foreach type in all b_term rev {
 
-			if "`type'" == "term" {
+			if "`type'" == "b_term" {
 				local cond "if `type'_loan_base ==1" 
 			}
 			if "`type'" == "rev" {

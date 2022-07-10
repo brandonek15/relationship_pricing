@@ -43,6 +43,3 @@ do "$code_path/analysis_relationships_for_slides.do"
 *Relationship Analysis
 do "$code_path/analysis_sdc_issuance_relationship.do"
 do "$code_path/analysis_ds_lending_relationship.do"
-
-*Rerun after clean_dealscan
-*Make sure prep_relationship_datasets and create_sdc / create_ds work
