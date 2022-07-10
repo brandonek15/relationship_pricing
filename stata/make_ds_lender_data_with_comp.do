@@ -58,6 +58,9 @@ gen first_loan = date_quarterly == min_date_quarterly
 label var first_loan "First Loan"
 rename max_prev_lender prev_lender
 label var prev_lender "Prev Lending Relationship"
+*Create the opposite dummy
+gen no_prev_lender = 1 - prev_lender
+label var no_prev_lender "No Prev Lending Relationship"
 gen switcher_loan = (first_loan ==0 & prev_lender==0)
 label var switcher_loan "Switching Lender"
 assert first_loan + prev_lender + switcher_loan ==1
@@ -79,6 +82,8 @@ drop _merge
 *Make recession interactions
 gen prev_lender_rec = USRECM * prev_lender
 label var prev_lender_rec "Rec x Prev Lending Relationship"
+gen no_prev_lender_rec = USRECM * no_prev_lender
+label var no_prev_lender_rec "Rec x No Prev Lending Relationship"
 gen first_loan_rec = USRECM * first_loan
 label var first_loan_rec "Rec x First Loan"
 gen switcher_loan_rec = USRECM * switcher_loan

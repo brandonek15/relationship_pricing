@@ -28,12 +28,12 @@ preserve
 		foreach rhs_type in pooled split {
 		
 			if "`rhs_type'" == "pooled" {
-				local rhs prev_lender
+				local rhs no_prev_lender
 				local rhs_suffix_add 
 				local rhs_extra
 			}
 			if "`rhs_type'" == "split" {
-				local rhs prev_lender switcher_loan
+				local rhs first_loan switcher_loan
 				local rhs_suffix_add _stay_leave
 				local rhs_extra switcher_loan_rec
 			}			
@@ -43,7 +43,7 @@ preserve
 			foreach rec_type in yes no {
 
 				if "`rec_type'" == "yes" {
-					local rhs_add prev_lender_rec `rhs_extra'
+					local rhs_add no_prev_lender_rec `rhs_extra'
 					local suffix_add _rec
 					local fes time 
 				}
@@ -859,7 +859,7 @@ foreach lhs in  discount_1_simple discount_1_controls {
 	local ++i
 	/*
 	*Regression 5 - Add pooled prev_rel and switcher_loan (Time FE)
-	reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+	reghdfe `lhs' no_prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
 	estadd local fe = "Time"
 	estadd local disc = "All"
 	estadd local sample = "All"

@@ -1,6 +1,6 @@
 use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
 foreach lhs in discount_1_simple discount_1_controls {
-	foreach discount_type in rev term all  {
+	foreach discount_type in rev b_term all  {
 
 		if "`discount_type'" == "rev" {
 			local cond `"if category =="Revolver""'
@@ -8,7 +8,7 @@ foreach lhs in discount_1_simple discount_1_controls {
 		}
 		if "`discount_type'" == "term" {
 			local cond `"if category =="Bank Term""'
-			local disc_add "Term"
+			local disc_add "B Term"
 		}
 		if "`discount_type'" == "all" {
 			local cond `"if 1==1"'
@@ -17,7 +17,7 @@ foreach lhs in discount_1_simple discount_1_controls {
 		foreach rec_type in yes no {
 		
 			if "`rec_type'" == "yes" {
-				local rhs_add prev_lender_rec
+				local rhs_add no_prev_lender_rec
 				local suffix_add _rec
 			}
 			if "`rec_type'" == "no" {
@@ -56,7 +56,7 @@ foreach lhs in discount_1_simple discount_1_controls {
 						local fe_add "Time,Borr"
 					}
 					
-					reghdfe `lhs' prev_lender `rhs_add' `cond' `sample_cond' &date_quarterly >=tq(2005q1), a(`fe') vce(cl borrowercompanyid)
+					reghdfe `lhs' no_prev_lender `rhs_add' `cond' `sample_cond' &date_quarterly >=tq(2005q1), a(`fe') vce(cl borrowercompanyid)
 					estadd local fe = "`fe_add'"
 					estadd local disc = "`disc_add'"
 					estadd local sample = "`sample_add'"
@@ -75,15 +75,15 @@ foreach lhs in discount_1_simple discount_1_controls {
 
 use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
 gen count = 1
-foreach discount_type in rev term all  {
+foreach discount_type in rev b_term all  {
 
 	if "`discount_type'" == "rev" {
 		local cond `"keep if category =="Revolver""'
 		local disc_add "Rev"
 	}
-	if "`discount_type'" == "term" {
+	if "`discount_type'" == "b_term" {
 		local cond `"keep if category =="Bank Term""'
-		local disc_add "Term"
+		local disc_add "B Term"
 	}
 	if "`discount_type'" == "all" {
 		local cond `"keep if 1==1"'
