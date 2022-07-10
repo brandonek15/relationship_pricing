@@ -30,12 +30,12 @@ preserve
 			if "`rhs_type'" == "pooled" {
 				local rhs no_prev_lender
 				local rhs_suffix_add 
-				local rhs_extra
+				local rhs_extra no_prev_lender_rec
 			}
 			if "`rhs_type'" == "split" {
 				local rhs first_loan switcher_loan
 				local rhs_suffix_add _stay_leave
-				local rhs_extra switcher_loan_rec
+				local rhs_extra first_loan_rec switcher_loan_rec
 			}			
 
 			label var discount_1_simple "Disc"
@@ -44,7 +44,7 @@ preserve
 			foreach rec_type in yes no {
 
 				if "`rec_type'" == "yes" {
-					local rhs_add no_prev_lender_rec `rhs_extra'
+					local rhs_add `rhs_extra'
 					local suffix_add _rec
 					local fes time 
 				}
@@ -215,7 +215,8 @@ foreach table in sdc ds {
 		local notes_add "SDC deal x lender"
 	}
 	if "`table'" == "ds" {
-		local lhs all_ds  $ds_types
+		
+		local lhs all_ds $ds_types
 		local notes_add "Dealscan loan x lender"
 	}
 	
@@ -223,7 +224,6 @@ foreach table in sdc ds {
 	local i = 1
 
 	foreach type in  `lhs'  {
-
 		if "`type'" == "all_sdc" {
 			local cond "if sdc_obs==1" 
 			local scalar_label "All Securities"
@@ -245,20 +245,20 @@ foreach table in sdc ds {
 			local cond "if ds_obs==1" 
 			local scalar_label "All Loans"
 		}
-		if "`type'" == "b_term" {
-			local cond "if `type'_loan ==1" 
+		if "`type'" == "b_term_loan" {
+			local cond "if `type' ==1" 
 			local scalar_label "Bank Term Loans"
 		}
-		if "`type'" == "rev" {
-			local cond "if `type'_loan ==1" 
+		if "`type'" == "rev_loan" {
+			local cond "if `type' ==1" 
 			local scalar_label "Rev Loans"
 		}
-		if "`type'" == "i_term" {
-			local cond "if `type'_loan ==1" 
+		if "`type'" == "i_term_loan" {
+			local cond "if `type' ==1" 
 			local scalar_label "Inst. Term Loans"
 		}
-		if "`type'" == "other" {
-			local cond "if `type'_loan ==1" 
+		if "`type'" == "other_loan" {
+			local cond "if `type' ==1" 
 			local scalar_label "Other Loans"
 		}
 		
@@ -308,7 +308,7 @@ foreach table_type in  simple controls {
 		if "`type'" == "debt" {
 			local cond "if `type' ==1" 
 		}
-		if "`type'" == "term" {
+		if "`type'" == "b_term" {
 			local cond "if `type'_loan ==1" 
 		}
 		if "`type'" == "rev" {
@@ -379,20 +379,20 @@ foreach table in sdc ds {
 				local cond "if ds_obs==1" 
 				local scalar_label "All Loans"
 			}
-			if "`type'" == "b_term" {
-				local cond "if `type'_loan ==1" 
+			if "`type'" == "b_term_loan" {
+				local cond "if `type' ==1" 
 				local scalar_label "Bank Term Loans"
 			}
-			if "`type'" == "i_term" {
-				local cond "if `type'_loan ==1" 
+			if "`type'" == "i_term_loan" {
+				local cond "if `type' ==1" 
 				local scalar_label "Inst. Term Loans"
 			}
-			if "`type'" == "rev" {
-				local cond "if `type'_loan ==1" 
+			if "`type'" == "rev_loan" {
+				local cond "if `type' ==1" 
 				local scalar_label "Rev Loans"
 			}
-			if "`type'" == "other" {
-				local cond "if `type'_loan ==1" 
+			if "`type'" == "other_loan" {
+				local cond "if `type' ==1" 
 				local scalar_label "Other Loans"
 			}
 			
@@ -729,7 +729,7 @@ local firm_chars `firm_chars' `firm_char_add'
 
 foreach lhs in discount_1_simple discount_1_controls {
 
-	foreach discount_type in all  {
+	foreach discount_type in rev  {
 
 		if "`discount_type'" == "rev" {
 			local cond `"if category =="Revolver""'
@@ -794,7 +794,7 @@ use "$data_path/dealscan_compustat_loan_level", clear
 label var discount_1_simple "Disc"
 label var discount_1_controls "Di-controls"
 
-foreach discount_type in all {
+foreach discount_type in rev {
 	
 	estimates clear
 	local i =1
@@ -871,8 +871,8 @@ foreach lhs in  discount_1_simple discount_1_controls {
 	local ++i
 	*/
 	*Regression 6 - Add interaction to prev_rel and switcher (Time FE)
-	reghdfe `lhs' prev_no_merge_compustat switc_no_merge_compustat ///
-	merge_compustat_no_ratings merge_ratings prev_merge_compustat_no_ratings switc_merge_compustat_no_ratings prev_merge_ratings ///
+	reghdfe `lhs' first_no_merge_compustat switc_no_merge_compustat ///
+	merge_compustat_no_ratings merge_ratings first_merge_compustat_no_ratings switc_merge_compustat_no_ratings prev_merge_ratings ///
 	  switc_merge_ratings if date_quarterly >=tq(2005q1) `cond' , a(date_quarterly) vce(cl borrowercompanyid)
 	estadd local fe = "Time"
 	estadd local disc = "`disc_add'"

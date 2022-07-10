@@ -42,7 +42,7 @@ drop if mi(borrowercompanyid)
 bys borrowercompanyid lender (date_quarterly facilityid): replace prev_lender = 1 if lender[_n] == lender[_n-1] & date_quarterly[_n] != date_quarterly[_n-1]
 bys borrowercompanyid lender (date_quarterly facilityid): replace prev_lender = 1 if prev_lender[_n-1] == 1
 egen max_prev_lender = max(prev_lender), by(facilityid)
-br facilityid borrowercompanyid lender prev_lender max_prev_lender date_quarterly
+*br facilityid borrowercompanyid lender prev_lender max_prev_lender date_quarterly
 sort borrowercompanyid facilityid date_quarterly
 *sort borrowercompanyid lender date_quarterly facilityid
 *br borrowercompanyid lender date_quarterly facilityid prev_lender
@@ -91,11 +91,13 @@ label var switcher_loan_rec "Rec x Switching Lender"
 
 *Make ratings_obs_type interactions
 foreach ratings_obs_type in no_merge_compustat merge_compustat_no_ratings merge_ratings {
+	gen nprev_`ratings_obs_type' = no_prev_lender*`ratings_obs_type'
 	gen prev_`ratings_obs_type' = prev_lender*`ratings_obs_type'
 	gen first_`ratings_obs_type' = first_loan*`ratings_obs_type'
 	gen switc_`ratings_obs_type' = switcher_loan*`ratings_obs_type'
 	
 	local label: variable label `ratings_obs_type'
+	label var nprev_`ratings_obs_type' "No Prev Lend Rel. x `label'"
 	label var prev_`ratings_obs_type' "Prev Lend Rel. x `label'"
 	label var first_`ratings_obs_type' "First Loan x `label'"
 	label var switc_`ratings_obs_type' "Switching Lend x `label'"

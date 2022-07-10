@@ -164,7 +164,7 @@ program define prepare_rel_dataset
 	label var rel_debt "Rel. Debt"
 	label var rel_conv "Rel. Convertible"
 	label var rel_rev_loan "Rel. Revolver"
-	label var rel_b_term_loan "Rel. Term Loan"
+	label var rel_b_term_loan "Rel. Bank Term Loan"
 	label var rel_other_loan "Rel. Other Loan"
 	label var rel_i_term_loan "Rel. Inst. Term Loan"
 	
