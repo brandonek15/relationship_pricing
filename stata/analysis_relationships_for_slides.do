@@ -109,6 +109,7 @@ restore
 *Past relationship and future pricing
 *Six specifications (discount on any past relationship, then add lender FE and then split up by type of relationship, for discount and spread)
 local drop_add 
+local cond
 
 foreach table_type in  simple controls {
 
@@ -152,13 +153,13 @@ foreach table_type in  simple controls {
 		estimates store est`i'
 		local ++i
 		/*
-		reghdfe `lhs' past_relationship `rhs_add' `cond' if (rev_loan_base ==1 | b_term_loan_base==1) & hire !=0, absorb(`fe_add' lender) vce(cl cusip_6)
+		reghdfe `lhs' past_relationship `rhs_add' if (rev_loan_base ==1 | b_term_loan_base==1) & hire !=0, absorb(`fe_add' lender) vce(cl cusip_6)
 		estadd local fe = "`fe_scalar_add',L"
 		estadd local sample = "All Discounts"
 		estimates store est`i'
 		local ++i
 		*/
-		reghdfe `lhs' rel_* `rhs_add' `cond' if (rev_loan_base ==1 | b_term_loan_base==1) & hire !=0, absorb(`fe_add') vce(cl cusip_6)
+		reghdfe `lhs' rel_* `rhs_add' if (rev_loan_base ==1 | b_term_loan_base==1) & hire !=0, absorb(`fe_add') vce(cl cusip_6)
 		estadd local fe = "`fe_scalar_add'"
 		estadd local sample = "All Discounts"
 		estimates store est`i'
