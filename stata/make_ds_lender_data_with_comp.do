@@ -46,15 +46,15 @@ egen max_prev_lender = max(prev_lender), by(facilityid)
 sort borrowercompanyid facilityid date_quarterly
 *sort borrowercompanyid lender date_quarterly facilityid
 *br borrowercompanyid lender date_quarterly facilityid prev_lender
-keep facilityid borrowercompanyid max_prev_lender discount* d_* date_quarterly ///
+keep facilityid borrowercompanyid max_prev_lender discount* d_* facilitystartdate date_quarterly ///
 	category merge_compustat merge_ratings merge_compustat_no_ratings no_merge_compustat
 duplicates drop
 *Create three categories - first loans 
-egen min_date_quarterly = min(date_quarterly), by(borrowercompanyid)
-format min_date_quarterly %tq
+egen min_facilitystartdate = min(facilitystartdate), by(borrowercompanyid)
+format min_facilitystartdate %td
 *br facilityid borrowercompanyid date_quarterly min_date_quarterly
-sort borrowercompanyid date_quarterly
-gen first_loan = date_quarterly == min_date_quarterly
+sort borrowercompanyid facilitystartdate
+gen first_loan = facilitystartdate == min_facilitystartdate
 label var first_loan "First Loan"
 rename max_prev_lender prev_lender
 label var prev_lender "Prev Lending Relationship"

@@ -424,8 +424,38 @@ twoway `discount_n_rev' `count_n_rev' `discount_n_term' `count_n_term' , ///
 gr export "$figures_output_path/discounts_across_loan_number.png", replace 
 
 *Alternative graph using coeff plot
-use "$data_path/dealscan_compustat_loan_level", clear
+*Split rev and term discount by discount number
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
 keep if (category =="Revolver" | category == "Bank Term")  & !mi(borrowercompanyid) & !mi(discount_1_simple)
+keep borrowercompanyid category facilitystartdate discount_1_simple first_loan prev_lender switcher_loan
+duplicates drop
+bys borrowercompanyid category (facilitystartdate): gen n = _n
+bys borrowercompanyid category (facilitystartdate): gen N = _N
+
+*Make a simple graph of the average discount by observation num
+forval i = 1/10 {
+	gen n_`i' = n == `i'
+	label var n_`i' "Loan Num `i'"
+}
+reg discount_1_simple n_* if category == "Revolver", nocons
+estimates store Rev
+reg discount_1_simple n_* if category == "Bank Term", nocons
+estimates store Term
+
+coefplot (Rev, label(Revolving Discount) pstyle(p3)) (Term, label(Term Discount) pstyle(p4)) ///
+, vertical ytitle("Discount") title("Regression Coefficient of Discount on Discount Number") ///
+	graphregion(color(white))  xtitle("Discount Number") xlabel(, angle(45)) ///
+	 note("Constant Omitted. Loan numbers greater than 10 omitted due to small sample (less than 10)") levels(90)
+	gr export "$figures_output_path/discounts_across_discount_number_coeff.png", replace 
+
+*Split rev and term discount by loan number
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+keep if (category =="Revolver" | category == "Bank Term")  & !mi(borrowercompanyid) 
+keep borrowercompanyid category facilitystartdate discount_1_simple first_loan prev_lender switcher_loan
+duplicates drop
+*In case there is a missing and a discount calculated, keep the not missing obs
+bys borrowercompanyid category facilitystartdate first_loan prev_lender switcher_loan (discount_1_simple): keep if _n == 1
+
 bys borrowercompanyid category (facilitystartdate): gen n = _n
 bys borrowercompanyid category (facilitystartdate): gen N = _N
 
@@ -441,9 +471,77 @@ estimates store Term
 
 coefplot (Rev, label(Revolving Discount) pstyle(p3)) (Term, label(Term Discount) pstyle(p4)) ///
 , vertical ytitle("Discount") title("Regression Coefficient of Discount on Loan Number") ///
-	graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
+	graphregion(color(white))  xtitle("Discount Number") xlabel(, angle(45)) ///
 	 note("Constant Omitted. Loan numbers greater than 10 omitted due to small sample (less than 10)") levels(90)
 	gr export "$figures_output_path/discounts_across_loan_number_coeff.png", replace 
+
+
+*Similar graph but looking at switcher loans vs stayer loans
+*and using coeff plot, regress on discount number
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+keep if (category =="Revolver")  & !mi(borrowercompanyid) & !mi(discount_1_simple)
+*Only want to keep one discount per date
+keep borrowercompanyid category facilitystartdate discount_1_simple first_loan prev_lender switcher_loan
+duplicates drop
+bys borrowercompanyid (facilitystartdate): gen n = _n
+bys borrowercompanyid (facilitystartdate): gen N = _N
+
+*Make a simple graph of the average discount by observation num
+forval i = 1/10 {
+	gen n_`i' = n == `i'
+	label var n_`i' "Loan Num `i'"
+}
+reg discount_1_simple n_* if category == "Revolver" & first_loan==1, nocons
+estimates store first
+reg discount_1_simple n_* if category == "Revolver" & prev_lender==1, nocons
+estimates store prev
+reg discount_1_simple n_* if category == "Revolver" & switcher_loan==1, nocons
+estimates store switch
+
+
+coefplot (first, label(First Loan Discount) pstyle(p3)) (prev, label(Discount with Previous Relationship) pstyle(p4)) ///
+	(switch, label(Discount with Switching) pstyle(p5)) ///
+	, vertical ytitle("Discount") title("Regression Coefficient of Discount on Discount Number") ///
+	graphregion(color(white))  xtitle("Discount Number") xlabel(, angle(45)) ///
+	 note("Constant Omitted. Loan numbers greater than 10 omitted due to small sample (less than 10)") levels(90)
+	gr export "$figures_output_path/discounts_across_discount_number_coeff_switch_stay.png", replace 
+
+*Similar graph but looking at switcher loans vs stayer loans
+*and using coeff plot, defining n by loan number, not discount number
+*Split rev and term discount by loan number
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+keep if !mi(borrowercompanyid)
+*Only want to keep one discount per date
+keep borrowercompanyid category facilitystartdate discount_1_simple first_loan prev_lender switcher_loan
+duplicates drop
+*In case there is a missing and a discount calculated, keep the not missing obs
+bys borrowercompanyid category facilitystartdate first_loan prev_lender switcher_loan (discount_1_simple): keep if _n == 1
+*Keep the smallest in case there is 
+bys borrowercompanyid (facilitystartdate): gen n = _n
+bys borrowercompanyid (facilitystartdate): gen N = _N
+replace n = 1 if first_loan ==1
+
+*Make a simple graph of the average discount by observation num
+forval i = 1/10 {
+	gen n_`i' = n == `i'
+	label var n_`i' "Loan Num `i'"
+}
+reg discount_1_simple n_* if category == "Revolver" & first_loan==1, nocons
+estimates store first
+reg discount_1_simple n_* if category == "Revolver" & prev_lender==1, nocons
+estimates store prev
+reg discount_1_simple n_* if category == "Revolver" & switcher_loan==1, nocons
+estimates store switch
+
+
+coefplot (first, label(First Loan Discount) pstyle(p3)) (prev, label(Discount with Previous Relationship) pstyle(p4)) ///
+	(switch, label(Discount with Switching) pstyle(p5)) ///
+	, vertical ytitle("Discount") title("Regression Coefficient of Discount on Loan Number") ///
+	graphregion(color(white))  xtitle("Discount Number") xlabel(, angle(45)) ///
+	 note("Constant Omitted. Loan numbers greater than 10 omitted due to small sample (less than 10)") levels(90)
+	gr export "$figures_output_path/discounts_across_loan_number_coeff_switch_stay.png", replace 
+
+
 
 /*	
 reghdfe discount_1_simple n_* if category == "Revolver", absorb(date_quarterly)
