@@ -1,29 +1,22 @@
-*This program will do analyses on fraction/likelihood of future deals conditional 
-*on previous deals in either SDC to Dealscan or Dealscan to SDC
-
-use "$data_path/sdc_deals_with_past_relationships_20", clear
-append using "$data_path/ds_lending_with_past_relationships_20"
-
-local sdc_obs_types
-foreach sdc in $sdc_types {
-	local sdc_obs_types `sdc_obs_types' `sdc'_base
-}
-local ds_obs_types
-foreach ds in $ds_types {
-	local ds_obs_types `ds_obs_types' `ds'_base
-}
-
-
-egen sdc_obs = rowmax(`sdc_obs_types')
-egen ds_obs = rowmax(`ds_obs_types')
-*Date quarterly
-gen date_quarterly = qofd(date_daily)
-format date_quarterly %tq
+*This program will run all analysis for the tables in the paper first,
+*And then the rest of the analyses for the slides at the end.
 
 *Past lender and future pricing
-preserve
-	use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
-	foreach lhs in  discount_1_simple discount_1_controls d_1_simple_pos d_1_controls_pos {
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+foreach lhs in  discount_1_simple discount_1_controls  {
+
+	foreach discount_type in rev b_term {
+
+		if "`discount_type'" == "rev" {
+			local cond `"& category =="Revolver""'
+			local disc_add "Rev"
+			local discount_type_suffix_add "_rev"
+		}
+		if "`discount_type'" == "b_term" {
+			local cond `"& category =="Bank Term""'
+			local disc_add "B Term"
+			local discount_type_suffix_add "_term"
+		}	
 
 		foreach rhs_type in pooled split {
 		
@@ -38,9 +31,6 @@ preserve
 				local rhs_extra first_loan_rec switcher_loan_rec
 			}			
 
-			label var discount_1_simple "Disc"
-			local cond `"& category =="Revolver""'
-			local disc_add "Rev"
 			foreach rec_type in yes no {
 
 				if "`rec_type'" == "yes" {
@@ -97,14 +87,36 @@ preserve
 
 				}
 				
-				esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_all`suffix_add'`rhs_suffix_add'_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+				esttab est* using "$regression_output_path/discount_prev_lend_`lhs'`suffix_add'`rhs_suffix_add'`discount_type_suffix_add'_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
 				title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
 				addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
 			}
 		}
 	}
+}
 
-restore
+
+*This program will do analyses on fraction/likelihood of future deals conditional 
+*on previous deals in either SDC to Dealscan or Dealscan to SDC
+
+use "$data_path/sdc_deals_with_past_relationships_20", clear
+append using "$data_path/ds_lending_with_past_relationships_20"
+
+local sdc_obs_types
+foreach sdc in $sdc_types {
+	local sdc_obs_types `sdc_obs_types' `sdc'_base
+}
+local ds_obs_types
+foreach ds in $ds_types {
+	local ds_obs_types `ds_obs_types' `ds'_base
+}
+
+
+egen sdc_obs = rowmax(`sdc_obs_types')
+egen ds_obs = rowmax(`ds_obs_types')
+*Date quarterly
+gen date_quarterly = qofd(date_daily)
+format date_quarterly %tq
 
 *Past relationship and future pricing
 *Six specifications (discount on any past relationship, then add lender FE and then split up by type of relationship, for discount and spread)
