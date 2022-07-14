@@ -38,8 +38,10 @@ do "$code_path/prep_relationship_datasets.do"
 do "$code_path/create_sdc_issuance_relationships.do"
 do "$code_path/create_ds_lending_relationships.do"
 
-do "$code_path/analysis_relationships_for_slides.do"
-
 *Relationship Analysis
 do "$code_path/analysis_sdc_issuance_relationship.do"
 do "$code_path/analysis_ds_lending_relationship.do"
+
+*Code to create tables for paper/slides
+do "$code_path/figures_paper_slides.do"
+do "$code_path/regression_tables_paper_slides.do"
