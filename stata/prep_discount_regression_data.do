@@ -12,16 +12,16 @@ replace category = "Other" if secured == 0 | senior ==0 | asset_based ==1
 
 assert !mi(category)
 *Create a new "package" id to be used when residualizing
-egen borrower_date_quarterly = group(borrowercompanyid date_quarterly)
+egen borrower_facilitystartdate = group(borrowercompanyid facilitystartdate)
 
 sort borrowercompanyid date_quarterly category facilityid
 gen diff_obs = 0
 
-*For each variable that could vary within loan package (borrowercompanyid date_quarterly), get the average by category
+*For each variable that could vary within loan package (borrowercompanyid facilitystartdate), get the average by category
 foreach var in spread spread_2 $loan_level_controls {
-	egen m_`var' = mean(`var'), by(borrowercompanyid date_quarterly category)
+	egen m_`var' = mean(`var'), by(borrowercompanyid facilitystartdate category)
 	gen m_`var'_inst_t = m_`var' if category == "Inst. Term"
-	egen m_`var'_inst = max(m_`var'_inst_t), by(borrowercompanyid date_quarterly)
+	egen m_`var'_inst = max(m_`var'_inst_t), by(borrowercompanyid facilitystartdate)
 	gen diff_`var' = m_`var'- m_`var'_inst if category == "Revolver" | category == "Bank Term"
 	replace diff_obs = 1 if !mi(m_`var') & !mi(m_`var'_inst)
 	drop m_`var'*
@@ -32,13 +32,13 @@ foreach var in spread spread_2 $loan_level_controls {
 *Get residualized spreads, which will be used to calculate the discount with controls
 *Only calculate on observations where we can calculate a difference
 foreach spreads in spread spread_2 {
-	reg `spreads' $loan_level_controls , absorb(borrower_date_quarterly)
+	reg `spreads' $loan_level_controls , absorb(borrower_facilitystartdate)
 	predict `spreads'_resid, residual
 }
 foreach var in spread_resid spread_2_resid  {
-	egen m_`var' = mean(`var'), by(borrowercompanyid date_quarterly category)
+	egen m_`var' = mean(`var'), by(borrowercompanyid facilitystartdate category)
 	gen m_`var'_inst_t = m_`var' if category == "Inst. Term"
-	egen m_`var'_inst = max(m_`var'_inst_t), by(borrowercompanyid date_quarterly)
+	egen m_`var'_inst = max(m_`var'_inst_t), by(borrowercompanyid facilitystartdate)
 	gen diff_`var' = m_`var'- m_`var'_inst if category == "Revolver" | category == "Bank Term"
 	replace diff_obs = 1 if !mi(m_`var') & !mi(m_`var'_inst)
 	drop m_`var'*
