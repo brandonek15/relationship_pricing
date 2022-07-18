@@ -17,7 +17,15 @@ local num_rev `r(N)'
 sum constant if !mi(discount_1_simple) & category == "Bank Term"
 local num_term `r(N)'
 di "Number of revolving discounts is `num_rev'. Number of bank term discounts is `num_term'"
-
+*Calculate number of dealscan observations
+sum constant if merge_compustat==1 
+local num_comp `r(N)'
+sum constant if !mi(discount_1_simple) & category == "Revolver" & merge_compustat==1 
+local num_rev_comp `r(N)'
+sum constant if !mi(discount_1_simple) & category == "Bank Term" & merge_compustat==1 
+local num_term_comp `r(N)'
+di "Number of observations with compustat data is `num_comp'"
+di "Number of revolving compustat discounts is `num_rev_comp', term discounts `num_term_comp'"
 
 *Correlation of bank term discount and revolving discount
 use "$data_path/stata_temp/dealscan_discounts", clear
