@@ -3,12 +3,12 @@
 *Split up the dealscan loans into how many packages have each combination
 use "$data_path/dealscan_compustat_loan_level", clear
 *br if borrowercompanyid == 11649 & date_quarterly == tq(2007q3)
-drop if category == "Other"
 gen rev_loan_cat = (category == "Revolver")
 gen bank_term_loan_cat = (category == "Bank Term")
 gen inst_term_loan_cat = (category == "Inst. Term")
-collapse (sum) facilityamt (max) *_cat, by(borrowercompanyid date_quarterly merge_compustat)
-isid borrowercompanyid date_quarterly
+gen other_loan_cat = (category == "Other")
+collapse (sum) facilityamt (max) *_cat, by(borrowercompanyid facilitystartdate merge_compustat)
+isid borrowercompanyid facilitystartdate
 gen package_type = ""
 replace package_type = "Only Revolver" if rev_loan_cat ==1 & bank_term_loan_cat ==0 & inst_term_loan_cat ==0
 replace package_type = "Only Bank Term" if rev_loan_cat ==0 & bank_term_loan_cat ==1 & inst_term_loan_cat ==0
@@ -17,16 +17,18 @@ replace package_type = "Rev + Bank Term" if rev_loan_cat ==1 & bank_term_loan_ca
 replace package_type = "Rev + Inst. Term" if rev_loan_cat ==1 & bank_term_loan_cat ==0 & inst_term_loan_cat ==1
 replace package_type = "Bank Term + Inst. Term" if rev_loan_cat ==0 & bank_term_loan_cat ==1 & inst_term_loan_cat ==1
 replace package_type = "Rev + Bank Term + Inst. Term" if rev_loan_cat ==1 & bank_term_loan_cat ==1 & inst_term_loan_cat ==1
+replace package_type = "Only Other" if other_loan_cat ==1 & rev_loan_cat ==0 & bank_term_loan_cat ==0 & inst_term_loan_cat ==0
 drop if mi(package_type)
 *Specify order
 gen order = .
-replace order = 1 if package_type == "Only Revolver"
-replace order = 2 if package_type == "Only Bank Term"
-replace order = 3 if package_type == "Only Inst. Term"
-replace order = 4 if package_type == "Rev + Bank Term"
-replace order = 5 if package_type == "Rev + Inst. Term"
-replace order = 6 if package_type == "Bank Term + Inst. Term"
-replace order = 7 if package_type == "Rev + Bank Term + Inst. Term"
+replace order = 1 if package_type == "Only Other"
+replace order = 2 if package_type == "Only Revolver"
+replace order = 3 if package_type == "Only Bank Term"
+replace order = 4 if package_type == "Only Inst. Term"
+replace order = 5 if package_type == "Rev + Bank Term"
+replace order = 6 if package_type == "Rev + Inst. Term"
+replace order = 7 if package_type == "Bank Term + Inst. Term"
+replace order = 8 if package_type == "Rev + Bank Term + Inst. Term"
 
 qui sum rev_loan_cat
 local num_obs = `r(N)'
@@ -34,13 +36,13 @@ local num_obs = `r(N)'
 graph pie, over(package_type) ///
 allcategories sort(order) ///
 	 graphregion(color(white)) title("Distribution of Loans Packages") ///
-	  note("Number of Packages: `num_obs'" "Loans to the same firm in the same quarter considered to be in the same package" "Not including other categories of loans") legend(rows(2))
+	  note("Number of Packages: `num_obs'") legend(rows(2))
 	graph export "$figures_output_path/package_type_pie_paper.png", replace
 
 graph pie [aweight=facilityamt], over(package_type) ///
 allcategories sort(order) ///
 	 graphregion(color(white)) title("Distribution of Loans Packages - Weighted by Loan Amount") ///
-	  note("Number of Packages: `num_obs'" "Loans to the same firm in the same quarter considered to be in the same package" "Not including categories of loans") legend(rows(2))
+	  note("Number of Packages: `num_obs'") legend(rows(2))
 	graph export "$figures_output_path/package_type_pie_wtd.png", replace
 
 
