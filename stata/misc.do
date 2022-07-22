@@ -1192,3 +1192,10 @@ reg neg_spreadrev discount_1_simplerev
 gen neg_spreadbank = -spreadbank
 reg spreadinstitutional discount_1_simplebank
 reg neg_spreadbank discount_1_simplebank
+
+
+*Want to create a better version of the "discount on loan number" 
+*I want the loan number to be 1 if it is labeled as a "no_prev_lender" and then the number number goes up
+*until it hits no_prev_lending relationship again.
+use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+gen loan_number = 1 if no_prev_lending ==1

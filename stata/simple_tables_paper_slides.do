@@ -77,6 +77,7 @@ replace lender = "RBS" if lender == "Rbs"
 replace lender = "PNC" if lender == "Pnc"
 replace lender = "HSBC" if lender == "Hsbc"
 replace lender = "MUFG" if lender == "Mufg"
+replace lender = "US Bancorp" if lender == "Us Bancorp"
 
 
 texsave using "${regression_output_path}/largest_lead_arrangers_issuers_paper.tex", ///

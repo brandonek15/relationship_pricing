@@ -35,7 +35,7 @@ local num_obs = `r(N)'
 
 graph pie, over(package_type) ///
 allcategories sort(order) ///
-	 graphregion(color(white)) title("Distribution of Loans Packages") ///
+	 graphregion(color(white)) title("Distribution of Loan Packages") ///
 	  note("Number of Packages: `num_obs'") legend(rows(2))
 	graph export "$figures_output_path/package_type_pie_paper.png", replace
 
@@ -138,50 +138,63 @@ graphregion(color(white))  xtitle("Discount") ///
 legend(order(1 "Revolving Discount" 2 "Bank Term Discount")) ///
  note("" "Epanechnikov kernel with bandwidth 20")
 graph export "$figures_output_path/discount_kdensity_rev_term_both_packages_paper.png", replace
-
-
-*See fraction 0 over time
-use "$data_path/dealscan_compustat_loan_level", clear
-keep if category == "Revolver" | category == "Bank Term"
-keep if !mi(discount_1_simple)
-gen zero_discount = abs(discount_1_simple)<10e-6
-replace discount_1_simple = . if zero_discount
-collapse (mean) zero_discount discount_1_simple, by(date_quarterly category)
-twoway (line zero_discount date_quarterly if category == "Revolver") (line zero_discount date_quarterly if category == "Bank Term"), ///
-ytitle("Fraction of Loans with Zero Discount") title("Fraction of Loans with Zero Discount", size(medsmall)) ///
-		 note("`note'") ///
-		graphregion(color(white))  xtitle("Quarter") ///
-		legend(order(1 "Revolving Discount" 2 "Term Discount"))
-		graph export "$figures_output_path/discount_frac_zero_paper.png", replace
 		
 		
 *Alternative graph using coeff plot
 *Split rev and term discount by loan number
 use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
 keep if (category =="Revolver" | category == "Bank Term")  & !mi(borrowercompanyid) 
-keep borrowercompanyid category facilitystartdate discount_1_simple first_loan prev_lender switcher_loan
+keep borrowercompanyid category facilitystartdate discount_1_simple ///
+first_loan prev_lender switcher_loan date_quarterly merge_compustat no_prev_lender first_loan switcher_loan
 duplicates drop
 *In case there is a missing and a discount calculated, keep the not missing obs
 bys borrowercompanyid category facilitystartdate first_loan prev_lender switcher_loan (discount_1_simple): keep if _n == 1
 
-bys borrowercompanyid category (facilitystartdate): gen n = _n
-bys borrowercompanyid category (facilitystartdate): gen N = _N
+*I want the loan number to be 1 if it is labeled as a "no_prev_lender" and then the number number goes up
+*until it hits no_prev_lending relationship again.
+gen loan_number = 1 if no_prev_lender==1
+bys borrowercompanyid category (facilitystartdate): replace loan_num = loan_num[_n-1] + 1 if mi(loan_num)
+
+*Don't want analysis tainted by artificial loan numbers.
+keep if date_quarter >=tq(2005q1)
 
 *Make a simple graph of the average discount by observation num
-forval i = 1/10 {
-	gen n_`i' = n == `i'
+forval i = 1/6 {
+	gen n_`i' = loan_number == `i'
 	label var n_`i' "Loan Num `i'"
 }
+
+estimates clear
+
+reg discount_1_simple n_* if category == "Revolver" & merge_compustat==1, nocons
+estimates store comp
+reg discount_1_simple n_* if category == "Revolver" & merge_compustat==0, nocons
+estimates store non_comp
+
+
+coefplot (comp, label(Compustat Firm Discounts) pstyle(p3)) (non_comp, label(Non-Compustat Firm Discounts) pstyle(p4)) ///
+, vertical ytitle("Revolving Discount") title("Discount Coefficient on Loan Number - Comp and Non-Comp Firms") ///
+	graphregion(color(white))  xtitle("Revolving Discount Number") xlabel(, angle(45)) ///
+	 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
+	 "Sample is loans on or after 2005Q1 to have a burnout period") levels(90)
+	gr export "$figures_output_path/discounts_across_loan_number_coeff_comp_non_comp_paper.png", replace 
+
 reg discount_1_simple n_* if category == "Revolver", nocons
 estimates store Rev
 reg discount_1_simple n_* if category == "Bank Term", nocons
 estimates store Term
 
+
 coefplot (Rev, label(Revolving Discount) pstyle(p3)) (Term, label(Term Discount) pstyle(p4)) ///
-, vertical ytitle("Discount") title("Regression Coefficient of Discount on Loan Number") ///
+, vertical ytitle("Discount") title("Discount Coefficient on Loan Number - Rev and Bank Term Discounts") ///
 	graphregion(color(white))  xtitle("Discount Number") xlabel(, angle(45)) ///
-	 note("Constant Omitted. Loan numbers greater than 10 omitted due to small sample (less than 10)") levels(90)
+	 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
+	 "Sample is loans on or after 2005Q1 to have a burnout period") levels(90)
 	gr export "$figures_output_path/discounts_across_loan_number_coeff_paper.png", replace 
+
+
+*Do a version comparing compustat firms vs non-compustat firms to test Rajan and Petersen 1995
+
 
 *Also do tests to see if slope is indeed negative (only for Revolvers!)
 gen count = 1
