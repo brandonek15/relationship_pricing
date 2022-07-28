@@ -31,8 +31,13 @@ foreach var in spread spread_2 $loan_level_controls {
 
 *Get residualized spreads, which will be used to calculate the discount with controls
 *Only calculate on observations where we can calculate a difference
+
+local loan_level_controls log_facilityamt maturity cov_lite senior secured fin_cov nw_cov borrower_base
+
 foreach spreads in spread spread_2 {
 	reg `spreads' $loan_level_controls , absorb(borrower_facilitystartdate)
+	*reg `spreads' $loan_level_controls if diff_obs==1, absorb(borrower_facilitystartdate)
+	*reg `spreads' `loan_level_controls' , absorb(borrower_facilitystartdate)
 	predict `spreads'_resid, residual
 }
 foreach var in spread_resid spread_2_resid  {

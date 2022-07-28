@@ -1199,3 +1199,15 @@ reg neg_spreadbank discount_1_simplebank
 *until it hits no_prev_lending relationship again.
 use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
 gen loan_number = 1 if no_prev_lending ==1
+
+*See if we can add charactersitics that don't vary by loan
+
+use "$data_path/dealscan_facility_level", clear
+egen borrower_facilitystartdate = group(borrowercompanyid facilitystartdate)
+bys borrower_facilitystartdate: egen max_sales = max(salesatclose)
+bys borrower_facilitystartdate: egen min_sales = min(salesatclose)
+gen temp = max_sales-min_sales
+gen public = (publicprivate == "Public")
+local loan_level_controls log_facilityamt maturity cov_lite
+local extra_controls senior secured fin_cov nw_cov borrower_base
+reg spread `loan_level_controls' `extra_controls' , absorb(borrower_facilitystartdate)

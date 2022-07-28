@@ -161,7 +161,7 @@ nomtitle  noobs
 
 eststo: estpost ttest `loan_vars' `firm_chars' , by(discount_obs) unequal
 	
-esttab . using "$regression_output_path/differences_all_discount_obs.tex", ///
+esttab . using "$regression_output_path/differences_all_discount_obs_paper.tex", ///
  label title("Loan and firm characteristics for observations where discounts are calculated and those that are not") replace ///
 cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Disc Obs" "Non Disc Obs" "Difference") ///
  noobs eqlabels(none) addnotes("Discount Obs is an observation where a discount is calculated" ///

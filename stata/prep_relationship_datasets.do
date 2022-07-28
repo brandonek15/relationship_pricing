@@ -102,7 +102,9 @@ foreach base_type in sdc ds {
 				drop if days_after_match<=`burner_days'
 			}
 			*Keep only the most recent transaction for each (the one with the smallest days between)
-			bys `id' lender (days_after_match): keep if _n ==1
+			*bys `id' lender (days_after_match): keep if _n ==1
+			*Keep only the earliest transaction for each (the one with the smallest days between)
+			bys `id' lender (days_after_match): keep if _n ==_N
 			rename days_after_match days_after_match_`subset_type'
 			*Save it to be merged on later
 			isid `id' lender
