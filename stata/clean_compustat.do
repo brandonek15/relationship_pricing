@@ -101,7 +101,7 @@ label var leverage "Book Leverage"
 gen market_value = atq - seqq + pstkq + (prccq*cshoq)
 gen market_to_book = market_value/atq
 label var market_to_book "Market / Book"
-gen sales_growth = (saleq-L3.saleq)/L3.saleq*100
+gen sales_growth = (saleq-L4.saleq)/L4.saleq*100
 label var sales_growth "Annual Sales Growth"
 gen log_sales = log(saleq)
 label var log_sales "Log(sales)"

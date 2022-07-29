@@ -166,3 +166,62 @@ esttab . using "$regression_output_path/differences_all_discount_obs_paper.tex",
 cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Disc Obs" "Non Disc Obs" "Difference") ///
  noobs eqlabels(none) addnotes("Discount Obs is an observation where a discount is calculated" ///
  "This occurs when a firm x quarter has both an institutional term loan and a revolver and/or a bank term loan") 
+
+*Make a data dictionary 
+clear
+set obs 24
+gen var = ""
+gen desc = ""
+label var var "Variable"
+label var desc "Description"
+replace var = "Log Facility Amount" if _n ==1
+replace desc = "Log of the amount on the loan facility" if _n==1
+replace var = "Maturity" if _n ==2
+replace desc = "Maturity in months" if _n==2
+replace var = "Leveraged Loan" if _n ==3
+replace desc = "An indicator for whether the loan is classified as leveraged in Dealscan" if _n==3
+replace var = "Contains Financial Covenants" if _n==4
+replace desc = "Indicator of whether the loan has financial covenants" if _n==4
+replace var = "Net Worth Covenants" if _n==5
+replace desc = "Indicator of whether the loan has net worth covenants" if _n==5
+replace var = "Cov-Lite" if _n==6
+replace desc = "Indicator for whether the loan is classified as Cov-lite in Dealscan" if _n==6
+replace var = "Spread" if _n==7
+replace desc = "Spread over LIBOR of the loan facility" if _n==7
+replace var = "Annual Sales (millions)" if _n==8
+replace desc = "Annual sales of the firm in millions as of the start date of the loan" if _n==8
+replace var = "Revolver" if _n==9
+replace desc = "Indicator for a revolving line of credit" if _n==9
+replace var = "Bank Term Loan" if _n==10
+replace desc = "Indicator for bank term loan" if _n==10
+replace var = "Inst. Term Loan" if _n==11
+replace desc = "Indicator for an institutional term loan" if _n==11
+replace var = "Other Loan" if _n==12
+replace desc = "Indicator for any other type of loan" if _n==12
+replace var = "L1 Market / Book" if _n==13
+replace desc = "Lagged Market Value / Book Assets ; [atq - seqq + pstkq + (prccq*cshoq)]/atq)" if _n==13
+replace var = "L1 PPE / Assets" if _n==14
+replace desc = "Lagged Property, Plant, and Equipment / Assets ; ppentq/atq" if _n==14
+replace var = "L1 Current Assets / Assets" if _n==15
+replace desc = "Lagged Current Assets / Assets ; actq/atq" if _n==15
+replace var = "L1 Log(assets)" if _n==16
+replace desc = "Lagged Log of Book Assets" if _n==16
+replace var = "L1 Book Leverage" if _n==17
+replace desc = "Lagged Debt/ (Debt + Equity) ;(dlcq + dlttq)/(dlcq + dlttq+ceqq)" if _n==17
+replace var = "L1 ROA" if _n==18
+replace desc = "Lagged Return on Assets ; ibq/L1.atq" if _n==18
+replace var = "L1 Annual Sales Growth" if _n==19
+replace desc = "Lagged Annual Sales Growth ; (saleq-L4.saleq)/L4.saleq*100" if _n==19
+replace var = "L1 EBITDA / Interest Expense" if _n==20
+replace desc = "Lagged EBITDA / Interest Expense ; ebitdaq/xintq" if _n==20
+replace var = "L1 Working Capital/Assets" if _n==21
+replace desc = "Lagged Working Capital / Assets ; wcapq/atq" if _n==21
+replace var = "L1 Capital Expenditures / Assets" if _n==22
+replace desc = "Lagged Capital Expenditures / Assets ; capxq/atq" if _n==22
+replace var = "L1 Firm Age (yrs)" if _n==23
+replace desc = "Lagged Years Between Observation and IPO data; (datadate - ipodate)/365.25" if _n==23
+replace var = "Credit Rating" if _n==24
+replace desc = "S and P Credit Rating of the Firm at Time of Origination. Credit rating converted to numerical scale, with AAA=1 and D=22 " if _n==24
+
+texsave using "$regression_output_path/variable_definitions.tex", ///
+ frag replace varlabels title("Variable Definitions")

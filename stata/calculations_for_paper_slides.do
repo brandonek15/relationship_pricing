@@ -39,3 +39,26 @@ use "$data_path/stata_temp/dealscan_discounts", clear
 corr rev_discount_1_simple term_discount_1_simple
 local corr = r(rho)
 di "Correlation between simple revolving discount and bank term discoutn is : `corr'"
+
+*Back of the envelope
+*Cost of providing a discount: 45bps (coefficient) * 234M (avg revolver amount for compustat) * 23% bank allocation * 56% avg utilization
+*Cost of providing = 0.14M a year
+use  "$data_path/dealscan_compustat_loan_level", clear
+sum facilityamt if category == "Revolver" & merge_compustat ==1 & !mi(discount_1_simple)
+use "$data_path/stata_temp/facilityid_lender_merge_data", clear
+sum bankallocation if lead_arranger_credit==1
+*Benefit of providing: 10.9M (avg fee) * 12.8% = 1.40M. Expected benefit = 1.40/5 = 0.28M a year
+*Be conservative and assume there is only assume they will have 1 issuance on average over 5 years
+*Net benefit = .28M-.14M=140,000
+/*
+use "$data_path/sdc_all_clean", clear
+sum gross_spread_dol
+use "$data_path/sdc_all_clean", clear
+gen count = 1
+collapse (first) first_date_daily = date_daily (last) last_date_daily = date_daily ///
+	(sum) count, by(cusip_6)
+gen potential_years = year(last_date_daily) - year(first_date_daily) + 1
+gen deals_per_year = count/potential_years
+winsor2 deals_per_year, cut(0 99) replace
+drop if potential_years ==1
+sum deals_per_year
