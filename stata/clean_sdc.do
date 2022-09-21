@@ -191,19 +191,101 @@ foreach date_type in "quarterly" "daily" {
 use "$data_path/sdc_equity_clean_daily", clear
 append using "$data_path/sdc_conv_clean_daily"
 append using "$data_path/sdc_debt_clean_daily"
+*Add date_quarterly for relationship states
+gen date_quarterly = qofd(date_daily)
+format date_quarterly %tq
+label var date_quarterly "Quarterly Date"
 *Need to choose a set of variables that will give me the exact same sort every time so the index is a proper id
 sort cusip_6 date_daily desc proceeds
 gen log_proceeds = log(proceeds)
 gen sdc_deal_id = _n
-save "$data_path/sdc_all_clean", replace
+save "$data_path/stata_temp/sdc_all_clean_temp", replace
 
+*******************************************************************************************
 *Make a long dataset that is one observation per bookrunner x deal - this will be used for
 *First load program that cleans dealscan to apply the same cleaning here as well
 do "$code_path/standardize_sdc.do"
-*a joinby on name of bookrunner (will have minimal information and can merge on sdc_all_clean later)
-use "$data_path/sdc_all_clean", clear
+use "$data_path/stata_temp/sdc_all_clean_temp", clear
 sdc_wide_to_long
+
+*a joinby on name of bookrunner (will have minimal information and can merge on sdc_all_clean later)
+preserve
+	keep sdc_deal_id cusip_6 lender
+	save "$data_path/sdc_deal_bookrunner", replace
+restore
+
+*Create the relationship states for sdc
+*This code was adjusted from clean_dealscan
+*This should work
+
+isid sdc_deal_id lender
+gen prev_lender = 0
+drop if mi(cusip_6)
+*Say you were a previous lender if you were the same lender to the same firm earlier
+*Or if you were previoulsy a previous lender
+bys cusip_6 lender (date_quarterly sdc_deal_id): replace prev_lender = 1 if lender[_n] == lender[_n-1] & date_quarterly[_n] != date_quarterly[_n-1]
+bys cusip_6 lender (date_quarterly sdc_deal_id): replace prev_lender = 1 if prev_lender[_n-1] == 1
+egen max_prev_lender = max(prev_lender), by(sdc_deal_id)
+*br sdc_deal_id cusip_6 lender prev_lender max_prev_lender date_quarterly
+sort cusip_6 sdc_deal_id date_quarterly
+
+*Create three categories - first loans 
+egen min_date_daily = min(date_daily), by(cusip_6)
+format min_date_daily %td
+*br sdc_deal_id cusip_6 date_quarterly min_date_quarterly
+sort cusip_6 date_daily
+gen first_loan = date_daily == min_date_daily
+label var first_loan "First Loan"
+drop prev_lender
+*The max_prev_lender is basically saying any previous lending relationship means this is a 1
+rename max_prev_lender prev_lender
+label var prev_lender "Prev Lending Relationship"
+*Create the opposite dummy
+gen no_prev_lender = 1 - prev_lender
+label var no_prev_lender "No Prev Lending Relationship"
+gen switcher_loan = (first_loan ==0 & prev_lender==0)
+label var switcher_loan "Switching Lender"
+assert first_loan + prev_lender + switcher_loan ==1
+
+preserve
+	freduse USRECM BAMLC0A4CBBB BAMLC0A1CAAA, clear
+	gen date_quarterly = qofd(daten)
+	collapse (max) USRECM , by(date_quarterly)
+	tsset date_quarterly
+	keep date_quarterly USRECM
+	tempfile rec
+	save `rec', replace
+restore
+
+*Get recession data
+joinby date_quarterly using `rec', unmatched(master) 
+drop _merge
+
+*Make recession interactions
+gen prev_lender_rec = USRECM * prev_lender
+label var prev_lender_rec "Rec x Prev Lending Relationship"
+gen no_prev_lender_rec = USRECM * no_prev_lender
+label var no_prev_lender_rec "Rec x No Prev Lending Relationship"
+gen first_loan_rec = USRECM * first_loan
+label var first_loan_rec "Rec x First Loan"
+gen switcher_loan_rec = USRECM * switcher_loan
+label var switcher_loan_rec "Rec x Switching Lender"
+
 save "$data_path/sdc_deal_bookrunner_level", replace
 
-drop gross_spread_perc proceeds log_proceeds
-save "$data_path/sdc_deal_bookrunner", replace
+*Now merge on the relationship states onto the deal level dataset
+
+drop lender
+duplicates drop
+isid sdc_deal_id
+
+keep sdc_deal_id prev_lender first_loan no_prev_lender switcher_loan prev_lender_rec no_prev_lender_rec first_loan_rec switcher_loan_rec
+save "$data_path/stata_temp/sdc_all_rel_states", replace
+
+use "$data_path/stata_temp/sdc_all_clean_temp", clear
+*Only keep observations that have relationship states. 
+merge 1:1 sdc_deal_id using "$data_path/stata_temp/sdc_all_rel_states", assert(1 3) 
+gen bookrunner_unknown = (_merge==1)
+drop _merge
+
+save "$data_path/sdc_all_clean", replace
