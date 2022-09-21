@@ -758,7 +758,7 @@ end
 cap program drop sdc_wide_to_long
 program define sdc_wide_to_long
 
-	keep bookrunner_* sdc_deal_id cusip_6 gross_spread_perc proceeds log_proceeds date_quarterly date_daily
+	*keep bookrunner_* sdc_deal_id cusip_6 gross_spread_perc proceeds log_proceeds date_quarterly date_daily
 	reshape long bookrunner_, i(sdc_deal_id) j(num)
 	*Rename this to the same variable as the dealscan lender variable
 	rename bookrunner_ lender

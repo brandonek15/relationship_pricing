@@ -23,8 +23,10 @@ do "$code_path/clean_fred.do"
 do "$code_path/clean_dealscan.do"
 do "$code_path/clean_sdc.do"
 
-*Make Compustat x dealscan relationships
+*Merge Compustat with dealscan and sdc data
 do "$code_path/make_ds_lender_data_with_comp.do"
+do "$code_path/make_sdc_data_with_comp.do"
+*Make a Dealscan + SDC stacked dataset
 *Analysis
 do "$code_path/summary_stats.do"
 do "$code_path/figures_dist_chars.do"

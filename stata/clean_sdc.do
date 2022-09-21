@@ -273,19 +273,8 @@ label var switcher_loan_rec "Rec x Switching Lender"
 
 save "$data_path/sdc_deal_bookrunner_level", replace
 
-*Now merge on the relationship states onto the deal level dataset
-
+*Now save a version that is at the deal level. This will drop observations that don't have a known bookrunner.
 drop lender
 duplicates drop
 isid sdc_deal_id
-
-keep sdc_deal_id prev_lender first_loan no_prev_lender switcher_loan prev_lender_rec no_prev_lender_rec first_loan_rec switcher_loan_rec
-save "$data_path/stata_temp/sdc_all_rel_states", replace
-
-use "$data_path/stata_temp/sdc_all_clean_temp", clear
-*Only keep observations that have relationship states. 
-merge 1:1 sdc_deal_id using "$data_path/stata_temp/sdc_all_rel_states", assert(1 3) 
-gen bookrunner_unknown = (_merge==1)
-drop _merge
-
 save "$data_path/sdc_all_clean", replace
