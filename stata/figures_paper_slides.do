@@ -142,7 +142,7 @@ graph export "$figures_output_path/discount_kdensity_rev_term_both_packages_pape
 		
 *Alternative graph using coeff plot
 *Split rev and term discount by loan number
-use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+use "$data_path/dealscan_compustat_loan_level", clear
 keep if (category =="Revolver" | category == "Bank Term")  & !mi(borrowercompanyid) 
 keep borrowercompanyid category facilitystartdate discount_1_simple ///
 first_loan prev_lender switcher_loan date_quarterly merge_compustat no_prev_lender first_loan switcher_loan

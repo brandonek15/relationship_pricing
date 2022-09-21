@@ -425,7 +425,7 @@ gr export "$figures_output_path/discounts_across_loan_number.png", replace
 
 *Alternative graph using coeff plot
 *Split rev and term discount by discount number
-use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+use "$data_path/dealscan_compustat_loan_level", clear
 keep if (category =="Revolver" | category == "Bank Term")  & !mi(borrowercompanyid) & !mi(discount_1_simple)
 keep borrowercompanyid category facilitystartdate discount_1_simple first_loan prev_lender switcher_loan
 duplicates drop
@@ -449,7 +449,7 @@ coefplot (Rev, label(Revolving Discount) pstyle(p3)) (Term, label(Term Discount)
 	gr export "$figures_output_path/discounts_across_discount_number_coeff.png", replace 
 
 *Split rev and term discount by loan number
-use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+use "$data_path/dealscan_compustat_loan_level", clear
 keep if (category =="Revolver" | category == "Bank Term")  & !mi(borrowercompanyid) 
 keep borrowercompanyid category facilitystartdate discount_1_simple first_loan prev_lender switcher_loan
 duplicates drop
@@ -478,7 +478,7 @@ coefplot (Rev, label(Revolving Discount) pstyle(p3)) (Term, label(Term Discount)
 
 *Similar graph but looking at switcher loans vs stayer loans
 *and using coeff plot, regress on discount number
-use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+use "$data_path/dealscan_compustat_loan_level", clear
 keep if (category =="Revolver")  & !mi(borrowercompanyid) & !mi(discount_1_simple)
 *Only want to keep one discount per date
 keep borrowercompanyid category facilitystartdate discount_1_simple first_loan prev_lender switcher_loan
@@ -509,7 +509,7 @@ coefplot (first, label(First Loan Discount) pstyle(p3)) (prev, label(Discount wi
 *Similar graph but looking at switcher loans vs stayer loans
 *and using coeff plot, defining n by loan number, not discount number
 *Split rev and term discount by loan number
-use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+use "$data_path/dealscan_compustat_loan_level", clear
 keep if !mi(borrowercompanyid)
 *Only want to keep one discount per date
 keep borrowercompanyid category facilitystartdate discount_1_simple first_loan prev_lender switcher_loan

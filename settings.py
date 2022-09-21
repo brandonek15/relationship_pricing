@@ -36,13 +36,13 @@ COMPUSTAT_DEALSCAN_LINK = os.path.join(RAW_DATA_PATH,'ds_cs_link_April_2018_post
 DIRECTORY_LIST = [FINAL_OUTPUT_PATH, CODE_PATH,DATA_PATH,INTERMEDIATE_DATA_PATH,\
                   SQL_LITE_PATH,RAW_DATA_PATH,INPUTS_DATA_PATH,RAW_DATA_SDC_PATH]
 
-START_DATE = pd.to_datetime('2001-01-01')
-END_DATE = pd.to_datetime('2020-12-31')
+START_DATE = pd.to_datetime('1980-01-01')
+END_DATE = pd.to_datetime('2021-12-31')
 #Delete SDC Tables Only set to 1 if you are sure you want to delete
 DELETE_SDC =0
 # Set to 1 if you want all of the raw data to be pulled
-PULL_RAW = 0
+PULL_RAW = 1
 GET_WRDS_DEALSCAN_LINK = 0
-MERGE_DEALSCAN_COMPUSTAT = 0
-READ_IN_SDC = 1
-EXPORT_SDC = 1
+MERGE_DEALSCAN_COMPUSTAT = 1
+READ_IN_SDC = 0
+EXPORT_SDC = 0

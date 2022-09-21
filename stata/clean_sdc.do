@@ -203,4 +203,7 @@ do "$code_path/standardize_sdc.do"
 *a joinby on name of bookrunner (will have minimal information and can merge on sdc_all_clean later)
 use "$data_path/sdc_all_clean", clear
 sdc_wide_to_long
+save "$data_path/sdc_deal_bookrunner_level", replace
+
+drop gross_spread_perc proceeds log_proceeds
 save "$data_path/sdc_deal_bookrunner", replace

@@ -1,4 +1,4 @@
-use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+use "$data_path/dealscan_compustat_loan_level", clear
 foreach lhs in discount_1_simple discount_1_controls {
 	foreach discount_type in rev b_term all  {
 
@@ -73,7 +73,7 @@ foreach lhs in discount_1_simple discount_1_controls {
 	}
 }
 
-use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+use "$data_path/dealscan_compustat_loan_level", clear
 gen count = 1
 foreach discount_type in rev b_term all  {
 

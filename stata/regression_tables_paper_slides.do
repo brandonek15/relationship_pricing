@@ -2,7 +2,7 @@
 *And then the rest of the analyses for the slides at the end.
 
 *Past lender and future pricing
-use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+use "$data_path/dealscan_compustat_loan_level", clear
 foreach lhs in  discount_1_simple discount_1_controls  {
 
 	foreach discount_type in rev b_term {
@@ -894,7 +894,7 @@ foreach discount_type in rev {
 }
 
 *See how compustat with ratings vs compustat w/out ratings, vs  non compustat compare
-use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
+use "$data_path/dealscan_compustat_loan_level", clear
 gen constant = 1
 foreach lhs in  discount_1_simple discount_1_controls {
 

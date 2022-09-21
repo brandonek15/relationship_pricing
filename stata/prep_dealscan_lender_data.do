@@ -22,7 +22,11 @@ save "$data_path/stata_temp/lenders_facilityid_level", replace
 *Do the reshape and standardize
 use "$data_path/dealscan_facility_lender_level", clear
 *only keeping observations that I can merge on a cusip_6, which are those that can match to compustat.
-merge m:1 borrowercompanyid date_quarterly using "$data_path/stata_temp/compustat_with_bcid", keep(3) keepusing(cusip_6) nogen
+merge m:1 borrowercompanyid date_quarterly using "$data_path/stata_temp/compustat_with_bcid", keep(1 3) keepusing(cusip_6) nogen
+*Spread Cusip_6 by borrowercompanyid
+*Implicitly assuming that the cusip_6 for the borrowercompanyid will be the same as it would be in the future
+bys borrowercompanyid (date_quarterly): replace cusip_6 = cusip_6[_n+1] if mi(cusip_6)
+keep if !mi(cusip_6)
 *Now keep the lender data we care about in the merge
 keep cusip_6 lender facilityid
 save "$data_path/lender_facilityid_cusip6", replace
