@@ -27,6 +27,7 @@ do "$code_path/clean_sdc.do"
 do "$code_path/make_ds_lender_data_with_comp.do"
 do "$code_path/make_sdc_data_with_comp.do"
 *Make a Dealscan + SDC stacked dataset
+do "$code_path/make_sdc_dealscan_stacked_data.do"
 
 *Analysis
 do "$code_path/summary_stats.do"
