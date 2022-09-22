@@ -61,7 +61,7 @@ foreach var in  $sdc_types $ds_types {
 	*Does this work?
 	replace scope_total = scope_total + scope_`var'
 }
-br lender deal_id cusip_6 date_daily scope_* $sdc_types $ds_types num_*
+*br lender deal_id cusip_6 date_daily scope_* $sdc_types $ds_types num_*
 
 *Create a "concentration" of relationship measure (how much of their lending is done by the bank)
 *Follow measure from "Determinants of Contract Terms in Bank Revolving Credit Agreements"
@@ -73,3 +73,51 @@ label var concentration "Loan Concentration"
 
 *************Create measures of future business*************************************
 
+*Will create a variable that is the number of times that a firm used that lender in the next five years
+local num_years 5
+local num_observations_max 20
+
+gen num_interactions_fut = 0
+label var num_interactions_fut "Number of Future Interactions"
+foreach var in  $sdc_types $ds_types {
+	gen num_`var'_fut = 0
+	forval i = 1/`num_observations_max' {
+		*Add one if the future observation is of the specific type, the future observation is at a future date, and that date is within 5 years.
+		bys cusip_6 lender (date_daily): replace num_`var'_fut = num_`var'_fut +1 ///
+			if `var'[_n+`i'] ==1 & date_daily & date_daily[_n+`i']>date_daily ///
+			& (date_daily[_n+`i']-date_daily)<`num_years'*365.25
+
+	}
+	replace num_interactions_fut = num_interactions_fut + num_`var'_fut
+}
+
+*br lender deal_id cusip_6 date_daily num_*fut $sdc_types $ds_types 
+
+*Create indicators for whether they have different types of future business (instead of counts)
+gen scope_total_fut = 0
+label var scope_total_fut "Number of total types of interactions with lender in future"
+foreach var in  $sdc_types $ds_types {
+	gen scope_`var'_fut = (num_`var'_fut>0)
+	*Does this work?
+	replace scope_total_fut = scope_total_fut + scope_`var'_fut
+}
+
+*br lender deal_id cusip_6 date_daily scope_*fut $sdc_types $ds_types 
+
+*Create more broad measures
+gen scope_loan_fut = 0
+label var scope_loan_fut "Future Loan"
+foreach var in $ds_types {
+	replace scope_loan_fut = 1 if scope_`var'_fut==1
+}
+
+gen scope_underwriting_fut = 0
+label var scope_underwriting_fut "Future Underwriting"
+foreach var in $sdc_types {
+	replace scope_underwriting_fut = 1 if scope_`var'_fut==1
+}
+
+gen scope_loan_underwriting_fut = (scope_loan_fut==1 & scope_underwriting_fut == 1)
+label var scope_loan_underwriting_fut "Future Loan and Underwriting"
+
+save "$data_path/sdc_ds_stacked_cleaned_with_rel_measures", replace
