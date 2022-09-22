@@ -91,6 +91,10 @@ label var rdq "Report Date of Quarterly Earnings"
 gen L1_atq = L1.atq
 label var L1_atq "L1 Assets"
 
+*Create total debt measure
+gen total_debt = (dlcq + dlttq)
+label var total_debt "Total Debt"
+
 *Create common variables - Controls
 gen log_assets = log(atq)
 label var log_assets "Log(assets)"
@@ -233,3 +237,10 @@ append using "$data_path/stata_temp/compustat_with_bcid"
 
 *Now I have a proper panel
 save "$data_path/compustat_clean", replace
+
+*Make a compustat dataset that is identified by cusip_6 and date_quarterly (by removing the borrowercompanyid)
+use "$data_path/compustat_clean", clear
+drop borrowercompanyid
+duplicates drop
+isid cusip_6 date_quarterly
+save "$data_path/compustat_clean_cusip6_date_quarterly", replace
