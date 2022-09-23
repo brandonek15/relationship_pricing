@@ -65,9 +65,7 @@ foreach var in  $sdc_types $ds_types {
 
 *Create a "concentration" of relationship measure (how much of their lending is done by the bank)
 *Follow measure from "Determinants of Contract Terms in Bank Revolving Credit Agreements"
-gen total_debt = (dlcq + dlttq)
-label var total_debt "Total Debt"
-gen concentration = (dealamount/1000000)/(total_debt+(dealamount/1000000))
+gen concentration = log((dealamount/1000000)/(total_debt+(dealamount/1000000)))
 label var concentration "Loan Concentration"
 *Note many of these don't have debt and so loan concentration ends up being 1.
 
