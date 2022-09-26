@@ -40,3 +40,5 @@ global run_big_data_code 1
 
 global sdc_types equity debt conv
 global ds_types rev_loan b_term_loan i_term_loan other_loan
+
+global rel_states prev_lender no_prev_lender first_loan switcher_loan

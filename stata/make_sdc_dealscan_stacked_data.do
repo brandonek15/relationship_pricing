@@ -17,6 +17,10 @@ tostring facilityid, replace
 gen deal_id = "SDC-" + sdc_deal_id if sdc_obs ==1
 replace deal_id = "DS-" + facilityid if ds_obs ==1
 
+*Make a single variable for the amount of money
+gen amount_raised = proceeds
+replace amount_raised = facilityamt if mi(amount_raised)
+
 order deal_id cusip_6 borrowercompanyid date_daily date_quarterly lender $sdc_types $ds_types
 sort cusip_6 date_daily borrowercompanyid
 
@@ -77,17 +81,29 @@ local num_observations_max 20
 
 gen num_interactions_fut = 0
 label var num_interactions_fut "Number of Future Interactions"
+gen amount_total_fut = 0
+label var amount_total_fut "Total Amount Raised in Future Interactions"
 foreach var in  $sdc_types $ds_types {
+	gen amount_`var'_fut = 0
 	gen num_`var'_fut = 0
 	forval i = 1/`num_observations_max' {
 		*Add one if the future observation is of the specific type, the future observation is at a future date, and that date is within 5 years.
 		bys cusip_6 lender (date_daily): replace num_`var'_fut = num_`var'_fut +1 ///
 			if `var'[_n+`i'] ==1 & date_daily & date_daily[_n+`i']>date_daily ///
 			& (date_daily[_n+`i']-date_daily)<`num_years'*365.25
-
+		bys cusip_6 lender (date_daily): replace amount_`var'_fut = amount_`var'_fut +amount_raised ///
+			if `var'[_n+`i'] ==1 & date_daily & date_daily[_n+`i']>date_daily ///
+			& (date_daily[_n+`i']-date_daily)<`num_years'*365.25
+		
 	}
+	*Create log amount
+	gen log_amount_`var'_fut = log(amount_`var'_fut +1)
+	*Created totals
 	replace num_interactions_fut = num_interactions_fut + num_`var'_fut
+	replace amount_total_fut = amount_total_fut + amount_`var'_fut
 }
+
+gen log_amount_total_fut = log(amount_total_fut+1)
 
 *br lender deal_id cusip_6 date_daily num_*fut $sdc_types $ds_types 
 

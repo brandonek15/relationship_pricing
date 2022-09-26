@@ -168,6 +168,16 @@ program define prepare_rel_dataset
 	label var rel_other_loan "Rel. Other Loan"
 	label var rel_i_term_loan "Rel. Inst. Term Loan"
 	
+	*Create interactions between previous relationship indicator and relationship states
+	
+	foreach subset_type in $sdc_types $ds_types {
+		foreach rel_state in $rel_states {
+			gen rel_`subset_type'_`rel_state'
+			local label : variable label rel_`subset_type'
+			label var rel_`subset_type'_`rel_state' "`label' x `rel_state'"
+		}
+	}
+	
 	*Make labels for lhs variables
 	cap label var discount_1_simple_base "Disc"
 	cap label var spread_base "Sprd"

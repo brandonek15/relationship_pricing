@@ -1211,3 +1211,56 @@ gen public = (publicprivate == "Public")
 local loan_level_controls log_facilityamt maturity cov_lite
 local extra_controls senior secured fin_cov nw_cov borrower_base
 reg spread `loan_level_controls' `extra_controls' , absorb(borrower_facilitystartdate)
+
+*quick analysis about previous and future business.
+use "$data_path/sdc_ds_stacked_cleaned_with_rel_measures", clear
+keep if date_daily>=td(01jan2001)
+bys deal_id: gen weight = 1/_N
+*Discount that is correlated with previous business.
+corr discount_1_simple duration num_interactions_prev scope_total concentration
+corr discount_1_simple duration num_interactions_prev scope_total concentration if rev_loan ==1
+corr spread discount_1_simple duration num_interactions_prev scope_total concentration if rev_loan ==1
+*Discount that is correlated with future business
+corr discount_1_simple num_interactions_fut scope_total_fut scope_loan_fut scope_underwriting_fut ///
+scope_loan_underwriting_fut if rev_loan ==1 
+corr discount_1_simple num_interactions_fut scope_total_fut scope_loan_fut scope_underwriting_fut ///
+scope_loan_underwriting_fut if rev_loan ==1
+corr discount_1_simple num_interactions_fut scope_total_fut scope_loan_fut scope_underwriting_fut ///
+scope_loan_underwriting_fut if rev_loan ==1
+corr spread num_interactions_fut scope_total_fut scope_loan_fut scope_underwriting_fut ///
+scope_loan_underwriting_fut if rev_loan ==1
+
+reg discount_1_simple num_interactions_fut 
+reg discount_1_simple num_interactions_fut [w=weight]
+reg discount_1_simple num_interactions_fut if num_interactions_fut <16
+
+reg discount_1_simple scope_loan_fut scope_underwriting_fut scope_loan_underwriting_fut
+reg discount_1_simple scope_*_fut 
+preserve
+reg discount_1_simple num_interactions_fut
+drop num_interactions_fut
+reg discount_1_simple num_*_fut  
+restore
+
+use "$data_path/sdc_ds_stacked_cleaned_with_rel_measures", clear
+
+reg discount_1_simple log_amount_total_fut
+preserve
+drop log_amount_total_fut
+reg discount_1_simple log_amount_*_fut
+
+restore
+
+
+use "$data_path/sdc_ds_stacked_cleaned_with_rel_measures", clear
+collapse (mean) discount_1_simple, by(num_interactions_fut)
+twoway line discount_1_simple num_interactions_fut
+
+*Do a way to bring it down to loan level
+use "$data_path/sdc_ds_stacked_cleaned_with_rel_measures", clear
+*Only keep the lender observation that has had the most interactions with the firm
+bys deal_id (scope_total lender): keep if _n ==_N
+*Only keep the first discount observation
+drop if mi(discount_1_simple)
+keep if rev_loan ==1
+bys cusip_6 (date_daily): keep if _n == 1
