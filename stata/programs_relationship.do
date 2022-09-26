@@ -168,16 +168,6 @@ program define prepare_rel_dataset
 	label var rel_other_loan "Rel. Other Loan"
 	label var rel_i_term_loan "Rel. Inst. Term Loan"
 	
-	*Create interactions between previous relationship indicator and relationship states
-	
-	foreach subset_type in $sdc_types $ds_types {
-		foreach rel_state in $rel_states {
-			gen rel_`subset_type'_`rel_state'
-			local label : variable label rel_`subset_type'
-			label var rel_`subset_type'_`rel_state' "`label' x `rel_state'"
-		}
-	}
-	
 	*Make labels for lhs variables
 	cap label var discount_1_simple_base "Disc"
 	cap label var spread_base "Sprd"
@@ -271,11 +261,25 @@ program define prepare_rel_dataset
 				if "`ds_inter_var'" == "bankallocation" {
 					local label "Loan Share"
 				}
-				if "`ds_inter_var'" == "days_after_match" {
-					local label "Days Between Rel."
+				if "`ds_inter_var'" == "prev_lender" {
+					local label "Prev Lending Relationship"
+				}
+				if "`ds_inter_var'" == "prev_lender" {
+					local label "Prev Relationship"
+				}
+				if "`ds_inter_var'" == "no_prev_lender" {
+					local label "No Prev Relationship"
+				}
+				if "`ds_inter_var'" == "first_loan" {
+					local label "First Interaction"
+				}				
+				if "`ds_inter_var'" == "switcher_loan" {
+					local label "Switching Interaction"
 				}
 				
 				local type_name = substr("`ds_type'",1,length("`ds_type'")-5)
+			
+				*Do I want to do it here insteaed
 			
 				gen i_`ds_inter_var'_`type_name' = 0
 				replace i_`ds_inter_var'_`type_name' = `ds_inter_var'_`ds_type'*rel_`ds_type' if !mi(`ds_inter_var'_`ds_type')
@@ -302,6 +306,18 @@ program define prepare_rel_dataset
 			}
 			if "`sdc_inter_var'" == "days_after_match" {
 				local label "Days Between Rel."
+			}
+			if "`sdc_inter_var'" == "prev_lender" {
+				local label "Prev Relationship"
+			}
+			if "`sdc_inter_var'" == "no_prev_lender" {
+				local label "No Prev Relationship"
+			}
+			if "`sdc_inter_var'" == "first_loan" {
+				local label "First Interaction"
+			}				
+			if "`sdc_inter_var'" == "switcher_loan" {
+				local label "Switching Interaction"
 			}
 			
 
