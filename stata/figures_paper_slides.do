@@ -2,6 +2,7 @@
 
 *Split up the dealscan loans into how many packages have each combination
 use "$data_path/dealscan_compustat_loan_level", clear
+keep if date_quarterly >=tq(1991q3) //First date that discounts can be calculated
 *br if borrowercompanyid == 11649 & date_quarterly == tq(2007q3)
 gen rev_loan_cat = (category == "Revolver")
 gen bank_term_loan_cat = (category == "Bank Term")
@@ -155,8 +156,6 @@ bys borrowercompanyid category facilitystartdate first_loan prev_lender switcher
 gen loan_number = 1 if no_prev_lender==1
 bys borrowercompanyid category (facilitystartdate): replace loan_num = loan_num[_n-1] + 1 if mi(loan_num)
 
-*Don't want analysis tainted by artificial loan numbers.
-keep if date_quarter >=tq(2005q1)
 
 *Make a simple graph of the average discount by observation num
 forval i = 1/6 {
@@ -175,8 +174,7 @@ estimates store non_comp
 coefplot (comp, label(Compustat Firm Discounts) pstyle(p3)) (non_comp, label(Non-Compustat Firm Discounts) pstyle(p4)) ///
 , vertical ytitle("Revolving Discount") title("Discount Coefficient on Loan Number - Comp and Non-Comp Firms") ///
 	graphregion(color(white))  xtitle("Revolving Discount Number") xlabel(, angle(45)) ///
-	 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
-	 "Sample is loans on or after 2005Q1 to have a burnout period") levels(90)
+	 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample") levels(90)
 	gr export "$figures_output_path/discounts_across_loan_number_coeff_comp_non_comp_paper.png", replace 
 
 reg discount_1_simple n_* if category == "Revolver", nocons
@@ -188,14 +186,13 @@ estimates store Term
 coefplot (Rev, label(Revolving Discount) pstyle(p3)) (Term, label(Term Discount) pstyle(p4)) ///
 , vertical ytitle("Discount") title("Discount Coefficient on Loan Number - Rev and Bank Term Discounts") ///
 	graphregion(color(white))  xtitle("Discount Number") xlabel(, angle(45)) ///
-	 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
-	 "Sample is loans on or after 2005Q1 to have a burnout period") levels(90)
+	 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample") levels(90)
 	gr export "$figures_output_path/discounts_across_loan_number_coeff_paper.png", replace 
 
 
 *Do a version comparing compustat firms vs non-compustat firms to test Rajan and Petersen 1995
 
-
+/*
 *Also do tests to see if slope is indeed negative (only for Revolvers!)
 gen count = 1
 reghdfe discount_1_simple n if category == "Revolver", absorb(count)

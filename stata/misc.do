@@ -608,15 +608,15 @@ br borrowercompanyid facilityid date_quarterly first_loan prev_lender switcher_l
 	  sample_keep discount_1_simple if !mi(discount_1_simple) & date_quarterly >=tq(2005q1)
 
 *Make the nice regression table to decompose
-use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
-gen constant = 1
-egen max_first_loan = max(first_loan) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
-egen max_prev_lender = max(prev_lender) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
-egen max_switcher_loan = max(switcher_loan) if date_quarterly>=tq(2005q1), by(borrowercompanyid)
+use "$data_path/dealscan_compustat_loan_level", clear
+keep if rev_loan ==1
+egen max_first_loan = max(first_loan), by(borrowercompanyid)
+egen max_prev_lender = max(prev_lender), by(borrowercompanyid)
+egen max_switcher_loan = max(switcher_loan) , by(borrowercompanyid)
 gen obs_types = max_first_loan + max_prev_lend + max_switcher_loan
 gen mult_obs = (obs_types) >=2 & !mi(max_first_loan)
 gen all_types = (obs_types) ==3 & !mi(max_first_loan)
-qui reghdfe discount_1_simple prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
+qui reghdfe discount_1_simple prev_lender switcher_loan , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
 gen sample_keep = e(sample)
 
 estimates clear
@@ -625,14 +625,14 @@ local i =1
 local lhs discount_1_simple
 *Try to decompose why firm FE changes result of switchers
 *First start with simplest regression, only time FE
-reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(date_quarterly) vce(cl borrowercompanyid)
+reghdfe `lhs' no_prev_lender , a(date_quarterly) vce(cl borrowercompanyid)
 estadd local fe = "Time"
 estadd local disc = "All Disc"
 estadd local sample = "All"
 estimates store est`i'
 local ++i
 *Keep only sample from FE regression
-reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) &sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
+reghdfe `lhs' no_prev_lender if sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
 estadd local fe = "Time"
 estadd local disc = "All Disc"
 estadd local sample = "FE Reg Obs"
@@ -640,33 +640,201 @@ estimates store est`i'
 local ++i
 
 *Keep only observations that can identify coefficients
-reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) &mult_obs==1 &sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
+reghdfe `lhs' no_prev_lender if mult_obs==1 &sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
 estadd local fe = "Time"
 estadd local disc = "All Disc"
 estadd local sample = "Coeff Identifying Obs"
 estimates store est`i'
 local ++i
 
-*Keep only firms that have both gone back to the previous lender and switched
-reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) &max_prev_lender==1 &max_switcher_loan==1 &sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
-estadd local fe = "Time"
+*The FE regression without time FE
+reghdfe `lhs' no_prev_lender , a(borrowercompanyid) vce(cl borrowercompanyid)
+estadd local fe = "Firm"
 estadd local disc = "All Disc"
-estadd local sample = "Prev Lender and Switch Firms"
+estadd local sample = "FE Reg Obs"
 estimates store est`i'
 local ++i
 
 *The FE regression
-reghdfe `lhs' prev_lender switcher_loan if date_quarterly >=tq(2005q1) , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
+reghdfe `lhs' no_prev_lender , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
 estadd local fe = "Firm, Time"
 estadd local disc = "All Disc"
 estadd local sample = "FE Reg Obs"
 estimates store est`i'
 local ++i
 
-esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_all_stay_leave_decomposition_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_rev_decomposition_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
 title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
-addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
+addnotes("SEs clustered at firm level")	
 
+*
+*Make the nice regression table to decompose for term loans
+use "$data_path/dealscan_compustat_loan_level", clear
+/*
+keep term_loan discount_1_simple prev_lender switcher_loan borrowercompanyid date_quarterly ///
+	first_loan prev_lender switcher_loan no_prev_lender
+duplicates drop
+*/
+keep if ~mi(discount_1_simple)
+keep if term_loan ==1
+egen max_no_prev_lender = max(no_prev_lender), by(borrowercompanyid)
+egen max_prev_lender = max(prev_lender), by(borrowercompanyid)
+gen obs_types = max_prev_lend + max_no_prev_lend
+gen mult_obs = (obs_types) >=2 & !mi(max_no_prev_lender)
+qui reghdfe discount_1_simple prev_lender switcher_loan , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
+gen sample_keep = e(sample)
+
+*Create an indicator for the first discount within a no_prev_lender category in a firm
+bys borrowercompanyid no_prev_lender (date_daily): gen first_discount_of_type = (_n==1)
+
+estimates clear
+local i =1
+
+local lhs discount_1_simple
+*Try to decompose why firm FE changes result of switchers
+*First start with simplest regression, only time FE
+reghdfe `lhs' no_prev_lender , a(date_quarterly) vce(cl borrowercompanyid)
+estadd local fe = "Time"
+estadd local disc = "All Disc"
+estadd local sample = "All"
+estimates store est`i'
+local ++i
+*Keep only sample from FE regression
+reghdfe `lhs' no_prev_lender if sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
+estadd local fe = "Time"
+estadd local disc = "All Disc"
+estadd local sample = "FE Reg Obs"
+estimates store est`i'
+local ++i
+
+*Keep only observations that can identify coefficients
+reghdfe `lhs' no_prev_lender if mult_obs==1 &sample_keep==1, a(date_quarterly) vce(cl borrowercompanyid)
+estadd local fe = "Time"
+estadd local disc = "All Disc"
+estadd local sample = "Coeff Identifying Obs"
+estimates store est`i'
+local ++i
+
+*Keep only first of each type observation that can identify coefficients
+reghdfe `lhs' no_prev_lender if mult_obs==1 &sample_keep==1 & first_discount_of_type==1, a(date_quarterly) vce(cl borrowercompanyid)
+estadd local fe = "Time"
+estadd local disc = "All Disc"
+estadd local sample = "Coeff Identifying Obs,First"
+estimates store est`i'
+local ++i
+
+
+
+*The FE regression without time FE
+reghdfe `lhs' no_prev_lender , a(borrowercompanyid) vce(cl borrowercompanyid)
+estadd local fe = "Firm"
+estadd local disc = "All Disc"
+estadd local sample = "FE Reg Obs"
+estimates store est`i'
+local ++i
+
+*The FE regression
+reghdfe `lhs' no_prev_lender , a(borrowercompanyid date_quarterly) vce(cl borrowercompanyid)
+estadd local fe = "Firm, Time"
+estadd local disc = "All Disc"
+estadd local sample = "FE Reg Obs"
+estimates store est`i'
+local ++i
+
+esttab est* using "$regression_output_path/discount_prev_lend_`lhs'_term_decomposition_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
+addnotes("SEs clustered at firm level")	
+
+*Try to figure some stuff out with summary stats
+*Look at term loan observations that are in the FE sample
+*keep if sample_keep==1 & term_loan ==1
+br borrowercompanyid date_daily discount_1_simple no_prev_lender max_* if mult_obs==1
+br borrowercompanyid date_daily discount_1_simple no_prev_lender max_* if mult_obs==1 & first_discount_of_type==1
+
+sum discount_1_simple if no_prev_lender ==1, detail
+sum discount_1_simple if no_prev_lender ==0, detail
+sum discount_1_simple if no_prev_lender ==1 &mult_obs==1 &sample_keep==1, detail
+sum discount_1_simple if no_prev_lender ==0 &mult_obs==1 &sample_keep==1, detail
+sum discount_1_simple if no_prev_lender ==1 &mult_obs==1 &sample_keep==1& first_discount_of_type==1, detail
+sum discount_1_simple if no_prev_lender ==0 &mult_obs==1 &sample_keep==1& first_discount_of_type==1, detail
+
+sum discount_1_simple if mult_obs==1, detail
+sum discount_1_simple if mult_obs ==0, detail
+
+*Look at mult_obs only, see average discount
+preserve
+keep if mult_obs==1
+collapse (sum) constant (mean) discount_1_simple, by(borrowercompanyid no_prev_lender)
+
+sum discount_1_simple if constant ==1 & no_prev_lender ==1
+sum discount_1_simple if constant ==1 & no_prev_lender ==0
+
+sum discount_1_simple if constant ==2 & no_prev_lender ==1
+sum discount_1_simple if constant ==2 & no_prev_lender ==0
+
+sum discount_1_simple if constant ==3 & no_prev_lender ==1
+sum discount_1_simple if constant ==3 & no_prev_lender ==0
+
+sum discount_1_simple if constant ==4 & no_prev_lender ==1
+sum discount_1_simple if constant ==4 & no_prev_lender ==0
+
+*Want a dataset which has borrowercompanyid avg_discount_no_prev avg_discount_prev count_no_prev count_prev
+reshape wide discount_1_simple constant, i(borrowercompanyid) j(no_prev_lender)
+*Generate difference
+gen diff_discount = discount_1_simple1-discount_1_simple0
+gen count = constant0 + constant1
+corr count diff_discount
+restore
+
+
+
+
+*Count the average discount by number of discounts received
+use "$data_path/dealscan_compustat_loan_level", clear
+drop if mi(borrowercompanyid) 
+drop if mi(discount_1_simple)
+
+collapse (sum) constant (mean) discount_1_simple , by(borrowercompanyid rev_loan term_loan)
+
+collapse (mean) discount_1_simple, by(constant rev_loan term_loan)
+
+*See how the nth discount looks by firms that receive N discounts
+use "$data_path/dealscan_compustat_loan_level", clear
+drop if mi(borrowercompanyid) 
+drop if mi(discount_1_simple)
+
+gen discount_number = 1 if no_prev_lender==1
+bys borrowercompanyid category (facilitystartdate): replace discount_num = discount_num[_n-1] + 1 if mi(discount_num)
+
+
+egen total_discounts = count(discount_1_simple), by(borrowercompanyid)
+collapse (mean) discount_1_simple, by(discount_number total_discount rev_loan term_loan)
+local cond_add "& rev_loan ==1"
+
+twoway (scatter discount_1_simple discount_number if total_discounts ==1 `cond_add', lcolor(blue)) ///
+	(line discount_1_simple discount_number if total_discounts ==2 `cond_add', lcolor(red)) ///
+	(line discount_1_simple discount_number if total_discounts ==3 `cond_add', lcolor(green)) ///
+	(line discount_1_simple discount_number if total_discounts ==4 `cond_add', lcolor(gold)) ///
+	(line discount_1_simple discount_number if total_discounts ==5 `cond_add', lcolor(brown)) ///
+	(line discount_1_simple discount_number if total_discounts ==6 `cond_add', lcolor(lavender))
+
+*Collapse by state so each observation only has up to 2, see if that fixes it.
+use "$data_path/dealscan_compustat_loan_level", clear
+drop if mi(borrowercompanyid) 
+drop if mi(discount_1_simple)
+
+collapse (sum) constant (mean) discount_1_simple, by(borrowercompanyid rev_loan term_loan no_prev_lender)
+gen count =1
+local lhs discount_1_simple
+reghdfe `lhs' no_prev_lender if rev_loan==1, a(count) vce(cl borrowercompanyid)
+reghdfe `lhs' no_prev_lender if rev_loan==1, a(borrowercompanyid) vce(cl borrowercompanyid)
+reghdfe `lhs' no_prev_lender if term_loan==1, a(count) vce(cl borrowercompanyid)
+reghdfe `lhs' no_prev_lender if term_loan==1, a(borrowercompanyid) vce(cl borrowercompanyid)
+gen sample_keep = e(sample)
+reghdfe `lhs' no_prev_lender if term_loan==1 &sample_keep==1, a(count) vce(cl borrowercompanyid)
+br if term_loan==1 &sample_keep==1
+*Keep term_loan discounts and only look at 
+	
 *Try to understand how interactions and the FE can produce a giant number for compustat sample
 use "$data_path/stata_temp/dealscan_discount_prev_lender", clear
 gen flag_min_date_quarterly = (USRECM ==1 & date_quarterly == min_date_quarterly & date_quarterly >=tq(2005q1))
@@ -1244,12 +1412,41 @@ restore
 
 use "$data_path/sdc_ds_stacked_cleaned_with_rel_measures", clear
 
+
 reg discount_1_simple log_amount_total_fut
 preserve
 drop log_amount_total_fut
 reg discount_1_simple log_amount_*_fut
 
 restore
+
+*Want to do a similar analysis but instead only looking at observations that did not have a prev lending relationship
+use "$data_path/sdc_ds_stacked_cleaned_with_rel_measures", clear
+corr discount_1_simple duration num_interactions_prev scope_total concentration if rev_loan ==1 & no_prev_lender==1
+corr discount_1_simple num_interactions_fut scope_total_fut scope_loan_fut scope_underwriting_fut ///
+scope_loan_underwriting_fut if rev_loan ==1 & no_prev_lender==1
+
+corr discount_1_simple num_equity_prev num_debt_prev num_conv_prev num_equity_fut num_debt_fut num_conv_fut ///
+	if rev_loan ==1 
+corr discount_1_simple num_rev_loan_prev num_b_term_loan_prev num_i_term_loan_prev num_other_loan_prev num_equity_prev num_debt_prev num_conv_prev num_equity_fut num_debt_fut num_conv_fut ///
+	if rev_loan ==1 & no_prev_lender==1
+corr discount_1_simple num_rev_loan_prev num_b_term_loan_prev num_i_term_loan_prev num_other_loan_prev num_equity_prev num_debt_prev num_conv_prev num_equity_fut num_debt_fut num_conv_fut ///
+	if rev_loan ==1 & refinancingindicator=="No"
+
+
+reg discount_1_simple num_equity_prev num_debt_prev num_conv_prev num_equity_fut num_debt_fut num_conv_fut ///
+	if rev_loan ==1 
+reg discount_1_simple num_rev_loan_prev num_b_term_loan_prev num_i_term_loan_prev num_other_loan_prev num_equity_prev num_debt_prev num_conv_prev num_equity_fut num_debt_fut num_conv_fut ///
+	if rev_loan ==1  & no_prev_lender==1
+reg discount_1_simple num_rev_loan_prev num_b_term_loan_prev num_i_term_loan_prev num_other_loan_prev num_equity_prev num_debt_prev num_conv_prev num_equity_fut num_debt_fut num_conv_fut ///
+	if rev_loan ==1  & refinancingindicator=="No"
+
+reg discount_1_simple num_rev_loan_prev num_b_term_loan_prev num_i_term_loan_prev num_other_loan_prev num_equity_prev num_debt_prev num_conv_prev log_amount_equity_fut log_amount_debt_fut log_amount_conv_fut ///
+	if rev_loan ==1 
+reg discount_1_simple num_rev_loan_prev num_b_term_loan_prev num_i_term_loan_prev num_other_loan_prev num_equity_prev num_debt_prev num_conv_prev log_amount_equity_fut log_amount_debt_fut log_amount_conv_fut ///
+	if rev_loan ==1  & no_prev_lender==1
+reg discount_1_simple num_rev_loan_prev num_b_term_loan_prev num_i_term_loan_prev num_other_loan_prev num_equity_prev num_debt_prev num_conv_prev log_amount_equity_fut log_amount_debt_fut log_amount_conv_fut ///
+	if rev_loan ==1  & refinancingindicator=="No"
 
 
 use "$data_path/sdc_ds_stacked_cleaned_with_rel_measures", clear
@@ -1264,3 +1461,71 @@ bys deal_id (scope_total lender): keep if _n ==_N
 drop if mi(discount_1_simple)
 keep if rev_loan ==1
 bys cusip_6 (date_daily): keep if _n == 1
+
+*Most baseline result:
+use "$data_path/dealscan_compustat_loan_level", clear
+local lhs discount_1_simple
+local rhs no_prev_lender
+local rhs_add
+local cond `"if category =="Revolver""'
+local sample_cond
+local fe date_quarterly
+reghdfe `lhs' `rhs' `rhs_add' `cond' `sample_cond' , a(`fe') vce(cl borrowercompanyid)
+
+local fe "date_quarterly borrowercompanyid"
+reghdfe `lhs' `rhs' `rhs_add' `cond' `sample_cond' , a(`fe') vce(cl borrowercompanyid)
+
+*What if I get rid of refinances
+local fe date_quarterly
+local sample_cond `"& refinancingindicator !="Yes""'
+reghdfe `lhs' `rhs' `rhs_add' `cond' `sample_cond' , a(`fe') vce(cl borrowercompanyid)
+local fe "date_quarterly borrowercompanyid"
+reghdfe `lhs' `rhs' `rhs_add' `cond' `sample_cond' , a(`fe') vce(cl borrowercompanyid)
+
+
+*Random sum stats
+use "$data_path/dealscan_compustat_loan_level", clear
+replace refinancingindicator = "Missing" if mi(refinancingindicator)
+local cond `"if category =="Revolver""'
+sum discount_1_simple `cond' & refinancingindicator =="Yes"
+sum discount_1_simple `cond' & refinancingindicator =="No"
+sum discount_1_simple `cond' & refinancingindicator ==""
+
+tab no_prev_lender if ~mi(discount_1_simple) & category == "Revolver" & refinancingindicator =="Yes"
+tab no_prev_lender if ~mi(discount_1_simple) & category == "Revolver" & refinancingindicator =="No"
+tab no_prev_lender if ~mi(discount_1_simple) & category == "Revolver"
+
+tab no_prev_lender refinancingindicator if ~mi(discount_1_simple) & category == "Revolver" 
+
+tab no_prev_lender refinancingindicator if ~mi(discount_1_simple) & category == "Revolver" & merge_compustat==1
+tab no_prev_lender refinancingindicator if ~mi(discount_1_simple) & category == "Revolver" & merge_compustat==0
+
+
+*Get the two by two table of means (not an actual table)
+sum discount_1_simple `cond' & refinancingindicator =="Yes" & no_prev_lender ==1
+sum discount_1_simple `cond' & refinancingindicator =="Yes" & no_prev_lender ==0
+sum discount_1_simple `cond' & refinancingindicator =="No" & no_prev_lender ==1
+sum discount_1_simple `cond' & refinancingindicator =="No" & no_prev_lender ==0
+sum discount_1_simple `cond' & refinancingindicator =="Missing" & no_prev_lender ==1
+sum discount_1_simple `cond' & refinancingindicator =="Missing" & no_prev_lender ==0
+
+*Look at the stacked data to see if there is switching
+use "$data_path/sdc_ds_stacked_cleaned_with_rel_measures", clear
+gen switcher_loan_sdc = switcher_loan if sdc_obs==1
+egen firm_has_switcher_sdc = max(switcher_loan_sdc), by(cusip_6)
+gen type = ""
+foreach var in $ds_types $sdc_types {
+	replace type = "`var'" if `var' ==1
+}
+br deal_id cusip_6  type date_daily prev_lender first_loan switcher_loan type lender spread ///
+if firm_has_switcher_sdc == 1
+sort cusip_6 date_daily lender type
+
+*Look at loans that are refinanced and compare their terms to the previous loans
+use "$data_path/dealscan_compustat_loan_level", clear
+gen refinance = (refinancingindicator=="Yes")
+egen ever_refinance = max(refinance), by(borrowercompanyid)
+gen discount_not_missing = !mi(discount_1_simple)
+egen ever_discount = max(discount_not_missing), by(borrowercompanyid)
+
+br borrowercompanyid packageid facilitystartdate category spread discount_1_simple refinance refinancingindicator facilityamt dealamount if ever_refinance ==1 & ever_discount==1

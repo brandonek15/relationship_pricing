@@ -30,7 +30,6 @@ foreach vars_set in baseline baseline_time ds_lender_type ds_chars ds_chars_bins
 		local rhs rel_* i_log_proceeds_* i_gross_spread_perc_* mi_gross_spread_perc_*
 		local drop_add "mi_*"
 	}
-
 	estimates clear
 	local i = 1
 
@@ -175,4 +174,93 @@ foreach lhs in gross_spread_perc_base log_proceeds_base {
 		"Lg-Amt is Log Proceeds from issuance")
 		
 	}
+}
+
+*Want to add one where I am looking at interactions between previous relationship and the relationship states
+use "$data_path/sdc_deals_with_past_relationships_20", clear
+
+br sdc_deal_id lender hire cusip_6 date_daily prev_lender_base first_loan_base switcher_loan_base ///
+	rel_* i_prev_lend* i_first_loan_* i_switcher_loan_* if date_daily >=td(01jan2006)
+sort sdc_deal_id lender date_daily
+
+	*Want to do a version of this but only when the base is switched (and only at loans???)
+	if "`vars_set'" == "relationship_states" {
+		local rhs rel_* i_first_loan_* i_switcher_loan_* 
+		local drop_add "mi_*"
+	}
+	
+*Adjusted from the "regressions_tables_paper_slides"
+*Todo, test if it works
+gen sdc_obs =1
+local rhs rel_* i_first_loan_* i_switcher_loan_* 
+local cond_add "& (switcher_loan_base==1 | first_loan_base==1)"
+local drop_add 
+local absorb constant
+local fe_local "None"
+foreach table in sdc {
+
+	if "`table'" == "sdc" {
+		local lhs all_sdc $sdc_types
+		local notes_add "SDC deal x lender"
+	}
+	if "`table'" == "ds" {
+		
+		local lhs all_ds $ds_types
+		local notes_add "Dealscan loan x lender"
+	}
+	
+	estimates clear
+	local i = 1
+
+	foreach type in  `lhs'  {
+		if "`type'" == "all_sdc" {
+			local cond "if sdc_obs==1" 
+			local scalar_label "All Securities"
+		}
+		
+		if "`type'" == "equity" {
+			local cond "if `type' ==1" 
+			local scalar_label "Equity Issuance"
+		}
+		if "`type'" == "debt" {
+			local cond "if `type' ==1" 
+			local scalar_label "Debt Issuance"
+		}
+		if "`type'" == "conv" {
+			local cond "if `type' ==1" 
+			local scalar_label "Convertible Issuance"
+		}
+		if "`type'" == "all_ds" {
+			local cond "if ds_obs==1" 
+			local scalar_label "All Loans"
+		}
+		if "`type'" == "b_term_loan" {
+			local cond "if `type' ==1" 
+			local scalar_label "Bank Term Loans"
+		}
+		if "`type'" == "rev_loan" {
+			local cond "if `type' ==1" 
+			local scalar_label "Rev Loans"
+		}
+		if "`type'" == "i_term_loan" {
+			local cond "if `type' ==1" 
+			local scalar_label "Inst. Term Loans"
+		}
+		if "`type'" == "other_loan" {
+			local cond "if `type' ==1" 
+			local scalar_label "Other Loans"
+		}
+		
+		reghdfe hire `rhs' `cond' `cond_add', absorb(`absorb') vce(cl cusip_6)
+		estadd local fe = "`fe_local'"
+		estadd local sample = "`scalar_label',Switchers"
+		estimates store est`i'
+		local ++i
+	}
+
+	esttab est* using "$regression_output_path/regressions_inten_rel_states_`table'_slides.tex", ///
+	replace  b(%9.3f) se(%9.3f) r2 label nogaps compress star(* 0.1 ** 0.05 *** 0.01) drop(_cons `drop_add') ///
+	title("Likelihood of hiring after relationships") scalars("fe Fixed Effects" "sample Sample" ) ///
+	addnotes("Observation is `notes_add'" "Sample is 20 largest lenders x each deal/loan" ///
+	"Hire indicator either 0 or 100 for readability" "SEs clustered at firm level" )
 }

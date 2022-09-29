@@ -8,12 +8,12 @@ foreach lhs in  discount_1_simple discount_1_controls  {
 	foreach discount_type in rev b_term {
 
 		if "`discount_type'" == "rev" {
-			local cond `"& category =="Revolver""'
+			local cond `"if category =="Revolver""'
 			local disc_add "Rev"
 			local discount_type_suffix_add "_rev"
 		}
 		if "`discount_type'" == "b_term" {
-			local cond `"& category =="Bank Term""'
+			local cond `"if category =="Bank Term""'
 			local disc_add "B Term"
 			local discount_type_suffix_add "_term"
 		}	
@@ -76,7 +76,7 @@ foreach lhs in  discount_1_simple discount_1_controls  {
 							local fe_add "Time,Borr"
 						}
 						
-						reghdfe `lhs' `rhs' `rhs_add' if date_quarterly >=tq(2005q1) `cond' `sample_cond' , a(`fe') vce(cl borrowercompanyid)
+						reghdfe `lhs' `rhs' `rhs_add' `cond' `sample_cond' , a(`fe') vce(cl borrowercompanyid)
 						estadd local fe = "`fe_add'"
 						estadd local disc = "`disc_add'"
 						estadd local sample = "`sample_add'"
@@ -89,7 +89,7 @@ foreach lhs in  discount_1_simple discount_1_controls  {
 				
 				esttab est* using "$regression_output_path/discount_prev_lend_`lhs'`suffix_add'`rhs_suffix_add'`discount_type_suffix_add'_slides.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
 				title("Discounts and Previous Lenders") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
-				addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 2005Q1-2020Q4" "Dropping 2001Q1-2004Q4 as burnout period")	
+				addnotes("SEs clustered at firm level" "Sample are all dealscan discounts from 1991Q3-2020Q4")	
 			}
 		}
 	}
@@ -456,7 +456,7 @@ foreach table in sdc ds {
 
 		foreach type in `lhs' {
 
-						if "`type'" == "all_sdc" {
+			if "`type'" == "all_sdc" {
 				local cond "if sdc_obs==1" 
 				local scalar_label "All Securities"
 			}
@@ -521,7 +521,6 @@ foreach table in sdc ds {
 		*/
 	}
 }
-*pick up here
 
 *Look at pricing after previous relationship (sprd and SDC fee) 
 local drop_add 
@@ -895,10 +894,9 @@ foreach discount_type in rev {
 
 *See how compustat with ratings vs compustat w/out ratings, vs  non compustat compare
 use "$data_path/dealscan_compustat_loan_level", clear
-gen constant = 1
 foreach lhs in  discount_1_simple discount_1_controls {
 
-	local cond `"& category =="Revolver""'
+	local cond `"if category =="Revolver""'
 	local disc_add "Rev"
 
 	label var discount_1_simple "Disc"		
@@ -906,7 +904,7 @@ foreach lhs in  discount_1_simple discount_1_controls {
 	local i =1
 		
 	*Regression 1 Regress discount on constant and
-	reghdfe `lhs' merge_compustat_no_ratings merge_ratings if date_quarterly >=tq(2005q1) `cond', absorb(constant) nocons  vce(cl borrowercompanyid)
+	reghdfe `lhs' merge_compustat_no_ratings merge_ratings `cond', absorb(constant) nocons  vce(cl borrowercompanyid)
 	estadd local fe = "None"
 	estadd local disc = "`disc_add'"
 	estadd local sample = "All"
@@ -914,7 +912,7 @@ foreach lhs in  discount_1_simple discount_1_controls {
 	local ++i
 	/*
 	*Regression 5 - Add pooled prev_rel and switcher_loan (Time FE)
-	reghdfe `lhs' no_prev_lender switcher_loan if date_quarterly >=tq(2005q1) `cond' , a(date_quarterly) vce(cl borrowercompanyid)
+	reghdfe `lhs' no_prev_lender switcher_loan  `cond' , a(date_quarterly) vce(cl borrowercompanyid)
 	estadd local fe = "Time"
 	estadd local disc = "`disc_add'"
 	estadd local sample = "All"
@@ -924,7 +922,7 @@ foreach lhs in  discount_1_simple discount_1_controls {
 	*Regression 6 - Add interaction to prev_rel and switcher (Time FE)
 	reghdfe `lhs' first_no_merge_compustat switc_no_merge_compustat ///
 	merge_compustat_no_ratings merge_ratings first_merge_compustat_no_ratings switc_merge_compustat_no_ratings prev_merge_ratings ///
-	  switc_merge_ratings if date_quarterly >=tq(2005q1) `cond' , a(date_quarterly) vce(cl borrowercompanyid)
+	  switc_merge_ratings `cond' , a(date_quarterly) vce(cl borrowercompanyid)
 	estadd local fe = "Time"
 	estadd local disc = "`disc_add'"
 	estadd local sample = "All"
