@@ -1426,6 +1426,10 @@ corr discount_1_simple duration num_interactions_prev scope_total concentration 
 corr discount_1_simple num_interactions_fut scope_total_fut scope_loan_fut scope_underwriting_fut ///
 scope_loan_underwriting_fut if rev_loan ==1 & no_prev_lender==1
 
+corr discount_1_simple duration scope_* if rev_loan ==1 
+corr discount_1_simple num_*prev if rev_loan ==1 
+
+
 corr discount_1_simple num_equity_prev num_debt_prev num_conv_prev num_equity_fut num_debt_fut num_conv_fut ///
 	if rev_loan ==1 
 corr discount_1_simple num_rev_loan_prev num_b_term_loan_prev num_i_term_loan_prev num_other_loan_prev num_equity_prev num_debt_prev num_conv_prev num_equity_fut num_debt_fut num_conv_fut ///
@@ -1529,3 +1533,5 @@ gen discount_not_missing = !mi(discount_1_simple)
 egen ever_discount = max(discount_not_missing), by(borrowercompanyid)
 
 br borrowercompanyid packageid facilitystartdate category spread discount_1_simple refinance refinancingindicator facilityamt dealamount if ever_refinance ==1 & ever_discount==1
+
+*Look a

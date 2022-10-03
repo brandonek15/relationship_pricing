@@ -144,18 +144,18 @@ graph export "$figures_output_path/discount_kdensity_rev_term_both_packages_pape
 *Alternative graph using coeff plot
 *Split rev and term discount by loan number
 use "$data_path/dealscan_compustat_loan_level", clear
-keep if (category =="Revolver" | category == "Bank Term")  & !mi(borrowercompanyid) 
+keep if !mi(borrowercompanyid) 
 keep borrowercompanyid category facilitystartdate discount_1_simple ///
 first_loan prev_lender switcher_loan date_quarterly merge_compustat no_prev_lender first_loan switcher_loan
-duplicates drop
 *In case there is a missing and a discount calculated, keep the not missing obs
 bys borrowercompanyid category facilitystartdate first_loan prev_lender switcher_loan (discount_1_simple): keep if _n == 1
 
 *I want the loan number to be 1 if it is labeled as a "no_prev_lender" and then the number number goes up
 *until it hits no_prev_lending relationship again.
 gen loan_number = 1 if no_prev_lender==1
-bys borrowercompanyid category (facilitystartdate): replace loan_num = loan_num[_n-1] + 1 if mi(loan_num)
-
+bys borrowercompanyid (facilitystartdate): replace loan_num = loan_num[_n-1] + 1 if mi(loan_num)
+*If I have multiple loans at the same point in time, set them equal to the same loan num
+bys borrowercompanyid (facilitystartdate): replace loan_num = loan_num[_n-1] if facilitystartdate == facilitystartdate[_n-1]
 
 *Make a simple graph of the average discount by observation num
 forval i = 1/6 {
