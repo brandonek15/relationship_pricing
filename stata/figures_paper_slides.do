@@ -94,6 +94,22 @@ tw  `recession' `rev_discount_simple' `rev_discount_controls' `term_discount_sim
 	
 gr export "$figures_output_path/time_series_discount_mean_all_rev_term_paper.png", replace 
 
+*Make a simpler version
+
+tw  `recession' `rev_discount_simple' `term_discount_simple' , ///
+	legend(order(1 "Recession" 2 "Rev Disc (Simple)" 3 "Rev Disc (Controls)")) ///
+	title("Discounts Over Time")  ytitle("Mean Discount (bps)") 	
+	
+gr export "$figures_output_path/time_series_discount_mean_all_rev_paper.png", replace 
+
+tw  `recession' `rev_discount_simple' `term_discount_simple' , ///
+	legend(order(1 "Recession" 2 "Rev Disc" 3 "Term Disc")) ///
+	title("Discounts Over Time")  ytitle("Mean Discount (bps)") 	
+	
+gr export "$figures_output_path/time_series_discount_mean_all_rev_term_no_controls_paper.png", replace 
+
+
+
 
 
 **** Customized distribution of discount graph - kdensity
