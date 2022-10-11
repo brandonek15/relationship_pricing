@@ -103,7 +103,7 @@ tw  `recession' `rev_discount_simple' `term_discount_simple' , ///
 gr export "$figures_output_path/time_series_discount_mean_all_rev_paper.png", replace 
 
 tw  `recession' `rev_discount_simple' `term_discount_simple' , ///
-	legend(order(1 "Recession" 2 "Rev Disc" 3 "Term Disc")) ///
+	legend(order(1 "Recession" 2 "Rev Discount" 3 "Term Discount")) ///
 	title("Discounts Over Time")  ytitle("Mean Discount (bps)") 	
 	
 gr export "$figures_output_path/time_series_discount_mean_all_rev_term_no_controls_paper.png", replace 

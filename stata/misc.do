@@ -1534,4 +1534,89 @@ egen ever_discount = max(discount_not_missing), by(borrowercompanyid)
 
 br borrowercompanyid packageid facilitystartdate category spread discount_1_simple refinance refinancingindicator facilityamt dealamount if ever_refinance ==1 & ever_discount==1
 
-*Look a
+*Get nice examples of firms that have both banking discounts and future IB activity
+use "$data_path/sdc_ds_stacked_cleaned_with_rel_measures", clear
+br deal_id cusip_6 date_daily company issuer discount_1_simple
+gen not_mi_discount = !mi(discount_1_simple)
+egen firm_not_mi_discount = max(not_mi_discount), by(cusip_6)
+br deal_id cusip_6 date_daily company issuer discount_1_simple if firm_not_mi_discount==1
+*We will use NRG and Goldman Sachs as the example
+
+*Do a more formal analysis of relationship strength measures and discounts
+use "$data_path/sdc_ds_stacked_cleaned_with_rel_measures", clear
+keep if date_daily >=td(01jan2006)
+*create some locals
+local num_interactions_list_sdc
+local scope_list_sdc
+local num_interactions_list_ds
+local scope_list_ds
+foreach var in  $sdc_types  { 
+	local num_interactions_list_sdc `num_interactions_list_sdc' num_`var'_prev
+	local scope_list_sdc `scope_list_sdc' scope_`var'
+}
+foreach var in  $ds_types  { 
+	local num_interactions_list_ds `num_interactions_list_ds' num_`var'_prev
+	local scope_list_ds `scope_list_ds' scope_`var'
+}
+foreach lhs in  discount_1_simple /* discount_1_controls */ {
+
+	foreach discount_type in rev /* b_term */ {
+
+		if "`discount_type'" == "rev" {
+			local cond `"if category =="Revolver""'
+			local disc_add "Rev"
+			local discount_type_suffix_add "_rev"
+		}
+		if "`discount_type'" == "b_term" {
+			local cond `"if category =="Bank Term""'
+			local disc_add "B Term"
+			local discount_type_suffix_add "_term"
+		}
+	
+		local fe "date_quarterly"
+		local fe_add "Time"
+		local sample_add "Comp"
+		estimates clear
+		local i =1
+	
+
+					
+		foreach rhs_type in simple_duration  simple_num_int simple_scope simple_all ///
+		 split_num_interactions split_scope_total {
+			
+			if "`rhs_type'" == "simple_duration" {
+				local rhs duration
+			}
+			if "`rhs_type'" == "simple_num_int" {
+				local rhs num_interactions_prev
+			}
+			if "`rhs_type'" == "simple_scope" {
+				local rhs scope_total
+			}
+			if "`rhs_type'" == "simple_all" {
+				local rhs duration num_interactions_prev scope_total
+			}
+			
+			if "`rhs_type'" == "split_num_interactions" {
+				local rhs duration `num_interactions_list_ds' `num_interactions_list_sdc' 
+			}
+			if "`rhs_type'" == "split_scope_total"  {
+				local rhs duration `scope_list_ds' `scope_list_sdc' 
+			}
+
+					
+			reghdfe `lhs' `rhs' `rhs_add' `cond' `sample_cond' , a(`fe') vce(cl borrowercompanyid)
+			estadd local fe = "`fe_add'"
+			estadd local disc = "`disc_add'"
+			estadd local sample = "`sample_add'"
+			estimates store est`i'
+			local ++i
+			
+
+		}
+		esttab est* using "$regression_output_path/discount_rel_strength_`lhs'`discount_type_suffix_add'.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+		title("Discounts and Relationship Strength") scalars("fe Fixed Effects" "disc Discount" "sample Sample") ///
+		addnotes("SEs clustered at firm level" "Sample are all dealscan discounts x lead arrangers from 2006Q1-2020Q4")	
+	}
+	
+}
