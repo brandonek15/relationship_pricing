@@ -1620,3 +1620,26 @@ foreach lhs in  discount_1_simple /* discount_1_controls */ {
 	}
 	
 }
+
+
+*Some random plots about ratings and discounts
+use "$data_path/dealscan_compustat_loan_level", clear
+twoway (scatter discount_1_simple rating_numeric ) (lfit discount_1_simple rating_numeric) ///
+(qfit discount_1_simple rating_numeric)
+
+*Look at loan packages over time to really understand the evolution of these things.
+use "$data_path/dealscan_compustat_loan_level", clear
+keep if !mi(borrowercompanyid) 
+*In case there is a missing and a discount calculated, keep the not missing obs
+bys borrowercompanyid category facilitystartdate first_loan prev_lender switcher_loan (discount_1_simple): keep if _n == 1
+
+*I want the loan number to be 1 if it is labeled as a "no_prev_lender" and then the number number goes up
+*until it hits no_prev_lending relationship again.
+gen loan_number = 1 if no_prev_lender==1
+bys borrowercompanyid (facilitystartdate): replace loan_num = loan_num[_n-1] + 1 if mi(loan_num)
+*If I have multiple loans at the same point in time, set them equal to the same loan num
+bys borrowercompanyid (facilitystartdate): replace loan_num = loan_num[_n-1] if facilitystartdate == facilitystartdate[_n-1]
+
+*Do a nice browse of the evolution of loans.
+
+

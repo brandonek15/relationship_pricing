@@ -198,7 +198,6 @@ estimates store Rev
 reg discount_1_simple n_* if category == "Bank Term", nocons
 estimates store Term
 
-
 coefplot (Rev, label(Revolving Discount) pstyle(p3)) (Term, label(Term Discount) pstyle(p4)) ///
 , vertical ytitle("Discount") title("Discount Coefficient on Loan Number - Rev and Bank Term Discounts") ///
 	graphregion(color(white))  xtitle("Discount Number") xlabel(, angle(45)) ///
