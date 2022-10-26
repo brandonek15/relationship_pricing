@@ -6,9 +6,6 @@
 
 *Then we will plot the same graphs as the "discount over time" one but decomposed
 *MEaning have 2 graphs, each with three series "rev spread" "inst stpread" "discount"
-
-*Think about how to adjust this
-*Then label
 *********
 use "$data_path/dealscan_compustat_loan_level", clear
 keep if !mi(borrowercompanyid) 
@@ -16,27 +13,45 @@ keep if !mi(borrowercompanyid)
 *In case there is a missing and a discount calculated, keep the not missing obs
 bys borrowercompanyid category facilitystartdate first_loan prev_lender switcher_loan (discount_1_simple): keep if _n == 1
 
+*Create another version of loan_number by category 
+gen first_loan_only_one = 1 if no_prev_lender==1
+bys borrowercompanyid (facilitystartdate): replace first_loan_only_one = . if facilitystartdate == facilitystartdate[_n-1]
+bys borrowercompanyid (facilitystartdate): gen new_lender_group_num = sum(first_loan_only_one)
+
+*Create a new identifier to start creating the loan numbers by category
+egen borrower_lender_group_id = group(borrowercompanyid new_lender_group_num)
+*now actually create it
+bys borrower_lender_group_id facilitystartdate category : gen first_obs_in_package_cat = _n==1
+bys borrower_lender_group_id category (facilitystartdate): gen loan_num_category = sum(first_obs_in_package_cat)
+
+*Drop unneeded variables
+drop first_loan_only_one new_lender_group_num first_obs_in_package_cat
+
+*The variable borrower_lender_group_id basically gives each borrower x lender group a new identifier. Can use this
+*To create the the loan number
+bys borrower_lender_group_id facilitystartdate (category): gen first_obs_in_package = _n ==1
+bys borrower_lender_group_id (facilitystartdate): gen loan_number = sum(first_obs_in_package)
+
+drop first_obs_in_package
+order borrower_lender_group_id facilitystartdate category loan_number loan_num_category
 
 *Spread out dummies for whether discounts of each type exist within borrowercompanyid and date_daily
 gen t_discount_obs_rev = !mi(discount_1_simple) & category == "Revolver"
 gen t_discount_obs_term = !mi(discount_1_simple) & category == "Bank Term"
 egen discount_obs_rev = max(t_discount_obs_rev), by(borrowercompanyid facilitystartdate)
 egen discount_obs_term = max(t_discount_obs_term), by(borrowercompanyid facilitystartdate)
+*Make similar dummies for whether they are firms with discounts, but now do it by firm x lender group and across time observations
+egen discount_obs_rev_bco_group = max(t_discount_obs_rev), by(borrower_lender_group_id)
+egen discount_obs_term_bco_group = max(t_discount_obs_term), by(borrower_lender_group_id)
 drop t_*
-sort borrowercompanyid facilitystartdate category discount_1_simple discount_obs*
 
-
-*I want the loan number to be 1 if it is labeled as a "no_prev_lender" and then the number number goes up
-*until it hits no_prev_lending relationship again.
-gen loan_number = 1 if no_prev_lender==1
-bys borrowercompanyid (facilitystartdate): replace loan_num = loan_num[_n-1] + 1 if mi(loan_num)
-*If I have multiple loans at the same point in time, set them equal to the same loan num
-bys borrowercompanyid (facilitystartdate): replace loan_num = loan_num[_n-1] if facilitystartdate == facilitystartdate[_n-1]
-*br borrowercompanyid facilitystartdate category discount_1_simple discount_obs* spread loan_number no_prev_lender
 *Make a simple graph of the average discount by observation num
 forval i = 1/6 {
 	gen n_`i' = loan_number == `i'
 	label var n_`i' "Loan Num `i'"
+	gen cat_n_`i' = loan_num_category == `i'
+	label var cat_n_`i' "Loan Num `i'"
+
 }
 
 *Generate variables that represent the share of the total loan package held in the revolver or the bank term loan
@@ -247,6 +262,8 @@ foreach decomp_type in all  comp no_comp {
 
 }
 
+
+
 ********* Analysis that makes the dataset a panel to try to understand spread dynamics.
 *Create a "Panel" which will be borrowercompany x category and loan observation
 use "$data_path/dealscan_compustat_loan_level", clear
@@ -279,22 +296,21 @@ joinby date_quarterly using `rec', unmatched(master)
 *the same quarter but have different facility start dates
 bys borrowercompanyid category date_quarterly (facilitystartdate): keep if _n ==1
 
+gen first_loan_only_one = 1 if no_prev_lender==1
+bys borrowercompanyid (facilitystartdate): replace first_loan_only_one = . if facilitystartdate == facilitystartdate[_n-1]
+bys borrowercompanyid (facilitystartdate): gen new_lender_group_num = sum(first_loan_only_one)
 
-*I want the loan number to be 1 if it is labeled as a "no_prev_lender" and then the number number goes up
-*until it hits no_prev_lending relationship again.
-gen loan_number = 1 if no_prev_lender==1
-*Calculate which first loan this is the firm, which essentially marks a new lender
-bys borrowercompanyid category (facilitystartdate): gen cumu_first = sum(loan_number)
-gen new_lender_group_num = cumu_first
-drop cumu_first
-*Add one as we move forward
-bys borrowercompanyid category (facilitystartdate): replace loan_num = loan_num[_n-1] + 1 if mi(loan_num)
-
-*Create an ID variable
+*Create a new identifier to start creating hte loan numbers by category
 egen id_var = group(borrowercompanyid new_lender_group category)
+*now actually create it
+bys id_var (facilitystartdate): gen loan_num_category = _n
+*If I have multiple loans at the same point in time, set them equal to the same loan num
+bys id_var (facilitystartdate): replace loan_num_category = loan_num_category[_n-1] if facilitystartdate == facilitystartdate[_n-1]
 
+rename loan_num_category loan_number
 
-drop if mi(loan_number)
+sort id_var loan_number
+order id_var loan_number facilitystartdate category
 
 *Xtset it
 xtset id_var loan_number
@@ -337,7 +353,7 @@ egen discount_obs_any = rowmax(discount_obs_rev discount_obs_term)
 gen constant =1
 *Basic regressions
 reg spread L1.spread
-foreach rhs_type in simple interaction {
+foreach rhs_type in simple /* interaction */ {
 	if "`rhs_type'" == "simple" {
 		local suffix
 		local rhs L1_spread
@@ -384,6 +400,7 @@ foreach rhs_type in simple interaction {
 	addnotes("SEs clustered at firm level" "Identifier is firm by loan type by lender group" "Discount firms are those that have had any discount at any points")
 }
 
+/*
 reghdfe spread L1.spread if category =="Revolver", a(date_quarterly)
 reghdfe spread L1.spread if category =="Bank Term", a(date_quarterly)
 reghdfe spread L1.spread if category =="Inst. Term", a(date_quarterly)
@@ -395,10 +412,99 @@ reghdfe spread L1_spread L1_spread_diff_pos L1_spread_diff_neg if category =="In
 reghdfe spread L1_spread L1_spread_diff_pos L1_spread_diff_neg if category =="Revolver", a(date_quarterly)
 reghdfe spread L1.spread if category =="Bank Term", a(date_quarterly)
 reghdfe spread L1.spread if category =="Inst. Term", a(date_quarterly)
+*/
+*****Now we will try to understand how the dynamics look like for ONLY revolvers/ institional term loans
+****It appears what happens is that a firm often gets tons of loans before they get an institutional term loan
+use "$data_path/dealscan_compustat_loan_level_with_loan_num", clear
+sort borrower_lender_group_id facilitystartdate
+order borrower_lender_group_id category facilitystartdate loan_number loan_num_category spread discount_1_simple
 
+*First look at the first time I see a revolver, bank loan, and institutional term loan.
+gen loan_num_of_first_loan = loan_number if loan_num_category ==1
+*Only keep one of these per firm x lender category
+bys borrower_lender_group_id category (facilitystartdate): replace loan_num_of_first_loan = . if facilitystartdate == facilitystartdate[_n-1]
 
+*br borrower_lender_group_id category facilitystartdate loan_number loan_num_category loan_num_of_first_loan 
 
-*Then we will run the same regression of spread onto previous relationship, but only
-*do within firm x type
+sum loan_num_of_first_loan if category == "Revolver"
+sum loan_num_of_first_loan if category == "Bank Term"
+sum loan_num_of_first_loan if category == "Inst. Term"
 
-*Then also explore how they look by looking at data directly
+local cond "& discount_obs_rev_bco_group ==1"
+sum loan_num_of_first_loan if category == "Revolver" `cond'
+sum loan_num_of_first_loan if category == "Bank Term" `cond'
+sum loan_num_of_first_loan if category == "Inst. Term" `cond'
+*On average
+
+local cond "& loan_num_of_first_loan <=15"
+
+local rev (kdensity loan_num_of_first_loan if category == "Revolver" & discount_obs_rev_bco_group ==1 `cond', bwidth(.25) col(blue) lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
+local i_term (kdensity loan_num_of_first_loan if category == "Inst. Term" & discount_obs_rev_bco_group ==1 `cond', bwidth(.25) col(black) lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
+
+twoway `rev' `i_term'   ///
+, ytitle("Density",axis(1))  ///
+ title("Kernel Density of Loan number of First Loan of Type t",size(medsmall)) ///
+graphregion(color(white))  xtitle("Loan Number") ///
+legend(order(1 "Revolver" 2 "Inst. Term")) 
+
+*Now do a simple plot of average spreads over time
+
+local sample_cond "& discount_obs_rev_bco_group ==1"
+local spread_var spread
+foreach decomp_type in all  comp no_comp {
+	
+	if "`decomp_type'" == "all" {
+		local cond ""
+		local subsample_title "All"
+	}
+	if "`decomp_type'" == "comp" {
+		local cond "& merge_compustat ==1"
+		local subsample_title "Compustat"
+	}
+
+	if "`decomp_type'" == "no_comp" {
+		local cond "& merge_compustat ==0"
+		local subsample_title "Non- Compustat"
+	}
+
+	foreach fe_type in none borrower {
+
+		if "`fe_type'" == "none" {
+			local fe_settings "nocons"
+			local fe_cond 
+			local fe_add "No FE" 
+			local drop_var
+			local fe_suffix
+			local fe_coeff_plot_opt 
+		}
+		if "`fe_type'" == "borrower" {
+			local fe_settings "absorb(borrower_lender_group_id)"
+			local fe_cond "& loan_num_category <=6"
+			local fe_add "Borrower x Lender Group FE"
+			local drop_var "drop cat_n_1"
+			local fe_suffix "_borrowerfe"
+			local fe_coeff_plot_opt "drop(_cons)"
+		}
+		*Want to drop the baseline category for the FE regression
+		preserve
+		`drop_var'
+		estimates clear
+
+		reg `spread_var' cat_n_* if category == "Revolver" `cond' `sample_cond' `fe_cond', `fe_settings' 
+		estimates store spread_rev
+
+		reg `spread_var' cat_n_* if category == "Inst. Term" `cond' `sample_cond' `fe_cond', `fe_settings'
+		estimates store spread_i_term
+
+		coefplot (spread_rev, label(Rev Spreads) pstyle(p5) `fe_coeff_plot_opt') ///
+		(spread_i_term, label(Inst. Spreads) pstyle(p6) `fe_coeff_plot_opt') ///
+		, vertical ytitle("`spread_label'") title("Coef on Loan Number (Category) - Decomposition - `fe_add' - `subsample_title'", size(small)) ///
+			graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
+			 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
+			 "Sample includes loans from loan packages with both institutional term loan and revolver") levels(90)
+			gr export "$figures_output_path/decomposition_across_loan_number_category_coeff`fe_suffix'_`decomp_type'_with_spread_rev.png", replace 
+			
+		restore
+	}
+}
+			

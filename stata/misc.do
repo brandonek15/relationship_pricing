@@ -1640,6 +1640,17 @@ bys borrowercompanyid (facilitystartdate): replace loan_num = loan_num[_n-1] + 1
 *If I have multiple loans at the same point in time, set them equal to the same loan num
 bys borrowercompanyid (facilitystartdate): replace loan_num = loan_num[_n-1] if facilitystartdate == facilitystartdate[_n-1]
 
-*Do a nice browse of the evolution of loans.
+*Only want to look at loans that at some point have a discount
+gen refinance = (refinancingindicator=="Yes")
+egen ever_refinance = max(refinance), by(borrowercompanyid)
+gen discount_not_missing = !mi(discount_1_simple)
+egen ever_discount = max(discount_not_missing), by(borrowercompanyid)
 
+*Do a nice browse of the evolution of loans.
+gsort borrowercompanyid facilitystartdate loan_num category -facilityamt
+order borrowercompanyid facilitystartdate loan_num category spread discount_1_simple refinance
+br if ever_discount ==1
+
+corr discount_1_simple loan_num
+reg discount_1_simple loan_num
 
