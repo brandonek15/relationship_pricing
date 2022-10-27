@@ -35,11 +35,9 @@ foreach var in spread spread_2 $loan_level_controls {
 local loan_level_controls log_facilityamt maturity cov_lite senior secured fin_cov nw_cov borrower_base
 
 foreach spreads in spread spread_2 {
-	reg `spreads' $loan_level_controls , absorb(borrower_facilitystartdate)
-	*reg `spreads' $loan_level_controls if diff_obs==1, absorb(borrower_facilitystartdate)
-	*reg `spreads' `loan_level_controls' , absorb(borrower_facilitystartdate)
-	predict `spreads'_resid, residual
+	reghdfe `spreads' $loan_level_controls , absorb(borrower_facilitystartdate) residuals(`spreads'_resid)
 }
+
 foreach var in spread_resid spread_2_resid  {
 	egen m_`var' = mean(`var'), by(borrowercompanyid facilitystartdate category)
 	gen m_`var'_inst_t = m_`var' if category == "Inst. Term"

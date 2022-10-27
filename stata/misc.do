@@ -1654,3 +1654,17 @@ br if ever_discount ==1
 corr discount_1_simple loan_num
 reg discount_1_simple loan_num
 
+*Do another browse on the evolution of loans
+use "$data_path/dealscan_compustat_loan_level_with_loan_num", clear
+order borrowercompanyid borrower_lender_group_id facilitystartdate category loan_number loan_num_category ///
+spread spread_resid discount_1_simple discount_1_controls log_facilityamt 
+
+gen t_discount_obs_rev = !mi(discount_1_simple) & category == "Revolver"
+*Make similar dummies for whether they are firms with discounts, but now do it by firm x lender group and across time observations
+egen discount_obs_rev_bco = max(t_discount_obs_rev), by(borrowercompanyid)
+br if discount_obs_rev_bco ==1
+
+*Do a simple analysis. For firms that have discounts calculated (discount_obs_rev_bco_group==1) at some point
+*Are the observations where they are both getting a revolver and institutional loan have higher spreads?
+reg spread discount_obs if category == "Inst. Term" & discount_obs_rev_bco_group==1
+reg spread discount_obs if category == "Inst. Term" & discount_obs_rev_bco_group==1, absorb(borrower_lender_group_id)
