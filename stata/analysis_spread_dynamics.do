@@ -40,9 +40,12 @@ gen t_discount_obs_rev = !mi(discount_1_simple) & category == "Revolver"
 gen t_discount_obs_term = !mi(discount_1_simple) & category == "Bank Term"
 egen discount_obs_rev = max(t_discount_obs_rev), by(borrowercompanyid facilitystartdate)
 egen discount_obs_term = max(t_discount_obs_term), by(borrowercompanyid facilitystartdate)
+egen discount_obs_any = rowmax(discount_obs_rev discount_obs_term)
 *Make similar dummies for whether they are firms with discounts, but now do it by firm x lender group and across time observations
 egen discount_obs_rev_bco_group = max(t_discount_obs_rev), by(borrower_lender_group_id)
 egen discount_obs_term_bco_group = max(t_discount_obs_term), by(borrower_lender_group_id)
+egen discount_obs_any_bco_group = rowmax(discount_obs_rev_bco_group  discount_obs_term_bco_group)
+
 drop t_*
 
 *Make a simple graph of the average discount by observation num
@@ -76,217 +79,229 @@ foreach cat in rev b_term {
 
 save "$data_path/dealscan_compustat_loan_level_with_loan_num", replace
 
-
-*Keep only discount observations
-use "$data_path/dealscan_compustat_loan_level_with_loan_num", clear
-keep if discount_obs_rev ==1
-
-foreach discount_type in discount_1_simple discount_1_controls {
-
-	if "`discount_type'" == "discount_1_simple" {
-		local suffix_add
-		local title_add "Simple"
-		local spread_var spread
-		local spread_label "Spread"
+*Make graphs for revolvers and bank term loans
+foreach disc_type in rev b_term {
+	if "`disc_type'" == "rev" {
+		local category "Revolver"
+		local sample "Revolving"
+		local keep "keep if discount_obs_rev==1"
 	}
-	if "`discount_type'" == "discount_1_controls" {
-		local suffix_add "_controls"
-		local title_add "Controls"
-		local spread_var spread_resid
-		local spread_label "Residualized Spread"
+	if "`disc_type'" == "b_term" {
+		local category "Bank Term"
+		local sample "Bank Term"
+		local keep "keep if discount_obs_term==1"
 	}
 
-	foreach fe_type in none borrower {
+	*Keep only discount observations
+	use "$data_path/dealscan_compustat_loan_level_with_loan_num", clear
+	`keep'
 
-		if "`fe_type'" == "none" {
-			local fe_settings "nocons"
-			local fe_cond 
-			local fe_add "No FE" 
-			local drop_var
-			local fe_suffix
-			local fe_coeff_plot_opt 
+	foreach discount_type in discount_1_simple discount_1_controls {
+
+		if "`discount_type'" == "discount_1_simple" {
+			local suffix_add
+			local title_add "Simple"
+			local spread_var spread
+			local spread_label "Spread"
 		}
-		if "`fe_type'" == "borrower" {
-			local fe_settings "absorb(borrower_lender_group_id)"
-			local fe_cond "& loan_num_category <=6"
-			local fe_add "Borrower x Lender Group FE"
-			local drop_var "drop n_1"
-			local fe_suffix "_borrowerfe"
-			local fe_coeff_plot_opt "drop(_cons)"
+		if "`discount_type'" == "discount_1_controls" {
+			local suffix_add "_controls"
+			local title_add "Controls"
+			local spread_var spread_resid
+			local spread_label "Residualized Spread"
 		}
-	
-		*This is the simple version that doesn't breakdown by type of firm
-		*Do the original version with only one series
-		preserve
-		`drop_var'
+
+		foreach fe_type in none borrower {
+
+			if "`fe_type'" == "none" {
+				local fe_settings "nocons"
+				local fe_cond 
+				local fe_add "No FE" 
+				local drop_var
+				local fe_suffix
+				local fe_coeff_plot_opt 
+			}
+			if "`fe_type'" == "borrower" {
+				local fe_settings "absorb(borrower_lender_group_id)"
+				local fe_cond "& loan_num_category <=6"
+				local fe_add "Borrower x Lender Group FE"
+				local drop_var "drop n_1"
+				local fe_suffix "_borrowerfe"
+				local fe_coeff_plot_opt "drop(_cons)"
+			}
 		
-		estimates clear
-
-		reg `discount_type' n_* if category == "Revolver" `fe_cond', `fe_settings'
-		estimates store all
-
-		coefplot (all, label(Revolving Discounts) pstyle(p2) `fe_coeff_plot_opt') ///
-		, vertical ytitle("Revolving Discount") title("Discount Coefficient on Loan Number - `title_add' - `fe_add'", size(small)) ///
-			graphregion(color(white))  xtitle("Revolving Discount Number") xlabel(, angle(45)) ///
-			 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample") levels(90)
-			gr export "$figures_output_path/discounts`suffix_add'_across_loan_number_coeff`fe_suffix'_all.png", replace 
-		
-		*This is the one from the paper
-		estimates clear
-
-		reg `discount_type' n_* if category == "Revolver" & merge_compustat==1 `fe_cond', `fe_settings'
-		estimates store comp
-		reg `discount_type' n_* if category == "Revolver" & merge_compustat==0 `fe_cond', `fe_settings'
-		estimates store non_comp
-
-
-		coefplot (comp, label(Compustat Firm Discounts) pstyle(p3) `fe_coeff_plot_opt') ///
-		 (non_comp, label(Non-Compustat Firm Discounts) pstyle(p4) `fe_coeff_plot_opt') ///
-		, vertical ytitle("Revolving Discount") title("Discount Coefficient on Loan Number - Comp and Non-Comp Firms - `title_add' - `fe_add'", size(small)) ///
-			graphregion(color(white))  xtitle("Revolving Discount Number") xlabel(, angle(45)) ///
-			 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample") levels(90)
-			gr export "$figures_output_path/discounts`suffix_add'_across_loan_number_coeff`fe_suffix'_comp_non_comp.png", replace 
-
-		*These are the decompositions
-		foreach decomp_type in all  comp no_comp {
+			*This is the simple version that doesn't breakdown by type of firm
+			*Do the original version with only one series
+			preserve
+			`drop_var'
 			
-			if "`decomp_type'" == "all" {
-				local cond ""
-				local subsample_title "All"
-			}
-			if "`decomp_type'" == "comp" {
-				local cond "& merge_compustat ==1"
-				local subsample_title "Compustat"
-			}
-
-			if "`decomp_type'" == "no_comp" {
-				local cond "& merge_compustat ==0"
-				local subsample_title "Non- Compustat"
-			}
-			*Add labels for controls bc its not really the spread no more
 			estimates clear
 
-			reg `spread_var' n_* if category == "Revolver" `cond' `fe_cond', `fe_settings'
-			estimates store comp_spread_rev
+			reg `discount_type' n_* if category == "`category'" `fe_cond', `fe_settings'
+			estimates store all
 
-			reg `spread_var' n_* if category == "Inst. Term" `cond' `fe_cond', `fe_settings'
-			estimates store comp_spread_i_term
-
-			coefplot (comp_spread_rev, label(Rev Spreads) pstyle(p5) `fe_coeff_plot_opt') ///
-			(comp_spread_i_term, label(Inst. Spreads) pstyle(p6) `fe_coeff_plot_opt') ///
-			, vertical ytitle("`spread_label'") title("Coefficients on Loan Number - Decomposition - `subsample_title' - `title_add' - `fe_add'", size(small)) ///
-				graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
-				 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
-				 "Sample includes loans from loan packages with both institutional term loan and revolver") levels(90)
-				gr export "$figures_output_path/decomposition`suffix_add'_across_loan_number_coeff`fe_suffix'_`decomp_type'_with_spread_rev.png", replace 
+			coefplot (all, label(`sample' Discounts) pstyle(p2) `fe_coeff_plot_opt') ///
+			, vertical ytitle("`sample' Discount") title("Discount Coefficient on Loan Number - `title_add' - `fe_add'", size(small)) ///
+				graphregion(color(white))  xtitle("`sample' Discount Number") xlabel(, angle(45)) ///
+				 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample") levels(90)
+				gr export "$figures_output_path/discounts`suffix_add'_across_loan_number_coeff`fe_suffix'_all_`disc_type'.png", replace 
 			
-		}
-			
-		*Do a version where I have three series, non-comp, comp w/ ratings, comp w/out ratings
-		estimates clear
-
-		reg `discount_type' n_* if category == "Revolver" & merge_compustat==1 & merge_ratings==1 `fe_cond', `fe_settings'
-		estimates store comp_rat
-		reg `discount_type' n_* if category == "Revolver" & merge_compustat==1 & merge_ratings==0 `fe_cond', `fe_settings'
-		estimates store comp_no_rat
-		reg `discount_type' n_* if category == "Revolver" & merge_compustat==0 `fe_cond', `fe_settings'
-		estimates store non_comp
-
-
-		coefplot (comp_rat, label(Compustat With Ratings) pstyle(p3) `fe_coeff_plot_opt') ///
-		 (comp_no_rat, label(Compustat Without Ratings) pstyle(p5) `fe_coeff_plot_opt') ///
-		 (non_comp, label(Non-Compustat Firm Discounts) pstyle(p4) `fe_coeff_plot_opt') ///
-		, vertical ytitle("Revolving Discount") title("Discount Coeff on Loan Number - Comp and Non-Comp Firms, Ratings - `title_add' - `fe_add'", size(small)) ///
-			graphregion(color(white))  xtitle("Revolving Discount Number") xlabel(, angle(45)) ///
-			 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample") levels(90)
-			gr export "$figures_output_path/discounts`suffix_add'_across_loan_number_coeff`fe_suffix'_comp_non_comp_ratings.png", replace 
-
-
-		foreach decomp_type in  comp_rat comp_no_rat {
-			
-			if "`decomp_type'" == "comp_rat" {
-				local cond "& merge_compustat ==1 & merge_ratings ==1"
-				local subsample_title "Compustat w/ Ratings"
-			}
-
-			if "`decomp_type'" == "comp_no_rat" {
-				local cond "& merge_compustat ==1 & merge_ratings ==0"
-				local subsample_title "Compustat w/o Ratings"
-			}
-
+			*This is the one from the paper
 			estimates clear
 
-			reg `spread_var' n_* if category == "Revolver" `cond' `fe_cond', `fe_settings'
-			estimates store comp_spread_rev
+			reg `discount_type' n_* if category == "`category'" & merge_compustat==1 `fe_cond', `fe_settings'
+			estimates store comp
+			reg `discount_type' n_* if category == "`category'" & merge_compustat==0 `fe_cond', `fe_settings'
+			estimates store non_comp
 
-			reg `spread_var' n_* if category == "Inst. Term" `cond' `fe_cond', `fe_settings'
-			estimates store comp_spread_i_term
 
-			coefplot (comp_spread_rev, label(Rev Spreads) pstyle(p5) `fe_coeff_plot_opt') ///
-			(comp_spread_i_term, label(Inst. Spreads) pstyle(p6) `fe_coeff_plot_opt') ///
-			, vertical ytitle("`spread_label'") title("Coefficients on Loan Number - Decomposition - `subsample_title' - `title_add' - `fe_add'", size(small)) ///
-				graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
-				 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
-				 "Sample includes loans from loan packages with both institutional term loan and revolver") levels(90)
-				gr export "$figures_output_path/decomposition`suffix_add'_across_loan_number_coeff`fe_suffix'_`decomp_type'_with_spread_rev.png", replace 
-		
+			coefplot (comp, label(Compustat Firm Discounts) pstyle(p3) `fe_coeff_plot_opt') ///
+			 (non_comp, label(Non-Compustat Firm Discounts) pstyle(p4) `fe_coeff_plot_opt') ///
+			, vertical ytitle("`sample' Discount") title("Discount Coefficient on Loan Number - Comp and Non-Comp Firms - `title_add' - `fe_add'", size(small)) ///
+				graphregion(color(white))  xtitle("`sample' Discount Number") xlabel(, angle(45)) ///
+				 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample") levels(90)
+				gr export "$figures_output_path/discounts`suffix_add'_across_loan_number_coeff`fe_suffix'_comp_non_comp_`disc_type'.png", replace 
+
+			*These are the decompositions
+			foreach decomp_type in all  comp no_comp {
+				
+				if "`decomp_type'" == "all" {
+					local cond ""
+					local subsample_title "All"
+				}
+				if "`decomp_type'" == "comp" {
+					local cond "& merge_compustat ==1"
+					local subsample_title "Compustat"
+				}
+
+				if "`decomp_type'" == "no_comp" {
+					local cond "& merge_compustat ==0"
+					local subsample_title "Non- Compustat"
+				}
+				*Add labels for controls bc its not really the spread no more
+				estimates clear
+
+				reg `spread_var' n_* if category == "`category'" `cond' `fe_cond', `fe_settings'
+				estimates store comp_spread_`disc_type'
+
+				reg `spread_var' n_* if category == "Inst. Term" `cond' `fe_cond', `fe_settings'
+				estimates store comp_spread_i_term
+
+				coefplot (comp_spread_`disc_type', label(`disc_type' Spreads) pstyle(p5) `fe_coeff_plot_opt') ///
+				(comp_spread_i_term, label(Inst. Spreads) pstyle(p6) `fe_coeff_plot_opt') ///
+				, vertical ytitle("`spread_label'") title("Coefficients on Loan Number - Decomposition - `subsample_title' - `title_add' - `fe_add'", size(small)) ///
+					graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
+					 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
+					 "Sample includes loans from loan packages with both institutional term loan and `category'") levels(90)
+					gr export "$figures_output_path/decomposition`suffix_add'_across_loan_number_coeff`fe_suffix'_`decomp_type'_with_spread_`disc_type'.png", replace 
+				
+			}
+				
+			*Do a version where I have three series, non-comp, comp w/ ratings, comp w/out ratings
+			estimates clear
+
+			reg `discount_type' n_* if category == "`category'" & merge_compustat==1 & merge_ratings==1 `fe_cond', `fe_settings'
+			estimates store comp_rat
+			reg `discount_type' n_* if category == "`category'" & merge_compustat==1 & merge_ratings==0 `fe_cond', `fe_settings'
+			estimates store comp_no_rat
+			reg `discount_type' n_* if category == "`category'" & merge_compustat==0 `fe_cond', `fe_settings'
+			estimates store non_comp
+
+
+			coefplot (comp_rat, label(Compustat With Ratings) pstyle(p3) `fe_coeff_plot_opt') ///
+			 (comp_no_rat, label(Compustat Without Ratings) pstyle(p5) `fe_coeff_plot_opt') ///
+			 (non_comp, label(Non-Compustat Firm Discounts) pstyle(p4) `fe_coeff_plot_opt') ///
+			, vertical ytitle("`sample' Discount") title("Discount Coeff on Loan Number - Comp and Non-Comp Firms, Ratings - `title_add' - `fe_add'", size(small)) ///
+				graphregion(color(white))  xtitle("`sample' Discount Number") xlabel(, angle(45)) ///
+				 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample") levels(90)
+				gr export "$figures_output_path/discounts`suffix_add'_across_loan_number_coeff`fe_suffix'_comp_non_comp_ratings_`disc_type'.png", replace 
+
+
+			foreach decomp_type in  comp_rat comp_no_rat {
+				
+				if "`decomp_type'" == "comp_rat" {
+					local cond "& merge_compustat ==1 & merge_ratings ==1"
+					local subsample_title "Compustat w/ Ratings"
+				}
+
+				if "`decomp_type'" == "comp_no_rat" {
+					local cond "& merge_compustat ==1 & merge_ratings ==0"
+					local subsample_title "Compustat w/o Ratings"
+				}
+
+				estimates clear
+
+				reg `spread_var' n_* if category == "`category'" `cond' `fe_cond', `fe_settings'
+				estimates store comp_spread_`disc_type'
+
+				reg `spread_var' n_* if category == "Inst. Term" `cond' `fe_cond', `fe_settings'
+				estimates store comp_spread_i_term
+
+				coefplot (comp_spread_`disc_type', label(`disc_type' Spreads) pstyle(p5) `fe_coeff_plot_opt') ///
+				(comp_spread_i_term, label(Inst. Spreads) pstyle(p6) `fe_coeff_plot_opt') ///
+				, vertical ytitle("`spread_label'") title("Coefficients on Loan Number - Decomposition - `subsample_title' - `title_add' - `fe_add'", size(small)) ///
+					graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
+					 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
+					 "Sample includes loans from loan packages with both institutional term loan and `category'") levels(90)
+					gr export "$figures_output_path/decomposition`suffix_add'_across_loan_number_coeff`fe_suffix'_`decomp_type'_with_spread_`disc_type'.png", replace 
+			
+			}
+		restore
 		}
-	restore
+	}
+
+	*Do versions where I do the facility amt
+	foreach decomp_type in all  comp no_comp {
+		
+		if "`decomp_type'" == "all" {
+			local cond ""
+			local subsample_title "All"
+		}
+		if "`decomp_type'" == "comp" {
+			local cond "& merge_compustat ==1"
+			local subsample_title "Compustat"
+		}
+
+		if "`decomp_type'" == "no_comp" {
+			local cond "& merge_compustat ==0"
+			local subsample_title "Non- Compustat"
+		}
+		estimates clear
+
+		reg log_facilityamt n_* if category == "`category'" `cond', nocons
+		estimates store `disc_type'_facilityamt
+
+		reg log_facilityamt n_* if category == "Inst. Term" `cond', nocons
+		estimates store i_term_facilityamt
+
+		coefplot (`disc_type'_facilityamt, label(`category' Log Facility Amt) pstyle(p3))  ///
+		(i_term_facilityamt, label(Inst. Log Facility Amt) pstyle(p5)) ///
+		, vertical ytitle("Log Facility Amt") title("Coefficients on Log Facility Amt - `subsample_title'",size(medsmall)) ///
+			graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
+			 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
+			 "Sample includes loans from loan packages with both institutional term loan and `category'") levels(90)
+			gr export "$figures_output_path/loan_amounts_across_loan_number_coeff_`decomp_type'_`disc_type'.png", replace 
+
+		*Do the same thing but look at the proportion of `category' in the total amount and the proportion relative to inst.
+
+		estimates clear
+
+		reg prop_`disc_type'_total n_* if category == "`category'" `cond', nocons
+		estimates store `disc_type'_total
+
+		reg prop_`disc_type'_inst n_* if category == "`category'" `cond', nocons
+		estimates store `disc_type'_inst
+
+		coefplot (`disc_type'_total, label(`category' Amount / Total Deal Amount) pstyle(p3))  ///
+		(`disc_type'_inst, label(`category' Amount / Inst. Amount) pstyle(p5)) ///
+		, vertical ytitle("Proportion") title("Coefficients on Proportion - `subsample_title'",size(medsmall)) ///
+			graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
+			 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
+			 "Sample includes loans from loan packages with both institutional term loan and `category'") levels(90)
+			gr export "$figures_output_path/prop_`disc_type'_across_loan_number_coeff_`decomp_type'_`disc_type'.png", replace 
+
 	}
 }
-
-*Do versions where I do the facility amt
-foreach decomp_type in all  comp no_comp {
-	
-	if "`decomp_type'" == "all" {
-		local cond ""
-		local subsample_title "All"
-	}
-	if "`decomp_type'" == "comp" {
-		local cond "& merge_compustat ==1"
-		local subsample_title "Compustat"
-	}
-
-	if "`decomp_type'" == "no_comp" {
-		local cond "& merge_compustat ==0"
-		local subsample_title "Non- Compustat"
-	}
-	estimates clear
-
-	reg log_facilityamt n_* if category == "Revolver" `cond', nocons
-	estimates store rev_facilityamt
-
-	reg log_facilityamt n_* if category == "Inst. Term" `cond', nocons
-	estimates store i_term_facilityamt
-
-	coefplot (rev_facilityamt, label(Revolver Log Facility Amt) pstyle(p3))  ///
-	(i_term_facilityamt, label(Inst. Log Facility Amt) pstyle(p5)) ///
-	, vertical ytitle("Log Facility Amt") title("Coefficients on Log Facility Amt - `subsample_title'",size(medsmall)) ///
-		graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
-		 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
-		 "Sample includes loans from loan packages with both institutional term loan and revolver") levels(90)
-		gr export "$figures_output_path/loan_amounts_across_loan_number_coeff_`decomp_type'_rev.png", replace 
-
-	*Do the same thing but look at the proportion of revolver in the total amount and the proportion relative to inst.
-
-	estimates clear
-
-	reg prop_rev_total n_* if category == "Revolver" `cond', nocons
-	estimates store rev_total
-
-	reg prop_rev_inst n_* if category == "Revolver" `cond', nocons
-	estimates store rev_inst
-
-	coefplot (rev_total, label(Revolver Amount / Total Deal Amount) pstyle(p3))  ///
-	(rev_inst, label(Revolver Amount / Inst. Amount) pstyle(p5)) ///
-	, vertical ytitle("Proportion") title("Coefficients on Proportion - `subsample_title'",size(medsmall)) ///
-		graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
-		 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
-		 "Sample includes loans from loan packages with both institutional term loan and revolver") levels(90)
-		gr export "$figures_output_path/prop_rev_across_loan_number_coeff_`decomp_type'_rev.png", replace 
-
-}
-
 
 
 ***************************Do a similar analysis but by loan number within category
@@ -388,14 +403,14 @@ foreach decomp_type in all  comp no_comp {
 
 ********* Analysis that makes the dataset a panel to try to understand spread dynamics.
 *Create a "Panel" which will be borrowercompany x category and loan observation
-use "$data_path/dealscan_compustat_loan_level", clear
+use "$data_path/dealscan_compustat_loan_level_with_loan_num", clear
 keep if !mi(borrowercompanyid) 
-keep borrowercompanyid category facilitystartdate date_quarterly discount_1_simple spread facilityamt ///
-first_loan prev_lender switcher_loan date_quarterly merge_compustat no_prev_lender first_loan switcher_loan 
+*keep borrowercompanyid category facilitystartdate date_quarterly discount_1_simple spread facilityamt ///
+*first_loan prev_lender switcher_loan date_quarterly merge_compustat no_prev_lender first_loan switcher_loan 
 
 *Need to collapse to make the panel (don't want to artificially call two of the same loans at the same time different loans
 collapse (mean) spread (max) discount_1_simple date_quarterly merge_compustat no_prev_lender first_loan switcher_loan ///
-, by(borrowercompanyid category facilitystartdate)
+discount_obs*, by(borrowercompanyid borrower_lender_group_id category facilitystartdate)
 
 *Merge on BBB and lagged BBB spread so I can have "rates are declining or increasing" measures
 preserve
@@ -463,14 +478,6 @@ label var L1_spread_diff_neg "L1 Spread * D1 Spread Negative"
 
 order borrowercompanyid category facilitystartdate loan_number id_var spread
 
-*Lastly let's create a dummy so we can restrict our regressions to only firms that at some point receive some discount
-*Spread out dummies for whether discounts of each type exist within borrowercompanyid and date_daily
-gen t_discount_obs_rev = !mi(discount_1_simple) & category == "Revolver"
-gen t_discount_obs_term = !mi(discount_1_simple) & category == "Bank Term"
-egen discount_obs_rev = max(t_discount_obs_rev), by(borrowercompanyid)
-egen discount_obs_term = max(t_discount_obs_term), by(borrowercompanyid)
-egen discount_obs_any = rowmax(discount_obs_rev discount_obs_term)
-
 *Now we have a panel where basically we have the identifier is firm x loan type x lender group
 gen constant =1
 *Basic regressions
@@ -486,7 +493,7 @@ foreach rhs_type in simple /* interaction */ {
 	}
 	estimates clear
 	local i =1
-	foreach sample in all discount_obs {
+	foreach sample in all /* discount_obs */ discount_obs_firm {
 		foreach category in "rev" "b_term" "i_term" {
 		if "`category'" == "rev" {
 			local cond `"if category =="Revolver""'
@@ -504,7 +511,11 @@ foreach rhs_type in simple /* interaction */ {
 			}
 			if "`sample'" == "discount_obs" {
 				local sample_cond "& discount_obs_any==1"
-				local sample_add "Discount Firms"
+				local sample_add "Disc Obs"
+			}
+			if "`sample'" == "discount_obs_firm" {
+				local sample_cond "& discount_obs_any_bco_group==1"
+				local sample_add "Disc Firms"
 			}
 			
 			reghdfe spread `rhs' `cond' `sample_cond' , a(constant) vce(cl borrowercompanyid)
@@ -519,21 +530,121 @@ foreach rhs_type in simple /* interaction */ {
 
 	esttab est* using "$regression_output_path/spread_autocorrelation_by_loan_type`suffix'.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
 	title("Spread Autocorrelation") scalars("cat Loan Cat.""sample Sample") ///
-	addnotes("SEs clustered at firm level" "Identifier is firm by loan type by lender group" "Discount firms are those that have had any discount at any points")
+	addnotes("SEs clustered at firm level" "Identifier is firm by loan type by lender group" ///
+	"Discount obs are those for which a discount can be computed" "Discount firms are those that have had any discount at any points")
 }
 
-/*
-reghdfe spread L1.spread if category =="Revolver", a(date_quarterly)
-reghdfe spread L1.spread if category =="Bank Term", a(date_quarterly)
-reghdfe spread L1.spread if category =="Inst. Term", a(date_quarterly)
+***********Do the same panel regression except this time keep only discount observations (or else it could be due to sample)
+foreach disc_type in rev b_term {
+	if "`disc_type'" == "rev" {
+		local categories "rev i_term"
+		local sample "Rev Discount"
+		local keep "keep if discount_obs_rev==1"
+	}
+	if "`disc_type'" == "b_term" {
+		local categories "b_term i_term"
+		local sample "Bank Term Discount"
+		local keep "keep if discount_obs_term==1"
+	}
 
-reghdfe spread L1_spread L1_spread_diff_pos L1_spread_diff_neg if category =="Revolver", a(constant)
-reghdfe spread L1_spread L1_spread_diff_pos L1_spread_diff_neg if category =="Bank Term", a(constant)
-reghdfe spread L1_spread L1_spread_diff_pos L1_spread_diff_neg if category =="Inst. Term", a(constant)
+	use "$data_path/dealscan_compustat_loan_level_with_loan_num", clear
+	keep if !mi(borrowercompanyid) 
+	*Do only `disc_type' loans
+	`keep'
+	drop if spread <0
 
-reghdfe spread L1_spread L1_spread_diff_pos L1_spread_diff_neg if category =="Revolver", a(date_quarterly)
-reghdfe spread L1.spread if category =="Bank Term", a(date_quarterly)
-reghdfe spread L1.spread if category =="Inst. Term", a(date_quarterly)
-*/
+	*Need to collapse to make the panel (don't want to artificially call two of the same loans at the same time different loans
+	collapse (mean) spread (max) discount_1_simple date_quarterly merge_compustat no_prev_lender first_loan switcher_loan ///
+	discount_obs*, by(borrowercompanyid borrower_lender_group_id category facilitystartdate)
 
+	*Merge on BBB and lagged BBB spread so I can have "rates are declining or increasing" measures
+	preserve
+		freduse BAMLC0A4CBBB , clear
+		rename BAMLC0A4CBBB bbb_spread
+		replace bbb_spread = bbb_spread*100
+		gen date_quarterly = qofd(daten)
+		collapse (max) bbb_spread , by(date_quarterly)
+		tsset date_quarterly
+		gen L1_bbb_spread = L.bbb_spread
+		gen D1_bbb_spread = bbb_spread - L1_bbb_spread
+		keep date_quarterly *bbb_spread
+		tempfile rec
+		save `rec', replace
+	restore
+
+	joinby date_quarterly using `rec', unmatched(master)
+
+	*Small issue where there are multiple "firsts" because its possible multiple loans of the same type are in 
+	*the same quarter but have different facility start dates
+	bys borrower_lender_group_id category date_quarterly (facilitystartdate): keep if _n ==1
+
+	gen first_loan_only_one = 1 if no_prev_lender==1
+	bys borrower_lender_group_id (facilitystartdate): replace first_loan_only_one = . if facilitystartdate == facilitystartdate[_n-1]
+	bys borrower_lender_group_id (facilitystartdate): gen new_lender_group_num = sum(first_loan_only_one)
+
+	*Create a new identifier to start creating hte loan numbers by category
+	egen id_var = group(borrowercompanyid new_lender_group category)
+	*now actually create it
+	bys id_var (facilitystartdate): gen loan_num_category = _n
+	*If I have multiple loans at the same point in time, set them equal to the same loan num
+	bys id_var (facilitystartdate): replace loan_num_category = loan_num_category[_n-1] if facilitystartdate == facilitystartdate[_n-1]
+
+	rename loan_num_category loan_number
+
+	sort id_var loan_number
+	order id_var loan_number facilitystartdate category
+
+	*Xtset it
+	xtset id_var loan_number
+	gen L1_spread = L1.spread
+	label var L1_spread  "L1 Spread"
+	label var spread "Spread"
+
+	*Now we have a panel where basically we have the identifier is firm x loan type x lender group
+	gen constant =1
+	*Basic regressions
+	reg spread L1.spread
+	foreach rhs_type in simple {
+		if "`rhs_type'" == "simple" {
+			local suffix
+			local rhs L1_spread
+		}
+
+		estimates clear
+		local i =1
+		foreach sample in discount_obs {
+			foreach category in `categories' {
+			di "`categories'"
+			if "`category'" == "rev" {
+				local cond `"if category =="Revolver""'
+			}
+			if "`category'" == "b_term" {
+				local cond `"if category =="Bank Term""'
+			}
+			if "`category'" == "i_term" {
+				local cond `"if category =="Inst. Term""'
+			}
+
+				if "`sample'" == "discount_obs" {
+					local sample_cond ""
+					local sample_add "`sample'"
+				}
+				
+				reghdfe spread `rhs' `cond' `sample_cond' , a(constant) vce(cl borrowercompanyid)
+				estadd local cat = "`category'"
+				estadd local sample = "`sample_add'"
+				estimates store est`i'
+				local ++i
+				
+			}
 			
+		}
+		*You may notice there is a small difference in sample size, and this occurs because sometimes
+		*There are no lead arrangers on an institutional loan so we drop it from the sample, after
+		*discount has been calculated
+		esttab est* using "$regression_output_path/spread_autocorrelation_by_loan_type`suffix'_`disc_type'_disc_obs_only.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+		title("Spread Autocorrelation") scalars("cat Loan Cat.""sample Sample") ///
+		addnotes("SEs clustered at firm level" "Identifier is firm by loan type by lender group" ///
+		"Discount obs are those for which a discount can be computed")
+	}
+}
