@@ -51,3 +51,5 @@ do "$code_path/analysis_ds_lending_relationship.do"
 do "$code_path/figures_paper_slides.do"
 do "$code_path/simple_tables_paper_slides.do"
 do "$code_path/regression_tables_paper_slides.do"
+
+*Do analyses by section

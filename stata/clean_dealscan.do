@@ -172,6 +172,31 @@ merge 1:1 facilityid lender using "$data_path/stata_temp/facilityid_lender_merge
 
 isid facilityid lender 
 
+*Make bins for maturity
+forval i = 0(12)108 {
+	local start = `i'
+	local stop = `i'+11
+	gen maturity_`start'_`stop' = (maturity >=`start' & maturity <=`stop')
+	label var maturity_`start'_`stop' "Maturity = [`start',`stop']"
+}
+gen maturity_120_plus = (maturity>=120 & ~mi(maturity))
+label var maturity_120_plus "Maturity = [120,inf)"
+
+*Make maturity [60,71] the baseline
+drop maturity_60_71
+*Make missing maturity variable
+gen maturity_mi = mi(maturity)
+label var maturity_mi "Maturity Missing"
+
+*Create deciles for loan size (will do log_facilityamt bc why not
+xtile xtile_log_facilityamt = log_facilityamt, nquantiles(10)
+forval i = 1(1)10 {
+	gen log_facilityamt_dec_`i' = xtile_log_facilityamt==`i'
+	label var log_facilityamt_dec_`i' "Facility Amt Decile `i'"
+}
+*Make decile 1 be the baseline
+drop log_facilityamt_dec_1
+
 *Label important variables
 label var log_facilityamt "Log Facility Amount"
 label var maturity "Maturity"

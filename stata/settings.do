@@ -31,7 +31,7 @@ global comp_outcome_vars cash_assets acq_assets shrhlder_payout_assets ///
 	 working_cap_assets capex_assets ppe_assets ///
 	 roa ebitda_assets  sga_assets
 	 
-global loan_level_controls log_facilityamt maturity cov cov_lite
+global loan_level_controls log_facilityamt maturity cov_lite
 	 
 global lower_cut_wins 2.5
 global upper_cut_wins 97.5

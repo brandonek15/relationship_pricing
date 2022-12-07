@@ -32,13 +32,19 @@ foreach var in spread spread_2 $loan_level_controls {
 *Get residualized spreads, which will be used to calculate the discount with controls
 *Only calculate on observations where we can calculate a difference
 
-local loan_level_controls log_facilityamt maturity cov_lite senior secured fin_cov nw_cov borrower_base
+local loan_level_controls log_facilityamt cov_lite maturity
 
 foreach spreads in spread spread_2 {
-	reghdfe `spreads' $loan_level_controls , absorb(borrower_facilitystartdate) residuals(`spreads'_resid)
+	reghdfe `spreads' `loan_level_controls' , absorb(borrower_facilitystartdate) residuals(`spreads'_resid)
 }
 
-foreach var in spread_resid spread_2_resid  {
+local loan_level_controls_no_param cov_lite maturity_* log_facilityamt_dec_*
+foreach spreads in spread spread_2 {
+	reghdfe `spreads' `loan_level_controls_no_param' , absorb(borrower_facilitystartdate) residuals(`spreads'_resid_np)
+}
+
+
+foreach var in spread_resid spread_2_resid spread_resid_np spread_2_resid_np  {
 	egen m_`var' = mean(`var'), by(borrowercompanyid facilitystartdate category)
 	gen m_`var'_inst_t = m_`var' if category == "Inst. Term"
 	egen m_`var'_inst = max(m_`var'_inst_t), by(borrowercompanyid facilitystartdate)
@@ -55,6 +61,8 @@ rename diff_spread discount_1_simple
 rename diff_spread_2 discount_2_simple
 rename diff_spread_resid discount_1_controls
 rename diff_spread_2_resid discount_2_controls
+rename diff_spread_resid_np discount_1_controls_np
+rename diff_spread_2_resid_np discount_2_controls_np
 
 *Want the direction of the discount to be in the right. Discount is inst_spread - bank_spread
 *But want the differences to be the differences between the bank and the institutional - easier to interpret
@@ -62,6 +70,8 @@ replace discount_1_simple = discount_1_simple*-1
 replace discount_2_simple = discount_2_simple*-1
 replace discount_1_controls = discount_1_controls*-1
 replace discount_2_controls = discount_2_controls*-1
+replace discount_1_controls_np = discount_1_controls_np*-1
+replace discount_2_controls_np = discount_2_controls_np*-1
 
 *Calculate the discount, residualized for loan level controls
 foreach disc in discount_1 discount_2 {
