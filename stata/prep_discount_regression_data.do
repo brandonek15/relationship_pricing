@@ -30,18 +30,37 @@ foreach var in spread spread_2 $loan_level_controls {
 }
 
 *Get residualized spreads, which will be used to calculate the discount with controls
-*Only calculate on observations where we can calculate a difference
+*Will use the entire sample to inform the coefficients, but use borrower x start date FEs (package FEs)
 
-local loan_level_controls log_facilityamt cov_lite maturity
+estimates clear
+local i =1
+
+local loan_level_controls cov_lite maturity log_facilityamt 
 
 foreach spreads in spread spread_2 {
-	reghdfe `spreads' `loan_level_controls' , absorb(borrower_facilitystartdate) residuals(`spreads'_resid)
+	reghdfe `spreads' `loan_level_controls' , absorb(borrower_facilitystartdate) residuals(`spreads'_resid) vce(cl borrowercompanyid)
+	if "`spreads'" == "spread" {
+		estadd local fe = "Borrower X Date"
+		estimates store est`i'
+		local ++i
+	}
 }
 
 local loan_level_controls_no_param cov_lite maturity_* log_facilityamt_dec_*
 foreach spreads in spread spread_2 {
-	reghdfe `spreads' `loan_level_controls_no_param' , absorb(borrower_facilitystartdate) residuals(`spreads'_resid_np)
+	reghdfe `spreads' `loan_level_controls_no_param' , absorb(borrower_facilitystartdate) residuals(`spreads'_resid_np) vce(cl borrowercompanyid)
+	if "`spreads'" == "spread" {
+		estadd local fe = "Borrower X Date"
+		estimates store est`i'
+		local ++i
+	}
+
 }
+
+*Make a table with the coefficients
+esttab est* using "$regression_output_path/spreads_onto_controls_for_residalized_measure.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
+title("Spreads and Loan Characteristics") scalars("fe Fixed Effects") ///
+addnotes("SEs clustered at firm level" "Sample are all loans" "Omitted categories are Maturity = [60,71) and Facility Amt Decile 1")	
 
 
 foreach var in spread_resid spread_2_resid spread_resid_np spread_2_resid_np  {

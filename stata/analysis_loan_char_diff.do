@@ -80,3 +80,29 @@ graphregion(color(white))  xtitle("Discount") ///
 legend(order(1 "Simple Revolving Discount" 2 "Residualized Revolving Discount" 3 "Residualized Revolving Discount - NP")) ///
  note("" "Epanechnikov kernel with bandwidth 20")
 graph export "$figures_output_path/discount_kdensity_simple_controls_with_np.png", replace
+
+*Get the coefficients of the characteristics in a regression table
+*Will make this in the "prep_discount_regression_data" code
+use "$data_path/dealscan_facility_level", clear
+
+*The difference between revolving and institutional and non-institutional term and instittuional term loanwill give me the "discount
+*Will temporarily be calling non secured, non senior, or asset backed into "Other"
+gen category_temp = category
+*Add loans that are non secured, non senior, or asset backed into "Other" so our measure is better
+replace category = "Other" if secured == 0 | senior ==0 | asset_based ==1
+
+assert !mi(category)
+*Create a new "package" id to be used when residualizing
+egen borrower_facilitystartdate = group(borrowercompanyid facilitystartdate)
+
+*Get residualized spreads
+local loan_level_controls log_facilityamt cov_lite maturity
+
+foreach spreads in spread spread_2 {
+	reghdfe `spreads' `loan_level_controls' , absorb(borrower_facilitystartdate) residuals(`spreads'_resid)
+}
+
+local loan_level_controls_no_param cov_lite maturity_* log_facilityamt_dec_*
+foreach spreads in spread spread_2 {
+	reghdfe `spreads' `loan_level_controls_no_param' , absorb(borrower_facilitystartdate) residuals(`spreads'_resid_np)
+}
