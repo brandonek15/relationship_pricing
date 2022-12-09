@@ -47,9 +47,11 @@ do "$code_path/create_ds_lending_relationships.do"
 do "$code_path/analysis_sdc_issuance_relationship.do"
 do "$code_path/analysis_ds_lending_relationship.do"
 
+*Do analyses by section
+do "$code_path/analysis_loan_char_diff.do"
+do "$code_path/analysis_relationship_quid_pro_quo.do"
+
 *Code to create tables for paper/slides
 do "$code_path/figures_paper_slides.do"
 do "$code_path/simple_tables_paper_slides.do"
 do "$code_path/regression_tables_paper_slides.do"
-
-*Do analyses by section
