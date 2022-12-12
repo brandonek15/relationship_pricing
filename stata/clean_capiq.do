@@ -23,6 +23,10 @@ label def Rating 1 "AAA" 2 "AA+" 3 "AA" 4 "AA-" 5 "A+"  6 "A"  7 "A-"  8 "BBB+" 
 encode ratingsymbol, label(Rating) gen(rating_numeric)
 label var rating_numeric "Credit Rating"
 
+*Create an investment grade indicator
+gen investment_grade = rating_numeric<=10
+label var investment_grade "Investment Grade Issuer"
+
 gen date_quarterly = qofd(ratingdate)
 format date_quarterly %tq
 label var date_quarterly "Quarterly Date"
@@ -50,7 +54,7 @@ format date_quarterly %tq
 merge 1:1 gvkey date_quarterly using "$data_path/stata_temp/gvkey_ratings_base", keep(1 3) nogen
 xtset gvkey date_quarterly
 
-foreach backfill in ratingsymbol rating_numeric min_date_quarterly max_date_quarterly {
+foreach backfill in ratingsymbol investment_grade rating_numeric min_date_quarterly max_date_quarterly {
 	bys gvkey (date_quarterly): replace `backfill' = `backfill'[_n-1] if mi(`backfill')
 }
 drop if date_quarterly < min_date_quarterly | date_quarterly >max_date_quarterly | mi(ratingsymbol)

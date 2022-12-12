@@ -1668,3 +1668,9 @@ br if discount_obs_rev_bco ==1
 *Are the observations where they are both getting a revolver and institutional loan have higher spreads?
 reg spread discount_obs if category == "Inst. Term" & discount_obs_rev_bco_group==1
 reg spread discount_obs if category == "Inst. Term" & discount_obs_rev_bco_group==1, absorb(borrower_lender_group_id)
+
+*Look at how discounts/ spreads look like for IG loans
+use "$data_path/dealscan_compustat_loan_level_with_loan_num", clear
+br company borrowercompanyid facilitystartdate borrower_lender_group_id loan_number spread category discount_1_simple investment_grade rating_numeric ///
+if borrower_lender_group_id == 29110
+*if ~mi(investment_grade) & spread >500 & investment_grade ==1 & !mi(spread)
