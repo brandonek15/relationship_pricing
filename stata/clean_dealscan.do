@@ -220,6 +220,12 @@ collapse (sum) lender_count institutional_lender, by(facilityid)
 rename institutional_lender institutional_lender_count
 
 gen share_institutional_lender = institutional_lender_count/lender_count
+gen non_inst_lender_count = lender_count - institutional_lender_count
+
+label var share_institutional_lender "Share of Lenders that are Institutional"
+label var lender_count "Total Lenders in Syndicate"
+label var institutional_lender_count "Total Inst. Lenders in Syndicate"
+label var non_inst_lender_count "Total non-Institutional Lenders in Syndicate"
 save "$data_path/stata_temp/facilityid_institutional_lender_counts", replace
 
 *This will also create the types of loan relationship states
@@ -283,6 +289,30 @@ duplicates drop
 isid facilityid
 
 merge 1:1 facilityid using "$data_path/stata_temp/facilityid_institutional_lender_counts", nogen assert(3)
+
+preserve
+	*First get the institutional loan data to merge onto loans through the package
+	*Need to get the institional_lenders on the institional loans in the loan package (maybe need to collapse?)
+	keep borrowercompanyid facilitystartdate category facilityamt facilityid ///
+	lender_count institutional_lender_count non_inst_lender_count share_institutional_lender
+	keep if category == "Inst. Term"
+	*If there are multiple institutional loans, get the biggest. And if that's tied, just do the lowest facilityid
+	gsort borrowercompanyid facilitystartdate -facilityamt facilityid
+	by borrowercompanyid facilitystartdate: keep if _n ==1
+
+	foreach var in lender_count non_inst_lender_count institutional_lender_count share_institutional_lender {
+		local label: variable label `var'
+		rename `var' i_`var'
+		label var i_`var' "`label' for Inst. Loan"
+	}
+	keep borrowercompanyid facilitystartdate i_*
+	save "$data_path/stata_temp/i_institutional_lender_counts", replace
+
+restore
+
+*Merge on the number of institional lenders on the instiutional loans
+merge m:1 borrowercompanyid facilitystartdate using "$data_path/stata_temp/i_institutional_lender_counts", nogen keep(1 3)
+
 
 save "$data_path/dealscan_facility_level", replace
 

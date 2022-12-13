@@ -50,6 +50,8 @@ do "$code_path/analysis_ds_lending_relationship.do"
 *Do analyses by section
 do "$code_path/analysis_loan_char_diff.do"
 do "$code_path/analysis_relationship_quid_pro_quo.do"
+do "$code_path/analysis_information.do"
+do "$code_path/analysis_reselling.do"
 
 *Code to create tables for paper/slides
 do "$code_path/figures_paper_slides.do"
