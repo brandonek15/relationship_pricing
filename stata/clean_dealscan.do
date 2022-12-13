@@ -213,6 +213,15 @@ replace salesatclose = salesatclose/1000000
 save "$data_path/dealscan_facility_lender_level", replace
 
 *Create a datset with only facility variables that can used in analyses
+*First create a dataset with the number of lenders and institutional lenders
+use "$data_path/dealscan_facility_lender_level", clear
+gen lender_count =1
+collapse (sum) lender_count institutional_lender, by(facilityid)
+rename institutional_lender institutional_lender_count
+
+gen share_institutional_lender = institutional_lender_count/lender_count
+save "$data_path/stata_temp/facilityid_institutional_lender_counts", replace
+
 *This will also create the types of loan relationship states
 use "$data_path/dealscan_facility_lender_level", clear
 isid facilityid lender
@@ -269,9 +278,12 @@ label var first_loan_rec "Rec x First Loan"
 gen switcher_loan_rec = USRECM * switcher_loan
 label var switcher_loan_rec "Rec x Switching Lender"
 
-drop lender lenderrole bankallocation agent_credit lead_arranger_credit
+drop lender institutional_lender lenderrole bankallocation agent_credit lead_arranger_credit
 duplicates drop
 isid facilityid
+
+merge 1:1 facilityid using "$data_path/stata_temp/facilityid_institutional_lender_counts", nogen assert(3)
+
 save "$data_path/dealscan_facility_level", replace
 
 *Now we will get the discounts by packageid

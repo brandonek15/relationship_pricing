@@ -1674,3 +1674,38 @@ use "$data_path/dealscan_compustat_loan_level_with_loan_num", clear
 br company borrowercompanyid facilitystartdate borrower_lender_group_id loan_number spread category discount_1_simple investment_grade rating_numeric ///
 if borrower_lender_group_id == 29110
 *if ~mi(investment_grade) & spread >500 & investment_grade ==1 & !mi(spread)
+
+*Look to see if I have the CLO and mutual find identities for the institutional loans
+use "$data_path/dealscan_facility_lender_level", clear
+order facilityid borrowercompanyid facilitystartdate lender lead_arranger lenderrole institutional
+br if institutional ==1
+br if regexm(lender,"GOLUB")
+tab lender if institutional ==1
+
+gen institutional_lender = 0
+foreach str in "FUND" "CLO" "LEVERAGED CAPITAL" "INSTITUTIONAL" "ADVISORS" ///
+ "INVESTORS" "INVESTMENT MANAGEMENT" "LIFE" "INVESTMENTS" "ALLSTATE" "HIGH-YIELD" "PARTNERS" ///
+ "ASSET" "INSURANCE" "RETIREMENT" "GOLUB" "BLACKSTONE" "CIFC" "CARLYLE" "ARES" ///
+ "OCTAGON" "PGIM" "MJX" "ANCHORAGE CAPITAL" "NEUBERGER BERMAN" "FIRST EAGLE" "KKR" "VOYA" ///
+ "SOUND POINT" "BLACKROCK" "BAIN CAPITAL" "PALMER SQUARE" "OAK HILL" "BARINGS" "CVC CREDIT" ///
+ "CBAM" "FORTRESS INVESTMENT" "BENEFIT STREET" "LCM ASSET" "SCULPTOR LOAN" "ASSURED INVESTMENT" ///
+ "REDDING RIDGE" "GOLDENTREE" "ONEX" "APOLLO GLOBAL" "ANTARES" "AGL" "NAPIER PARK" ///
+ "HPS INVESTMENT" "ASSET MANAGEMENT" "SIXTH STREET" "CERBERUS CAPITAL" "CAPITAL MANAGEMENT" ///
+ "REGIMENT CAPITAL" "FORTIS" "VAN KAMPEN" "TRAVELERS" "TRANSAMERICA" {
+	replace institutional_lender = 1 if regexm(lender,"`str'")
+}
+
+gen lender_first_letter = substr(lender,1,1)
+tab lender if institutional ==1
+tab lender institutional_lender if institutional ==1 & lender_first_letter<"B"
+tab lender institutional_lender if institutional ==1 & lender_first_letter>"S" & lender_first_letter<"W"
+tab lender institutional_lender if institutional ==1 & lender_first_letter>"W"
+
+*Want to create some measures of the institutional investors that are parts of the syndicate
+use "$data_path/dealscan_facility_lender_level", clear
+gen lender_count =1
+collapse (sum) lender_count institutional_lender, by(facilityid)
+rename institutional_lender institutional_lender_count
+
+gen share_institutional_lender = institutional_lender_count/lender_count
+save "$data_path/stata_temp/facilityid_institutional_lender_counts", replace
