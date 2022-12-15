@@ -33,7 +33,43 @@ bys borrower_lender_group_id facilitystartdate (category): gen first_obs_in_pack
 bys borrower_lender_group_id (facilitystartdate): gen loan_number = sum(first_obs_in_package)
 
 drop first_obs_in_package
-order borrower_lender_group_id facilitystartdate category loan_number loan_num_category
+
+*Want to do a similar one except not by borrower_lender_group, instead just by borrower.
+bys borrowercompanyid facilitystartdate (category): gen first_obs_in_package = _n ==1
+bys borrowercompanyid (facilitystartdate): gen loan_number_borrower = sum(first_obs_in_package)
+
+drop first_obs_in_package
+order borrowercompanyid borrower_lender_group_id facilitystartdate category loan_number_borrower loan_number loan_num_category 
+
+*Now want to create variables to be used for the "t-1" analysis, where I look at loan numbers BEFORE a switch
+*First generate a variable that says you are the nth lender group for a borrower
+preserve
+
+	keep borrowercompanyid borrower_lender_group_id facilitystartdate
+	*Keep only the first loan from the borrower_lender_group_id x borrowercompanyid
+	bys borrowercompanyid borrower_lender_group_id (facilitystartdate): keep if _n ==1
+	*Now number the borrower_lender_group_ids
+	bys borrowercompanyid (borrower_lender_group_id facilitystartdate): gen syndicate_number = _n
+	keep borrowercompanyid borrower_lender_group_id syndicate_number
+	tempfile synd_num
+	save `synd_num', replace
+
+restore
+
+merge m:1 borrowercompanyid borrower_lender_group_id using `synd_num', assert(3) nogen
+
+*We will only look at syndicate 2's and call their syndicate 1 loans the t-n loans
+egen total_loans_borrower_syndicate = max(loan_number), by(borrower_lender_group_id)
+*Create a variable for the total number of loan syndicates for a borrower
+egen max_syndicate = max(syndicate_number), by(borrowercompanyid)
+gen loan_number_syndicate_2 = loan_number if syndicate_number ==2
+*Make the loans go from t-1,t-2,...
+replace loan_number_syndicate_2 = loan_number - total_loans_borrower_syndicate -1 if syndicate_number ==1 & max_syndicate >1
+order borrowercompanyid borrower_lender_group_id facilitystartdate category loan_number_borrower loan_number loan_num_category syndicate_number loan_number_syndicate_2 max_syndicate
+
+drop total_loans_borrower_syndicate
+*To do. Look if dynamics look different for loan syndicate 1 vs loan syndicates >1
+*To do. Look at the t-1 analysis for loan syndicate 2s
 
 *Spread out dummies for whether discounts of each type exist within borrowercompanyid and date_daily
 gen t_discount_obs_rev = !mi(discount_1_simple) & category == "Revolver"
@@ -54,8 +90,21 @@ forval i = 1/6 {
 	label var n_`i' "Loan Num `i'"
 	gen cat_n_`i' = loan_num_category == `i'
 	label var cat_n_`i' "Loan Num `i'"
-
+	
+	*Also do this for 2nd syndicate
+	gen synd_2_n_`i' = loan_number_syndicate_2==`i'
+	replace synd_2_n_`i' = . if max_syndicate==1
+	label var synd_2_n_`i' "Loan Num `i'"
 }
+
+*Do the negative loan numbers for loans in the first syndicate
+forval i = 6(-1)1 {
+	*Also do this for 2nd syndicate
+	gen synd_2_neg_n_`i' = loan_number_syndicate_2==-`i'
+	replace synd_2_neg_n_`i' = . if max_syndicate==1
+	label var synd_2_neg_n_`i' "Loan Num -`i'"
+}
+
 
 *Generate variables that represent the share of the total loan package held in the revolver or the bank term loan
 egen t_total_rev = total(facilityamt) if category == "Revolver", by(borrowercompanyid facilitystartdate)
@@ -290,6 +339,89 @@ foreach disc_type in rev b_term {
 					 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
 					 "Sample includes loans from loan packages with both institutional term loan and `category'") levels(90)
 					gr export "$figures_output_path/decomposition`suffix_add'_across_loan_number_coeff`fe_suffix'_`decomp_type'_with_spread_`disc_type'.png", replace 
+			
+			}
+			
+			*Make one that is first syndicate vs later syndicate.
+			estimates clear
+
+			reg `discount_type' n_* if category == "`category'" & syndicate_number==1 `fe_cond', `fe_settings'
+			estimates store synd_1
+			reg `discount_type' n_* if category == "`category'" & syndicate_number>1 `fe_cond', `fe_settings'
+			estimates store synd_ge1
+
+			coefplot (synd_1, label(First Syndicate) pstyle(p3) `fe_coeff_plot_opt') ///
+			 (synd_ge1, label(Syndicate 2+) pstyle(p5) `fe_coeff_plot_opt') ///
+			, vertical ytitle("`sample' Discount") title("Discount Coeff on Loan Number - First Syndicate vs Syndicates 2+ `title_add' - `fe_add'", size(small)) ///
+				graphregion(color(white))  xtitle("`sample' Discount Number") xlabel(, angle(45)) ///
+				 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample") levels(90)
+				gr export "$figures_output_path/discounts`suffix_add'_across_loan_number_coeff`fe_suffix'_synd_1_vs_other_`disc_type'.png", replace 
+
+			*Decompose the first syndicate vs later syndicate
+			foreach decomp_type in  synd_1 synd_2_plus {
+				
+				if "`decomp_type'" == "synd_1" {
+					local cond "& syndicate_number==1 "
+					local subsample_title "First Syndicate"
+				}
+
+				if "`decomp_type'" == "synd_2_plus" {
+					local cond "& syndicate_number>1"
+					local subsample_title "Syndicates 2+"
+				}
+
+				estimates clear
+
+				reg `spread_var' n_* if category == "`category'" `cond' `fe_cond', `fe_settings'
+				estimates store spread_`disc_type'
+
+				reg `spread_var' n_* if category == "Inst. Term" `cond' `fe_cond', `fe_settings'
+				estimates store spread_i_term
+
+				coefplot (spread_`disc_type', label(`disc_type' Spreads) pstyle(p5) `fe_coeff_plot_opt') ///
+				(spread_i_term, label(Inst. Spreads) pstyle(p6) `fe_coeff_plot_opt') ///
+				, vertical ytitle("`spread_label'") title("Coefficients on Loan Number - Decomposition - `subsample_title' - `title_add' - `fe_add'", size(small)) ///
+					graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
+					 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
+					 "Sample includes loans from loan packages with both institutional term loan and `category'") levels(90)
+					gr export "$figures_output_path/decomposition`suffix_add'_across_loan_number_coeff`fe_suffix'_`decomp_type'_with_spread_`disc_type'.png", replace 
+			
+			*t-1 analysis. Looking at the 2nd syndicate as the loan 1 vs loan 2, and then looking at the 
+			*1st syndicate as loan -1, loan -2, etc.
+			
+			estimates clear
+
+			reg `discount_type' synd_2_neg_n_* synd_2_n_* if category == "`category'" `fe_cond', `fe_settings'
+			estimates store all
+
+			coefplot (all, label(`sample' Discounts) pstyle(p2) `fe_coeff_plot_opt') ///
+			, vertical ytitle("`sample' Discount") title("Discount Coefficient on Loan Number - 2nd Syndicate vs 1st - `title_add' - `fe_add'", size(small)) ///
+				graphregion(color(white))  xtitle("`sample' Discount Number") xlabel(, angle(45)) ///
+				 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
+				  "Loan -1 is the loan package right before switching syndicates, Loan -2 is the one before loan -1, etc.") levels(90)
+				gr export "$figures_output_path/discounts`suffix_add'_across_loan_number_coeff`fe_suffix'_all_2nd_synd_`disc_type'.png", replace 
+
+			*Do the decomposition
+			estimates clear
+			local decomp_type all
+			local cond ""
+			local subsample_title "All"
+
+			reg `spread_var' synd_2_neg_n_* synd_2_n_* if category == "`category'" `cond' `fe_cond', `fe_settings'
+			estimates store spread_`disc_type'
+
+			reg `spread_var' synd_2_neg_n_* synd_2_n_* if category == "Inst. Term" `cond' `fe_cond', `fe_settings'
+			estimates store spread_i_term
+
+			coefplot (spread_`disc_type', label(`disc_type' Spreads) pstyle(p5) `fe_coeff_plot_opt') ///
+			(spread_i_term, label(Inst. Spreads) pstyle(p6) `fe_coeff_plot_opt') ///
+			, vertical ytitle("`spread_label'") title("Coefficients on Loan Number - Decomposition - 2nd Syndicate `subsample_title' - `title_add' - `fe_add'", size(small)) ///
+				graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
+				 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
+				 "Sample includes loans from loan packages with both institutional term loan and `category'" ///
+				 "Loan -1 is the loan package right before switching syndicates, Loan -2 is the one before loan -1, etc.") levels(90)
+				gr export "$figures_output_path/decomposition`suffix_add'_across_loan_number_coeff`fe_suffix'_`decomp_type'_2nd_synd_with_spread_`disc_type'.png", replace 
+
 			
 			}	
 		restore
