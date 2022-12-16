@@ -28,6 +28,8 @@ do "$code_path/make_ds_lender_data_with_comp.do"
 do "$code_path/make_sdc_data_with_comp.do"
 *Make a Dealscan + SDC stacked dataset
 do "$code_path/make_sdc_dealscan_stacked_data.do"
+*Prepare data for spread dynamics and analyses that compare bank loans vs inst loans
+do "$code_path/make_spread_dynamics_data.do"
 
 *Analysis
 do "$code_path/summary_stats.do"

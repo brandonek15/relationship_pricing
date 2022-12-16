@@ -1726,3 +1726,6 @@ reghdfe discount_1_simple i_lender_count no_i_lender i_share_institutional_lende
 reghdfe discount_1_simple i_share_institutional_lender if category == "Revolver", a(date_quarterly) vce(cl borrowercompanyid)
 reghdfe discount_1_simple i_lender_count i_share_i_lend_* if category == "Revolver", a(date_quarterly) vce(cl borrowercompanyid)
 
+*See how these relate to 
+use "$data_path/dealscan_compustat_loan_level_with_loan_num", clear
+corr discount_1_simple prop_rev_total prop_rev_inst if category == "Revolver"
