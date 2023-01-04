@@ -1729,3 +1729,15 @@ reghdfe discount_1_simple i_lender_count i_share_i_lend_* if category == "Revolv
 *See how these relate to 
 use "$data_path/dealscan_compustat_loan_level_with_loan_num", clear
 corr discount_1_simple prop_rev_total prop_rev_inst if category == "Revolver"
+
+*Look at the total discounts
+use "$data_path/dealscan_compustat_loan_level", clear
+*Get discount x loan amounts by category x year
+keep if category == "Revolver" | category == "Bank Term"
+gen discount_loan_amount = discount_1_simple/10000 * facilityamt / 1000000 //Now the units are in millions dollars of discounts
+keep if !mi(discount_loan_amount)
+gen facility_start_year = year(facilitystartdate)
+gen count = 1
+collapse (sum) count discount_loan_amount, by(facility_start_year category)
+sort facility_start_year category
+export delimited using "$data_path/discount_amount_per_year_millions", replace

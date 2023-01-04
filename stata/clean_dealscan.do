@@ -120,8 +120,6 @@ label var end_date_quarterly "Quarterly End Date"
 gen date_daily = facilitystartdate
 label var date_daily "Date Daily of Start Date"
 format date_daily %td
-*Need to make an adjustment to cov variable based on Berlin, Nini, Yu. All revolving loans have covenants
-replace cov = 1 if rev_loan==1
 
 *Merge on FRED rate data to make a comparable spread variable
 merge m:1 date_quarterly using "$data_path/fred_rates", nogen keep(1 3)
