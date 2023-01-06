@@ -137,13 +137,13 @@ esttab . using "$regression_output_path/differences_loan_chars_ratings_obs.tex",
 cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Obs with Ratings" "Obs w/out Ratings" "Difference") ///
  nonum eqlabels(none) addnotes("Sample is Revolver and Bank Term Loans") 
 
-*Correlation tables
-use  "$data_path/stata_temp/dealscan_discounts_facilityid", clear
-foreach var in discount_1_simple discount_1_controls discount_2_simple discount_2_controls {
+*Summary stats table of discounts/spreads and Correlation tables
+use  "$data_path/dealscan_compustat_loan_level", clear
+foreach var in discount_1_simple discount_1_controls discount_1_controls_np {
 	gen temp_term_disc = `var' if category == "Bank Term" 
-	egen temp_term_disc_sp = max(temp_term_disc), by(borrowercompanyid date_quarterly)
+	egen temp_term_disc_sp = max(temp_term_disc), by(borrowercompanyid facilitystartdate)
 	gen temp_rev_disc = `var' if category == "Revolver" 
-	egen temp_rev_disc_sp = max(temp_rev_disc), by(borrowercompanyid date_quarterly)
+	egen temp_rev_disc_sp = max(temp_rev_disc), by(borrowercompanyid facilitystartdate)
 	*Drop the revolving discount and then recreate it so it is populated for all loans in the quarter x firm
 	drop `var'
 	*Create the term_discount, which will exist 
@@ -154,16 +154,48 @@ foreach var in discount_1_simple discount_1_controls discount_2_simple discount_
 }
 *Need to spread the bank term, inst term, revolver, and other spread 
 gen temp_term_sprd = spread if category == "Bank Term" 
-egen term_sprd_sp = max(temp_term_sprd), by(borrowercompanyid date_quarterly)
+egen term_sprd_sp = mean(temp_term_sprd), by(borrowercompanyid facilitystartdate)
 gen temp_rev_sprd = spread if category == "Revolver" 
-egen rev_sprd_sp = max(temp_rev_sprd), by(borrowercompanyid date_quarterly)
+egen rev_sprd_sp = mean(temp_rev_sprd), by(borrowercompanyid facilitystartdate)
 gen temp_inst_term_sprd = spread if category == "Inst. Term" 
-egen inst_term_sprd_sp = max(temp_inst_term_sprd), by(borrowercompanyid date_quarterly)
+egen inst_term_sprd_sp = mean(temp_inst_term_sprd), by(borrowercompanyid facilitystartdate)
 gen temp_other_sprd = spread if category == "Other" 
-egen other_sprd_sp = max(temp_other_sprd), by(borrowercompanyid date_quarterly)
+egen other_sprd_sp = mean(temp_other_sprd), by(borrowercompanyid facilitystartdate)
 
-keep borrowercompanyid rev_discount* term_discount_* *sprd_sp date_quarterly
+*Want to match sample in regression tables, so now only include bank loans
+keep if category == "Revolver" | category == "Bank Term"
+drop if mi(rev_discount_1_simple) & mi(term_discount_1_simple)
+keep borrowercompanyid rev_discount* term_discount_* *sprd_sp facilitystartdate date_quarterly
+rename *sprd_sp *sprd	
+save "$data_path/stata_temp/discounts_and_spreads_borrowercompanyid_facilitystartdate_loan_obs", replace
+
+*Now make the summary stats table
+use "$data_path/stata_temp/discounts_and_spreads_borrowercompanyid_facilitystartdate_loan_obs", clear
+gen rev_inst_term_sprd = inst_term_sprd if ~mi(rev_discount_1_simple)
+gen term_inst_term_sprd = inst_term_sprd if ~mi(term_discount_1_simple)
+replace rev_sprd = . if mi(rev_discount_1_simple)
+replace term_sprd = . if mi(term_discount_1_simple)
+
 duplicates drop
+
+local rev_vars rev_discount_1_simple rev_discount_1_controls  ///
+	rev_discount_1_controls_np rev_sprd rev_inst_term_sprd
+
+local term_vars term_discount_1_simple term_discount_1_controls  ///
+	term_discount_1_controls_np term_sprd term_inst_term_sprd
+
+estpost tabstat `rev_vars' `term_vars', s(min p5 p25 p50 p75 p95 max mean sd count) c(s)
+esttab . using "$regression_output_path/sumstats_discounts_spreads.tex", ///
+ label title("Loan Discounts") replace ///
+cells("min(fmt(3)) p25(fmt(3)) p50(fmt(3)) p75(fmt(3)) max(fmt(3)) mean(fmt(2)) sd(fmt(2)) count(fmt(0))") ///
+nomtitle  nonum noobs note("Only includes observations where the particular discount can be calculated")
+
+*Now do a correlations table
+use "$data_path/stata_temp/discounts_and_spreads_borrowercompanyid_facilitystartdate_loan_obs", clear
+duplicates drop
+isid borrowercompanyid facilitystartdate
+
+*
 
 		preserve
 			freduse USRECM BAMLC0A4CBBB BAMLC0A1CAAA, clear
@@ -188,10 +220,7 @@ duplicates drop
 		restore
 
 		joinby date_quarterly using `rec', unmatched(master)
-		
-*Here we have a dataset identified by borrowercompanyid date_quarterly 
-rename *sprd_sp *sprd	
-	
+			
 corrtex *sprd *bbb_spread, title("Spread Correlations") sig ///
 file("$regression_output_path/spread_correlations_both.tex") replace
 

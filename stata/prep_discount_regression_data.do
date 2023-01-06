@@ -35,7 +35,9 @@ foreach var in spread spread_2 $loan_level_controls {
 estimates clear
 local i =1
 
-local loan_level_controls cov_lite maturity log_facilityamt 
+*Temporarily make them populated so I don't lose observations
+replace maturity = -1 if maturity_mi ==1
+local loan_level_controls cov_lite maturity maturity_mi log_facilityamt 
 
 foreach spreads in spread spread_2 {
 	reghdfe `spreads' `loan_level_controls' , absorb(borrower_facilitystartdate) residuals(`spreads'_resid) vce(cl borrowercompanyid)
@@ -56,10 +58,12 @@ foreach spreads in spread spread_2 {
 	}
 
 }
+*Make it missing again
+replace maturity = . if maturity_mi ==1
 
 *Make a table with the coefficients
-esttab est* using "$regression_output_path/spreads_onto_controls_for_residalized_measure.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
-title("Spreads and Loan Characteristics") scalars("fe Fixed Effects") ///
+esttab est* using "$regression_output_path/spreads_onto_controls_for_residalized_measure.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons *_mi) star(* 0.1 ** 0.05 *** 0.01) ///
+title("Spreads and Loan Characteristics") scalars("fe Fixed Effects")  ///
 addnotes("SEs clustered at firm level" "Sample are all loans" "Omitted categories are Maturity = [60,71) and Facility Amt Decile 1")	
 
 
@@ -92,6 +96,7 @@ replace discount_2_controls = discount_2_controls*-1
 replace discount_1_controls_np = discount_1_controls_np*-1
 replace discount_2_controls_np = discount_2_controls_np*-1
 
+
 *Calculate the discount, residualized for loan level controls
 foreach disc in discount_1 discount_2 {
 	*Regress discount on loan characteristics
@@ -106,8 +111,33 @@ label var discount_1_simple "Di-1-S"
 label var discount_2_simple "Di-2-S"
 label var discount_1_controls "Di-1-C"
 label var discount_2_controls "Di-2-C"
+label var discount_1_controls_np "Di-1-C-NP"
+label var discount_2_controls_np "Di-2-C-NP"
 label var discount_1_controls_diff "Di-1-C-Diff"
 label var discount_2_controls_diff "Di-2-C-Diff"
+
+*Create an indicator whether it is a discount obs or not (and subsets too) - these are at the package level
+gen not_missing_discount_temp = !mi(discount_1_simple)
+egen discount_obs = max(not_missing_discount_temp), by(borrowercompanyid facilitystartdate)
+drop not_missing_discount_temp
+gen not_missing_discount_temp = !mi(discount_1_simple) & category == "Revolver"
+egen discount_obs_rev = max(not_missing_discount_temp), by(borrowercompanyid facilitystartdate)
+drop not_missing_discount_temp
+gen not_missing_discount_temp = !mi(discount_1_simple) & category == "Bank Term"
+egen discount_obs_b_term = max(not_missing_discount_temp), by(borrowercompanyid facilitystartdate)
+drop not_missing_discount_temp
+
+
+*I only want one discount per package, so I will make a new variable that is the package discount
+foreach disc in discount_1_simple discount_2_simple discount_1_controls discount_2_controls ///
+	discount_1_controls_np discount_2_controls_np discount_1_controls_diff discount_2_controls_diff {
+	
+	gen `disc'_dup = `disc'
+	local label: variable label `disc'
+	label var `disc'_dup "`label' with duplicates"
+	*Arbitrarily only keep the smallest facilityid discount so there aren't duplicates
+	bys borrowercompanyid facilitystartdate category (facilityid): replace `disc' = . if _n>1
+}
 
 
 *Make buckets for discount
@@ -119,7 +149,7 @@ foreach spread_type in standard alternate {
 		local spread_suffix 2
 	}
 	
-	foreach discount_type in simple controls controls_diff {
+	foreach discount_type in simple controls controls_np controls_diff {
 		
 		gen d_`spread_suffix'_`discount_type'_le_0 = (discount_`spread_suffix'_`discount_type'<-10e-9) 
 		gen d_`spread_suffix'_`discount_type'_0 = (discount_`spread_suffix'_`discount_type'>=-10e-9 & discount_`spread_suffix'_`discount_type' <=10e-9) 

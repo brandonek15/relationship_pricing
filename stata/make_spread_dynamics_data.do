@@ -66,9 +66,6 @@ drop total_loans_borrower_syndicate
 *Spread out dummies for whether discounts of each type exist within borrowercompanyid and date_daily
 gen t_discount_obs_rev = !mi(discount_1_simple) & category == "Revolver"
 gen t_discount_obs_term = !mi(discount_1_simple) & category == "Bank Term"
-egen discount_obs_rev = max(t_discount_obs_rev), by(borrowercompanyid facilitystartdate)
-egen discount_obs_term = max(t_discount_obs_term), by(borrowercompanyid facilitystartdate)
-egen discount_obs_any = rowmax(discount_obs_rev discount_obs_term)
 *Make similar dummies for whether they are firms with discounts, but now do it by firm x lender group and across time observations
 egen discount_obs_rev_bco_group = max(t_discount_obs_rev), by(borrower_lender_group_id)
 egen discount_obs_term_bco_group = max(t_discount_obs_term), by(borrower_lender_group_id)

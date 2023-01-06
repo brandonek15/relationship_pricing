@@ -61,25 +61,37 @@ gr export "$figures_output_path/time_series_discount_mean_all_rev_with_np.png", 
 **** Customized distribution of discount graph - kdensity
 use "$data_path/dealscan_compustat_loan_level", clear
 
-local rev (kdensity  discount_1_simple if category == "Revolver", color(orange) bwidth(20)  lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
-local rev_controls (kdensity  discount_1_controls if category == "Revolver", color(red) bwidth(20)  lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
-local rev_controls_np (kdensity  discount_1_controls_np if category == "Revolver", color(green) bwidth(20)  lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
+foreach type in rev b_term {
 
-twoway `rev' `rev_controls'  ///
-, ytitle("Density",axis(1))  ///
- title("Kernel Density of Discount - Simple vs Controls",size(medsmall)) ///
-graphregion(color(white))  xtitle("Discount") ///
-legend(order(1 "Simple Revolving Discount" 2 "Residualized Revolving Discount")) ///
- note("" "Epanechnikov kernel with bandwidth 20")
-graph export "$figures_output_path/discount_kdensity_simple_controls.png", replace
+	if "`type'" == "rev" {
+		local cat "Revolver"
+	}
+	if "`type'" == "b_term" {
+		local cat "Bank Term"
+	}
+		
 
-twoway `rev' `rev_controls' `rev_controls_np'  ///
-, ytitle("Density",axis(1))  ///
- title("Kernel Density of Discount - Simple vs Controls vs Controls - Non Parametric",size(medsmall)) ///
-graphregion(color(white))  xtitle("Discount") ///
-legend(order(1 "Simple Revolving Discount" 2 "Residualized Revolving Discount" 3 "Residualized Revolving Discount - NP")) ///
- note("" "Epanechnikov kernel with bandwidth 20")
-graph export "$figures_output_path/discount_kdensity_simple_controls_with_np.png", replace
+	local `type' (kdensity  discount_1_simple if category == "`cat'", color(orange) bwidth(20)  lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
+	local `type'_controls (kdensity  discount_1_controls if category == "`cat'", color(red) bwidth(20)  lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
+	local `type'_controls_np (kdensity  discount_1_controls_np if category == "`cat'", color(green) bwidth(20)  lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
+
+	twoway ``type'' ``type'_controls'  ///
+	, ytitle("Density",axis(1))  ///
+	 title("Kernel Density of Discount - Simple vs Controls",size(medsmall)) ///
+	graphregion(color(white))  xtitle("Discount") ///
+	legend(order(1 "Simple `cat' Discount" 2 "Residualized `cat' Discount")) ///
+	 note("" "Epanechnikov kernel with bandwidth 20")
+	graph export "$figures_output_path/discount_kdensity_simple_controls_`type'.png", replace
+
+	twoway ``type'' ``type'_controls' ``type'_controls_np'  ///
+	, ytitle("Density",axis(1))  ///
+	 title("Kernel Density of Discount - Simple vs Controls vs Controls - Non Parametric",size(medsmall)) ///
+	graphregion(color(white))  xtitle("Discount") ///
+	legend(order(1 "Simple `cat' Discount" 2 "Residualized `cat' Discount" 3 "Residualized `cat' Discount - NP")) ///
+	 note("" "Epanechnikov kernel with bandwidth 20")
+	graph export "$figures_output_path/discount_kdensity_simple_controls_with_np_`type'.png", replace
+
+}
 
 *Get the coefficients of the characteristics in a regression table
 *Will make this in the "prep_discount_regression_data" code

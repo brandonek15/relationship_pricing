@@ -14,3 +14,11 @@ twoway (scatter `content') (lfit `content') ///
 graphregion(color(white))  xtitle("Ratings Numeric") ///
  note("Ratings on a Numeric Scale: 1 = AAA, 22=D""Correlation: `corr', beta on regression: `beta'")
 gr export "$figures_output_path/ratings_discount_1_simple_rev.png", replace 
+
+
+binscatter `content' ///
+, ytitle("Discount",axis(1))  ///
+ title("Discounts and Ratings - Rev",size(medsmall)) ///
+graphregion(color(white))  xtitle("Ratings Numeric") ///
+ note("Ratings on a Numeric Scale: 1 = AAA, 22=D""Correlation: `corr', beta on regression: `beta'")
+gr export "$figures_output_path/ratings_discount_1_simple_binscatter_rev.png", replace 

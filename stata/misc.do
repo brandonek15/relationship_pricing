@@ -1741,3 +1741,20 @@ gen count = 1
 collapse (sum) count discount_loan_amount, by(facility_start_year category)
 sort facility_start_year category
 export delimited using "$data_path/discount_amount_per_year_millions", replace
+
+*Kdensity of compustat vs non compustat 
+**** Customized distribution of discount graph - kdensity
+use "$data_path/dealscan_compustat_loan_level", clear
+
+ttest discount_1_simple if category == "Revolver", by(merge_compustat) unequal
+
+local comp (kdensity  discount_1_simple if category == "Revolver" & merge_compustat ==1, color(midblue) bwidth(20)  lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
+local non_comp (kdensity discount_1_simple if category == "Revolver" & merge_compustat ==0, col(orange) bwidth(20) lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
+
+twoway `comp' `non_comp'  ///
+, ytitle("Density",axis(1))  ///
+ title("Kernel Density of Revolving Discount - Compustat vs Non Compustat",size(medsmall)) ///
+graphregion(color(white))  xtitle("Discount") ///
+legend(order(1 "Compustat" 2 "Non Compustat")) ///
+ note("" "Epanechnikov kernel with bandwidth 20")
+graph export "$figures_output_path/discount_kdensity_rev_comp_non_comp.png", replace
