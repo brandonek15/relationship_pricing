@@ -178,6 +178,24 @@ replace term_sprd = . if mi(term_discount_1_simple)
 
 duplicates drop
 
+foreach type in rev term {
+	
+	if "`type'" == "rev" {
+		local label_add "Rev Disc Sample:"
+	}
+	if "`type'" == "term" {
+		local label_add "Term Disc Sample"
+	}
+	
+
+	label var `type'_discount_1_simple "`label_add' Simple Discount"
+	label var `type'_discount_1_controls "`label_add' Discount with Controls"
+	label var `type'_discount_1_controls_np "`label_add' Discount with Non-Parametric Controls"
+	label var `type'_sprd "`label_add' Revolving Spread"
+	label var `type'_inst_term_sprd "`label_add' Institutional Term Spread"
+	
+}
+
 local rev_vars rev_discount_1_simple rev_discount_1_controls  ///
 	rev_discount_1_controls_np rev_sprd rev_inst_term_sprd
 
