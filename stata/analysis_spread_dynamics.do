@@ -124,6 +124,58 @@ foreach disc_type in rev b_term {
 					gr export "$figures_output_path/decomposition`suffix_add'_across_loan_number_coeff`fe_suffix'_`decomp_type'_with_spread_`disc_type'.png", replace 
 				
 			}
+			
+			*Do a version with loan number for the borrower
+			estimates clear
+
+			reg `discount_type' borrower_n_* if category == "`category'" & merge_compustat==1 `fe_cond', `fe_settings'
+			estimates store comp
+			reg `discount_type' borrower_n_* if category == "`category'" & merge_compustat==0 `fe_cond', `fe_settings'
+			estimates store non_comp
+
+
+			coefplot (comp, label(Compustat Firm Discounts) pstyle(p3) `fe_coeff_plot_opt') ///
+			 (non_comp, label(Non-Compustat Firm Discounts) pstyle(p4) `fe_coeff_plot_opt') ///
+			, vertical ytitle("`sample' Discount") title("Discount Coefficient on Loan Number - By Firm - Comp and Non-Comp Firms - `title_add' - `fe_add'", size(small)) ///
+				graphregion(color(white))  xtitle("`sample' Discount Number") xlabel(, angle(45)) ///
+				 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample") levels(90)
+				gr export "$figures_output_path/discounts`suffix_add'_across_loan_number_coeff`fe_suffix'_comp_non_comp_`disc_type'_bor.png", replace 
+
+			*These are the decompositions
+			foreach decomp_type in all  comp no_comp {
+				
+				if "`decomp_type'" == "all" {
+					local cond ""
+					local subsample_title "All"
+				}
+				if "`decomp_type'" == "comp" {
+					local cond "& merge_compustat ==1"
+					local subsample_title "Compustat"
+				}
+
+				if "`decomp_type'" == "no_comp" {
+					local cond "& merge_compustat ==0"
+					local subsample_title "Non- Compustat"
+				}
+				*Add labels for controls bc its not really the spread no more
+				estimates clear
+
+				reg `spread_var' borrower_n_* if category == "`category'" `cond' `fe_cond', `fe_settings'
+				estimates store comp_spread_`disc_type'
+
+				reg `spread_var' borrower_n_* if category == "Inst. Term" `cond' `fe_cond', `fe_settings'
+				estimates store comp_spread_i_term
+
+				coefplot (comp_spread_`disc_type', label(`disc_type' Spreads) pstyle(p5) `fe_coeff_plot_opt') ///
+				(comp_spread_i_term, label(Inst. Spreads) pstyle(p6) `fe_coeff_plot_opt') ///
+				, vertical ytitle("`spread_label'") title("Coefficients on Loan Number - By Firm - Decomposition - `subsample_title' - `title_add' - `fe_add'", size(small)) ///
+					graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
+					 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
+					 "Sample includes loans from loan packages with both institutional term loan and `category'") levels(90)
+					gr export "$figures_output_path/decomposition`suffix_add'_across_loan_number_coeff`fe_suffix'_`decomp_type'_with_spread_`disc_type'_bor.png", replace 
+				
+			}
+			
 				
 			*Do a version where I have three series, non-comp, comp w/ ratings, comp w/out ratings
 			estimates clear
@@ -218,6 +270,53 @@ foreach disc_type in rev b_term {
 					 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
 					 "Sample includes loans from loan packages with both institutional term loan and `category'") levels(90)
 					gr export "$figures_output_path/decomposition`suffix_add'_across_loan_number_coeff`fe_suffix'_`decomp_type'_with_spread_`disc_type'.png", replace 
+			
+			}
+			
+			*Make an IG vs junk version for total loan number by firm
+						*Make one that is investment grade vs junk.
+			estimates clear
+
+			reg `discount_type' borrower_n_* if category == "`category'" & investment_grade==1 `fe_cond', `fe_settings'
+			estimates store ig
+			reg `discount_type' borrower_n_* if category == "`category'" & investment_grade==0 `fe_cond', `fe_settings'
+			estimates store junk
+
+			coefplot (ig, label(Investment Grade) pstyle(p3) `fe_coeff_plot_opt') ///
+			 (junk, label(Junk Grade) pstyle(p5) `fe_coeff_plot_opt') ///
+			, vertical ytitle("`sample' Discount") title("Discount Coeff on Loan Number - By Firm - Compustat Rated - Investment Grade vs Junk `title_add' - `fe_add'", size(small)) ///
+				graphregion(color(white))  xtitle("`sample' Discount Number") xlabel(, angle(45)) ///
+				 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample") levels(90)
+				gr export "$figures_output_path/discounts`suffix_add'_across_loan_number_coeff`fe_suffix'_ratings_ig_junk_`disc_type'_bor.png", replace 
+
+			*Decompose the compustat investment grade vs junk
+			foreach decomp_type in  comp_rat_ig comp_rat_junk {
+				
+				if "`decomp_type'" == "comp_rat_ig" {
+					local cond "& investment_grade ==1"
+					local subsample_title "Compustat w/ Ratings - Investment Grade"
+				}
+
+				if "`decomp_type'" == "comp_rat_junk" {
+					local cond "& investment_grade ==0"
+					local subsample_title "Compustat w/ Ratings - Junk Grade"
+				}
+
+				estimates clear
+
+				reg `spread_var' borrower_n_* if category == "`category'" `cond' `fe_cond', `fe_settings'
+				estimates store comp_spread_`disc_type'
+
+				reg `spread_var' borrower_n_* if category == "Inst. Term" `cond' `fe_cond', `fe_settings'
+				estimates store comp_spread_i_term
+
+				coefplot (comp_spread_`disc_type', label(`disc_type' Spreads) pstyle(p5) `fe_coeff_plot_opt') ///
+				(comp_spread_i_term, label(Inst. Spreads) pstyle(p6) `fe_coeff_plot_opt') ///
+				, vertical ytitle("`spread_label'") title("Coefficients on Loan Number - By Firm - Decomposition - `subsample_title' - `title_add' - `fe_add'", size(small)) ///
+					graphregion(color(white))  xtitle("Loan Number") xlabel(, angle(45)) ///
+					 note("Constant Omitted. Loan numbers greater than 6 omitted due to small sample" ///
+					 "Sample includes loans from loan packages with both institutional term loan and `category'") levels(90)
+					gr export "$figures_output_path/decomposition`suffix_add'_across_loan_number_coeff`fe_suffix'_`decomp_type'_with_spread_`disc_type'_bor.png", replace 
 			
 			}
 			

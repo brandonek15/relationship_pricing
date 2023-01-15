@@ -73,12 +73,14 @@ egen discount_obs_any_bco_group = rowmax(discount_obs_rev_bco_group  discount_ob
 
 drop t_*
 
-*Make a simple graph of the average discount by observation num
+*Make dummies for a simple graph of the average discount by observation num
 forval i = 1/6 {
 	gen n_`i' = loan_number == `i'
 	label var n_`i' "Loan Num `i'"
 	gen cat_n_`i' = loan_num_category == `i'
 	label var cat_n_`i' "Loan Num `i'"
+	gen borrower_n_`i' = loan_number_borrower == `i'
+	label var borrower_n_`i' "Loan Num `i'"
 	
 	*Also do this for 2nd syndicate
 	gen synd_2_n_`i' = loan_number_syndicate_2==`i'

@@ -117,6 +117,11 @@ foreach sample in discount_comp no_discount_comp discount_no_comp no_discount_no
 	nomtitle  nonum noobs
 
 }
+
+*For Ben: loan_vars are there, we can just look at the first few that we actually use in the discounts to keep it simple
+*The indicator "discount_obs_rev" is an indicator for a loan being in a package with a revolving discount,
+* "discount_obs_b_term" same for bank term discount, and "discount_obs" for either of them.
+
 *Make a difference of means table
 local exclude "institutional"
 local loan_vars: list loan_vars - exclude
