@@ -106,18 +106,15 @@ tw  `recession' `rev_discount_simple' `term_discount_simple' , ///
 	legend(order(1 "Recession" 2 "Rev Discount" 3 "Term Discount")) ///
 	title("Discounts Over Time")  ytitle("Mean Discount (bps)") 	
 	
-gr export "$figures_output_path/time_series_discount_mean_all_rev_term_no_controls_paper.png", replace 
-
-
-
+gr export "$figures_output_path/time_series_discount_mean_all_rev_term_no_controls_paper.png", replace
 
 
 **** Customized distribution of discount graph - kdensity
 use "$data_path/dealscan_compustat_loan_level", clear
 
-local rev (kdensity  discount_1_simple if category == "Revolver", color(midblue) bwidth(20)  lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
-local b_term (kdensity discount_1_simple if category == "Bank Term", col(orange) bwidth(20) lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
-local rev_controls (kdensity  discount_1_controls if category == "Revolver", color(blue) bwidth(20)  lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
+local rev (kdensity  discount_1_simple if category == "Revolver", color(midblue) bwidth(5)  lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
+local b_term (kdensity discount_1_simple if category == "Bank Term", col(orange) bwidth(5) lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
+local rev_controls (kdensity  discount_1_controls if category == "Revolver", color(blue) bwidth(5)  lpattern(solid) cmissing(n) lwidth(medthin) yaxis(1))
 
 twoway `rev' `b_term'  ///
 , ytitle("Density",axis(1))  ///

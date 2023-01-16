@@ -52,7 +52,7 @@ tw  `recession' `rev_discount_simple' `rev_discount_controls'  , ///
 gr export "$figures_output_path/time_series_discount_mean_all_rev.png", replace 
 
 tw  `recession' `rev_discount_simple' `rev_discount_controls' `rev_discount_controls_np' , ///
-	legend(order(1 "Recession" 2 "Rev Disc (Simple)" 3 "Rev Disc (Controls)" 4 "Rev Disc (Controls -NP)")) ///
+	legend(order(1 "Recession" 2 "Rev Disc (Simple)" 3 "Rev Disc (Controls)" 4 "Rev Disc (Controls -SP)")) ///
 	title("Discounts Over Time")  ytitle("Mean Discount (bps)") 	
 	
 gr export "$figures_output_path/time_series_discount_mean_all_rev_with_np.png", replace 
@@ -85,9 +85,9 @@ foreach type in rev b_term {
 
 	twoway ``type'' ``type'_controls' ``type'_controls_np'  ///
 	, ytitle("Density",axis(1))  ///
-	 title("Kernel Density of Discount - Simple vs Controls vs Controls - Non Parametric",size(medsmall)) ///
+	 title("Kernel Density of Discount - Simple vs Controls vs Controls - Semi Parametric",size(medsmall)) ///
 	graphregion(color(white))  xtitle("Discount") ///
-	legend(order(1 "Simple `cat' Discount" 2 "Residualized `cat' Discount" 3 "Residualized `cat' Discount - NP")) ///
+	legend(order(1 "Simple `cat' Discount" 2 "Residualized `cat' Discount" 3 "Residualized `cat' Discount - SP") rows(2)) ///
 	 note("" "Epanechnikov kernel with bandwidth 20")
 	graph export "$figures_output_path/discount_kdensity_simple_controls_with_np_`type'.png", replace
 
