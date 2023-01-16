@@ -259,3 +259,20 @@ file("$regression_output_path/spread_correlations_both_mean_time_series.tex") re
 
 corrtex *sprd rev_discount* term_discount_*, title("Spread Correlations with Discount - Time Series Means") sig ///
 file("$regression_output_path/discount_correlations_both_mean_time_series.tex") replace
+
+
+// Stuff by Ben
+eststo clear
+
+local firm_chars L1_market_to_book L1_ppe_assets L1_current_assets L1_log_assets L1_leverage ///
+L1_roa L1_sales_growth L1_ebitda_int_exp ///
+L1_working_cap_assets L1_capex_assets L1_firm_age rating_numeric
+
+
+eststo: estpost tabstat  `firm_chars', by(category)  statistics(mean sd) columns(statistics) listwise
+
+eststo: estpost tabstat  `firm_chars' if discount_obs==1, by(category )   statistics(mean sd) columns(statistics) listwise
+
+esttab est1 est2 , cells("mean(label(Mean) fmt(3)) sd(label(St. Dev) fmt(3))" ) ///
+	mgroups("Full Sample" "Discount Sample" ,pattern(1  1  )  ///
+	prefix(\multicolumn{@span}{c}{) suffix(}) span erepeat(\cmidrule(lr){@span})) nonumber noobs
