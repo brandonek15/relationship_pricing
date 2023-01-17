@@ -60,3 +60,6 @@ do "$code_path/analysis_supply_curve.do"
 do "$code_path/figures_paper_slides.do"
 do "$code_path/simple_tables_paper_slides.do"
 do "$code_path/regression_tables_paper_slides.do"
+
+*Calculations for paper
+do "$code_path/calculations_for_paper_slides.do"

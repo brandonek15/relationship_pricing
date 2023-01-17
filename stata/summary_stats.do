@@ -170,7 +170,7 @@ egen other_sprd_sp = mean(temp_other_sprd), by(borrowercompanyid facilitystartda
 *Want to match sample in regression tables, so now only include bank loans
 keep if category == "Revolver" | category == "Bank Term"
 drop if mi(rev_discount_1_simple) & mi(term_discount_1_simple)
-keep borrowercompanyid rev_discount* term_discount_* *sprd_sp facilitystartdate date_quarterly
+keep borrowercompanyid rev_discount* term_discount_* *sprd_sp facilitystartdate date_quarterly merge_compustat
 rename *sprd_sp *sprd	
 save "$data_path/stata_temp/discounts_and_spreads_borrowercompanyid_facilitystartdate_loan_obs", replace
 
@@ -208,10 +208,20 @@ local term_vars term_discount_1_simple term_discount_1_controls  ///
 	term_discount_1_controls_np term_sprd term_inst_term_sprd
 
 estpost tabstat `rev_vars' `term_vars', s(min p5 p25 p50 p75 p95 max mean sd count) c(s)
-esttab . using "$regression_output_path/sumstats_discounts_spreads.tex", ///
+esttab . using "$regression_output_path/sumstats_discounts_spreads_paper.tex", ///
  label title("Loan Discounts") replace ///
 cells("min(fmt(3)) p25(fmt(3)) p50(fmt(3)) p75(fmt(3)) max(fmt(3)) mean(fmt(2)) sd(fmt(2)) count(fmt(0))") ///
 nomtitle  nonum noobs note("Only includes observations where the particular discount can be calculated")
+
+*Make a difference of means tables for comp vs non-comp for the different types of discounts.
+eststo: estpost ttest `rev_vars' `term_vars' , by(merge_compustat) unequal
+	
+esttab . using "$regression_output_path/differences_discounts_spreads_comp_paper.tex", ///
+ label title("Discounts and Spreads") replace ///
+cells("mu_2(fmt(3)) mu_1(fmt(3)) b(star)") collabels("Comp Obs" "Non Comp Obs" "Difference") ///
+ nonum eqlabels(none) 
+
+
 
 *Now do a correlations table
 use "$data_path/stata_temp/discounts_and_spreads_borrowercompanyid_facilitystartdate_loan_obs", clear
@@ -272,12 +282,12 @@ L1_working_cap_assets L1_capex_assets L1_firm_age rating_numeric
 
 local loan_vars spread log_facilityamt maturity cov_lite leveraged asset_based senior secured
 
-eststo: estpost tabstat  `firm_chars' `loan_vars', by(category)  statistics(mean sd) columns(statistics) listwise
+eststo: estpost tabstat  `firm_chars' `loan_vars', by(category)  statistics(mean sd count) columns(statistics) nototal
 
-eststo: estpost tabstat  `firm_chars' `loan_vars' if discount_obs==1, by(category )   statistics(mean sd) columns(statistics) listwise
+eststo: estpost tabstat  `firm_chars' `loan_vars' if discount_obs==1, by(category )   statistics(mean sd count) columns(statistics) nototal
 
 esttab est1 est2 using "$regression_output_path/sumstats_by_discount_obs_paper.tex", ///
- cells("mean(label(Mean) fmt(3)) sd(label(St. Dev) fmt(3))") label  ///
+ cells("mean(label(Mean) fmt(3)) sd(label(St. Dev) fmt(3)) count(label(Count) fmt(0))") label  ///
 	mgroups("Full Sample" "Discount Sample" ,pattern(1  1  )  ///
 	prefix(\multicolumn{@span}{c}{) suffix(}) span erepeat(\cmidrule(lr){@span})) nonumber noobs replace
 
@@ -290,7 +300,7 @@ replace cat_new = "B Term" if category == "Bank Term"
 replace cat_new = "I Term" if category == "Inst. Term"
 eststo clear
 
-eststo: estpost tabstat  `loan_vars', by(cat_new)  statistics(mean sd) columns(statistics) 
+eststo: estpost tabstat  `loan_vars', by(cat_new)  statistics(mean sd) columns(statistics) nototal
 
 *Now just make it print nice
 esttab est1 using "$regression_output_path/sumstats_by_loan_type_paper.tex", ///

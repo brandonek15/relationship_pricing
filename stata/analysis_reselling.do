@@ -65,7 +65,7 @@ foreach type in rev b_term {
 
 	*Make a table with the analysis
 	esttab est* using "$regression_output_path/discounts_and_syndicate`suffix'.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons) star(* 0.1 ** 0.05 *** 0.01) ///
-	title("Spreads and Loan Characteristics") scalars("fe Fixed Effects" "disc Discount Type") ///
+	title("Discounts and Institutional Involvement") scalars("fe Fixed Effects" "disc Discount Type") ///
 	addnotes("SEs clustered at firm level" "Number of Lenders in Syndicate Winsorized at 95")	
 }
 
