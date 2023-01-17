@@ -27,6 +27,16 @@ local num_term_comp `r(N)'
 di "Number of observations with compustat data is `num_comp'"
 di "Number of revolving compustat discounts is `num_rev_comp', term discounts `num_term_comp'"
 
+*Get proporation of cases there is a positive revolving and positive bank term discount
+sum constant if !mi(discount_1_simple) & category == "Revolver" & discount_1_simple>0
+local num_pos_rev `r(N)'
+sum constant if !mi(discount_1_simple) & category == "Bank Term" & discount_1_simple>0
+local num_pos_b_term `r(N)'
+
+local prop_pos_rev = round(`num_pos_rev'/`num_rev',.001)
+local prop_pos_b_term = round(`num_pos_b_term'/`num_term',.001)
+di "Proportion of revolving discount that is positive is: `prop_pos_rev', proportion term discount is positive is: `prop_pos_b_term'"
+
 *Correlation between simple and controls discount
 use  "$data_path/dealscan_compustat_loan_level", clear
 corr discount_1_simple discount_1_controls if category == "Revolver"
