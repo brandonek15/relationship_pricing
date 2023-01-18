@@ -80,6 +80,21 @@ corr rev_discount_1_simple term_discount_1_simple
 local corr = r(rho)
 di "Correlation between simple revolving discount and bank term discoutn is : `corr'"
 
+*What is the total fraction of loans that are in packages with an institutional loan (and thus that we can calculate discounts)
+use  "$data_path/dealscan_compustat_loan_level", clear
+gen facilityamt_disc_obs = facilityamt * discount_obs_rev if category == "Revolver"
+replace facilityamt_disc_obs = facilityamt * discount_obs_b_term if category == "Bank Term"
+collapse (sum) facilityamt_disc_obs facilityamt, by(category)
+gen frac_disc_obs = facilityamt_disc_obs/facilityamt
+
+sum frac_disc_obs if category == "Revolver"
+local frac_rev = round(r(mean),.01)
+
+sum frac_disc_obs if category == "Bank Term"
+local frac_b_term = round(r(mean),.01)
+
+di "Fraction of revolving facilities that are in packages where we can compute discounts: `frac_rev', bank term facilities: `frac_b_term'"
+
 *Back of the envelope
 *Cost of providing a discount: 45bps (coefficient) * 234M (avg revolver amount for compustat) * 23% bank allocation * 56% avg utilization
 *Cost of providing = 0.14M a year
