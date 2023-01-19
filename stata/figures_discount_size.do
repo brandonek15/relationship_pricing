@@ -32,8 +32,8 @@ gen discount_ratio_sd_spread = discount_1_simple/spread_sd
 local ratio_mean_rev (line discount_ratio_mean_spread year if category == "Revolver", color(midblue) lpattern(solid) yaxis(1))
 local ratio_mean_term (line discount_ratio_mean_spread year if category == "Bank Term", col(orange) lpattern(solid) yaxis(1))
 
-local ratio_sd_rev (line discount_ratio_sd_spread year if category == "Revolver", color(midblue) lpattern(dash) yaxis(1))
-local ratio_sd_term (line discount_ratio_sd_spread year if category == "Bank Term", col(orange) lpattern(dash) yaxis(1))
+local ratio_sd_rev (line discount_ratio_sd_spread year if category == "Revolver", color(midblue) lpattern(shortdash) yaxis(2))
+local ratio_sd_term (line discount_ratio_sd_spread year if category == "Bank Term", col(orange) lpattern(shortdash) yaxis(2))
 
 twoway `ratio_mean_rev' `ratio_mean_term' , ///
 	legend(order(1 "Revolver" 2 "Term") size(medium)) xtitle("Year") ///
@@ -42,7 +42,12 @@ gr export "$figures_output_path/avg_discounts_ratio_mean_over_time.png", replace
 
 twoway `ratio_sd_rev' `ratio_sd_term' , ///
 	legend(order(1 "Revolver" 2 "Term") size(medium)) xtitle("Year") ///
-	title("Avg Discount / SD Spread") ytitle("Avg Discount / SD Spread", axis(1))
+	title("Avg Discount / SD Spread") ytitle("Avg Discount / SD Spread", axis(2))
 gr export "$figures_output_path/avg_discounts_ratio_sd_over_time.png", replace 
 
+twoway `ratio_mean_rev' `ratio_mean_term' `ratio_sd_rev' `ratio_sd_term'  , ///
+	legend(order(1 "Revolver - Mean" 2 "Term - Mean" 3 "Revolver - SD" 4 "Spread - SD") size(medium) rows(2)) xtitle("Year") ///
+	title("Average discounts as a function of spreads") ytitle("Avg Discount / Avg Spread", axis(1)) ///
+	ytitle("Avg Discount / SD Spread", axis(2))
+gr export "$figures_output_path/avg_discounts_ratio_mean_sd_over_time.png", replace 
 
