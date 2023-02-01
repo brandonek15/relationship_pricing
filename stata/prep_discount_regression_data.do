@@ -66,8 +66,55 @@ esttab est* using "$regression_output_path/spreads_onto_controls_for_residalized
 title("Spreads and Loan Characteristics") scalars("fe Fixed Effects")  ///
 addnotes("SEs clustered at firm level" "Sample are all loans" "Omitted categories are Maturity = [60,71) and Facility Amt Decile 1")	
 
+*Make a version for just bank term and inst. term loans
+replace maturity = -1 if maturity_mi ==1
+replace init_amort = -1 if init_amort_mi ==1
+replace num_quarters_first_payment = -1 if init_amort_mi ==1
+local loan_level_controls cov_lite maturity maturity_mi log_facilityamt 
+local extra_controls init_amort num_quarters_first_payment init_amort_mi
 
-foreach var in spread_resid spread_2_resid spread_resid_np spread_2_resid_np  {
+foreach spreads in spread spread_2 {
+	reghdfe `spreads' `loan_level_controls' if category == "Inst. Term" | category == "Bank Term", absorb(borrower_facilitystartdate) residuals(`spreads'_resid_term) vce(cl borrowercompanyid)
+	if "`spreads'" == "spread" {
+		estadd local fe = "Borrower X Date"
+		estimates store est`i'
+		local ++i
+	}
+}
+
+foreach spreads in spread spread_2 {
+	reghdfe `spreads' `loan_level_controls' `extra_controls' if category == "Inst. Term" | category == "Bank Term" , absorb(borrower_facilitystartdate) residuals(`spreads'_resid_term_e) vce(cl borrowercompanyid)
+	if "`spreads'" == "spread" {
+		estadd local fe = "Borrower X Date"
+		estimates store est`i'
+		local ++i
+	}
+}
+
+
+local loan_level_controls_no_param cov_lite maturity_* log_facilityamt_dec_*
+foreach spreads in spread spread_2 {
+	reghdfe `spreads' `loan_level_controls_no_param' `extra_controls' if category == "Inst. Term" | category == "Bank Term", absorb(borrower_facilitystartdate) residuals(`spreads'_resid_term_e_np) vce(cl borrowercompanyid)
+	if "`spreads'" == "spread" {
+		estadd local fe = "Borrower X Date"
+		estimates store est`i'
+		local ++i
+	}
+
+}
+*Make it missing again
+replace maturity = . if maturity_mi ==1
+replace init_amort = . if maturity_mi ==1
+replace num_quarters_first_payment = . if maturity_mi ==1
+
+*Make a table with the coefficients for term loans only
+esttab est* using "$regression_output_path/spreads_onto_controls_for_residalized_measure_term_only.tex", replace b(%9.2f) se(%9.2f) r2 label nogaps compress drop(_cons *_mi) star(* 0.1 ** 0.05 *** 0.01) ///
+title("Spreads and Loan Characteristics") scalars("fe Fixed Effects")  ///
+addnotes("SEs clustered at firm level" "Sample are all loans" "Omitted categories are Maturity = [60,71) and Facility Amt Decile 1")	
+
+
+foreach var in spread_resid spread_2_resid spread_resid_np spread_2_resid_np ///
+	spread_resid_term spread_resid_term_e spread_resid_term_e_np	{
 	egen m_`var' = mean(`var'), by(borrowercompanyid facilitystartdate category)
 	gen m_`var'_inst_t = m_`var' if category == "Inst. Term"
 	egen m_`var'_inst = max(m_`var'_inst_t), by(borrowercompanyid facilitystartdate)
@@ -96,6 +143,13 @@ replace discount_2_controls = discount_2_controls*-1
 replace discount_1_controls_np = discount_1_controls_np*-1
 replace discount_2_controls_np = discount_2_controls_np*-1
 
+*The term only spreads, we want to see how they look
+foreach term_disc in diff_spread_resid_term diff_spread_resid_term_e diff_spread_resid_term_e_np {
+	replace `term_disc' = `term_disc' * -1
+	sum `term_disc', detail
+	drop `term_disc'
+}
+*They are not important so we drop them
 
 *Calculate the discount, residualized for loan level controls
 foreach disc in discount_1 discount_2 {

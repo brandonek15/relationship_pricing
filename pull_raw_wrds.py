@@ -67,6 +67,12 @@ def pull_raw(wrds_conn,conn):
     retrieve_table(wrds=wrds_conn, connection=conn, library='dealscan',table = 'networthcovenant' \
                    , heading='networthcovenant',columns_to_pull=cols,dtypes_for_upload=dtypes)
 
+    #Repayment schedule data. I want to do all of the cleaning of this in stata
+    dtypes = {'facilityid': int}
+    cols =['FacilityID','Period','NumberofPeriods','Payment','BeginDate']
+    retrieve_table(wrds=wrds_conn, connection=conn, library='dealscan',table = 'facilitypaymentschedule' \
+                   , heading='facilitypaymentschedule',columns_to_pull=cols,dtypes_for_upload=dtypes)
+
     #Pull Compustat Data
     dtypes = {'gvkey': int}
     retrieve_table(wrds_conn, conn, 'comp', 'fundq', 'comp_quarter', \

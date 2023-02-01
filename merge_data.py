@@ -23,7 +23,12 @@ def merge_data():
     #output to CSV
     path = os.path.join(INTERMEDIATE_DATA_PATH,'dealscan_merge.csv')
     merge_df.to_csv(path,index=False)
-    
+
+    #Also get the dealscan facilitypaymentscheduledata only and output it as is
+    facilitypaymentschedule_df= client.table('facilitypaymentschedule').execute()
+    path = os.path.join(INTERMEDIATE_DATA_PATH,'dealscan_facilitypaymentscheduledata.csv')
+    facilitypaymentschedule_df.to_csv(path,index=False)
+
     #Also get the compustat file (to play with in another project potentially)
     #Creates the query
     merge = merge_compustat(client)

@@ -208,6 +208,7 @@ label var spread "Spread"
 label var salesatclose "Annual Sales (millions)"
 replace salesatclose = salesatclose/1000000
 
+
 save "$data_path/dealscan_facility_lender_level", replace
 
 *Create a datset with only facility variables that can used in analyses
@@ -311,7 +312,12 @@ restore
 *Merge on the number of institional lenders on the instiutional loans
 merge m:1 borrowercompanyid facilitystartdate using "$data_path/stata_temp/i_institutional_lender_counts", nogen keep(1 3)
 
+save "$data_path/dealscan_facility_level_no_amort", replace
+do "$code_path/clean_dealscan_payment_schedule.do"
 
+use "$data_path/dealscan_facility_level_no_amort", clear
+merge 1:1 facilityid using "$data_path/stata_temp/initial_amortization", keep(1 3) nogen
+gen init_amort_mi = mi(init_amort)
 save "$data_path/dealscan_facility_level", replace
 
 *Now we will get the discounts by packageid
