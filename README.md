@@ -1,4 +1,4 @@
-Here is the documentation for the code:  
+Here is the documentation for the code for the relationship pricing project with Ben Marrow. Paper draft found here  https://drive.google.com/file/d/1VwQHZtmIhu1xTu2nkvMf5uSsrWCb4Yde/view  
   
 Python Code: 
 •	Relationship_main: everything goes through this file, and it calls all of the other programs.  
